@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}تقویم و مدیریت بازدیدهای ملکی | سقف CRM{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            هماهنگی و بازخورد بازدیدهای ملکی <span class="text-neon-emerald">«سقف CRM»</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            تقویم قرارهای بازدید، گزارش ارزیابی متقاضی پس از سرویس و سنجش تمایل به خرید (۱ تا ۵)
+        </p>
+    </div>
+    <button onclick="openModal('newVisitModal')" class="btn-neon-emerald">
+        <span>➕</span> هماهنگی بازدید جدید
+    </button>
+</div>
+
+<!-- Visits List -->
+<div class="glass-panel" style="padding: 1.75rem;">
+    <div style="overflow-x: auto;">
+        <table class="glass-table">
+            <thead>
+                <tr>
+                    <th>زمان هماهنگ شده</th>
+                    <th>فایل ملکی</th>
+                    <th>متقاضی (خریدار/مستاجر)</th>
+                    <th>کارشناس همراه</th>
+                    <th>وضعیت سرویس</th>
+                    <th>تمایل به معامله</th>
+                    <th>بازخورد و نکات مشتری</th>
+                    <th>ثبت نتیجه</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in visits %}
+                    <tr class="glass-row">
+                        <td style="color: #00f2fe; font-weight: 700; font-size: 0.88rem;">
+                            {{ v.scheduled_time.strftime('%Y-%m-%d %H:%M') if v.scheduled_time else '' }}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('properties.detail', id=v.property.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 600;">
+                                {{ v.property.title[:32] }}...
+                            </a>
+                            <div style="font-size: 0.75rem; color: #94a3b8;">📍 {{ v.property.district }}</div>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('clients.detail', id=v.client.id) }}" style="color: #cbd5e1; text-decoration: none; font-weight: 600;">
+                                {{ v.client.full_name }}
+                            </a>
+                            <div style="font-size: 0.75rem; color: #94a3b8; direction: ltr;">{{ v.client.phone_number }}</div>
+                        </td>
+                        <td>{{ v.agent.name if v.agent else 'مشاور' }}</td>
+                        <td>
+                            <span class="badge-neon {% if v.status == 'completed' %}badge-neon-emerald{% elif v.status == 'scheduled' %}badge-neon-cyan{% else %}badge-neon-crimson{% endif %}">
+                                {% if v.status == 'scheduled' %}هماهنگ‌شده{% elif v.status == 'completed' %}انجام‌شده{% else %}{{ v.status }}{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="font-weight: 800; color: #10b981;">
+                                {{ v.readiness_to_buy | pnum }} از ۵ ⭐
+                            </span>
+                        </td>
+                        <td style="max-width: 250px; font-size: 0.85rem; color: #cbd5e1;">
+                            {{ v.feedback or 'هنوز بازخوردی ثبت نشده است' }}
+                        </td>
+                        <td>
+                            <button onclick="openFeedbackModal({{ v.id }})" class="glass-btn" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
+                                ✍️ ثبت ارزیابی
+                            </button>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: #64748b; padding: 2rem;">
+                            هنوز بازدیدی در تقویم ثبت نشده است.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: New Visit -->
+<div id="newVisitModal" class="glass-modal-overlay">
+    <div class="glass-modal-box">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">هماهنگی بازدید ملک جدید</h3>
+        <form action="{{ url_for('crm.schedule_visit') }}" method="POST">
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">انتخاب ملک</label>
+                <select name="property_id" class="glass-select" required>
+                    {% for p in properties %}
+                        <option value="{{ p.id }}">{{ p.title[:45] }}... ({{ p.district }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">انتخاب متقاضی</label>
+                <select name="client_id" class="glass-select" required>
+                    {% for c in clients %}
+                        <option value="{{ c.id }}">{{ c.full_name }} ({{ c.phone_number }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">کارشناس همراه</label>
+                <select name="agent_id" class="glass-select">
+                    {% for ag in agents %}
+                        <option value="{{ ag.id }}">{{ ag.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">تاریخ و ساعت بازدید</label>
+                <input type="datetime-local" name="scheduled_time" class="glass-input" required>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="closeModal('newVisitModal')" class="glass-btn">انصراف</button>
+                <button type="submit" class="btn-neon-emerald">ثبت در برنامه بازدید</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Visit Feedback -->
+<div id="feedbackModal" class="glass-modal-overlay">
+    <div class="glass-modal-box">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">ثبت بازخورد و نتیجه بازدید</h3>
+        <form id="feedbackForm" method="POST">
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">وضعیت بازدید</label>
+                <select name="status" class="glass-select">
+                    <option value="completed">بازدید انجام شد (موفق)</option>
+                    <option value="cancelled">لغو شده</option>
+                    <option value="no_show">مشتری یا مالک حاضر نشدند</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">میزان آمادگی و تمایل متقاضی به معامله (۱ تا ۵)</label>
+                <select name="readiness_to_buy" class="glass-select">
+                    <option value="5">۵ - فوق‌العاده مشتاق (آماده نشست و قرارداد)</option>
+                    <option value="4" selected>۴ - پسندیده است (در حال مقایسه)</option>
+                    <option value="3">۳ - معمولی (ایرادات جزئی مطرح کرد)</option>
+                    <option value="2">۲ - نپسندید</option>
+                    <option value="1">۱ - کاملاً نامتناسب</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">نظرات و ایرادات اعلام‌شده توسط متقاضی</label>
+                <textarea name="feedback" rows="3" class="glass-textarea" placeholder="مثلاً: نورگیر سالن عالی بود ولی درخواست تخفیف روی مبلغ ودیعه دارد..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="closeModal('feedbackModal')" class="glass-btn">انصراف</button>
+                <button type="submit" class="btn-neon-cyan">ثبت ارزیابی</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function openFeedbackModal(visitId) {
+        const form = document.getElementById('feedbackForm');
+        form.action = `/crm/visits/${visitId}/status`;
+        openModal('feedbackModal');
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}سامانه هوشمند فایلینگ و املاک سقف{% endblock %}</title>
+    
+    <!-- Design System: Glassmorphism + Neon Dark -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/glassmorphism.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/neon-dark.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Chart.js for Dark Neon Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-shell">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar glass-sidebar">
+            <a href="{{ url_for('dashboard.index') }}" class="brand-logo">
+                <div class="brand-icon">🏛️</div>
+                <div class="brand-text">
+                    <h1>سامانه سقف</h1>
+                    <span>Real Estate Intelligence</span>
+                </div>
+            </a>
+
+            <ul class="nav-menu">
+                <li class="nav-section-title">داشبورد و هوش مصنوعی</li>
+                <li class="nav-item">
+                    <a href="{{ url_for('dashboard.index') }}" class="{% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                        <span>📊</span>
+                        <span>داشبورد مدیریتی</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('crawler.live_monitor') }}" class="{% if 'crawler' in request.endpoint %}active{% endif %}">
+                        <span>🕷️</span>
+                        <span>کراولر زنده دیوار و شیپور</span>
+                        <span class="neon-pulse-dot emerald" style="margin-right: auto;"></span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('matching.console') }}" class="{% if 'matching' in request.endpoint %}active{% endif %}">
+                        <span>⚡</span>
+                        <span>کنسول تطبیق هوشمند</span>
+                        <span class="nav-badge">AI</span>
+                    </a>
+                </li>
+
+                <li class="nav-section-title">پایگاه‌های داده متصل</li>
+                <li class="nav-item">
+                    <a href="{{ url_for('properties.list_properties') }}" class="{% if 'properties' in request.endpoint %}active{% endif %}">
+                        <span>🏢</span>
+                        <span>فایلینگ املاک و مالکین</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('clients.list_clients') }}" class="{% if 'clients' in request.endpoint %}active{% endif %}">
+                        <span>👥</span>
+                        <span>بانک مشتریان و تقاضا</span>
+                    </a>
+                </li>
+
+                <li class="nav-section-title">مدیریت فروش و پیگیری (CRM)</li>
+                <li class="nav-item">
+                    <a href="{{ url_for('crm.pipeline') }}" class="{% if request.endpoint == 'crm.pipeline' %}active{% endif %}">
+                        <span>📈</span>
+                        <span>قیف فروش و معاملات</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('crm.calls') }}" class="{% if request.endpoint == 'crm.calls' %}active{% endif %}">
+                        <span>📞</span>
+                        <span>تاریخچه تماس‌ها</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('crm.visits') }}" class="{% if request.endpoint == 'crm.visits' %}active{% endif %}">
+                        <span>📅</span>
+                        <span>هماهنگی بازدیدها</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Bottom Consultant Status -->
+            <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                <div class="glass-card" style="padding: 0.85rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #00f2fe, #8b5cf6); display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                        س
+                    </div>
+                    <div>
+                        <div style="font-size: 0.88rem; font-weight: 700;">مشاور ارشد سیستم</div>
+                        <div style="font-size: 0.75rem; color: #10b981; display: flex; align-items: center; gap: 0.35rem;">
+                            <span class="neon-pulse-dot emerald"></span> آنلاین و آماده تطبیق
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper">
+            <!-- Top Navbar -->
+            <header class="top-navbar glass-nav">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span style="font-weight: 600; color: #94a3b8; font-size: 0.95rem;">
+                        سامانه جامع مدیریت و فایلینگ املاک سقف
+                    </span>
+                    <span class="badge-neon badge-neon-cyan">
+                        <span class="neon-pulse-dot cyan"></span> دیتابیس SQLite متصل
+                    </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                    <a href="{{ url_for('crawler.live_monitor') }}" class="glass-btn" style="border-color: rgba(0, 242, 254, 0.3);">
+                        <span>⚡</span> کراول سریع
+                    </a>
+                    <a href="{{ url_for('properties.create') }}" class="btn-neon-cyan">
+                        <span>➕</span> ثبت فایل جدید
+                    </a>
+                    <a href="{{ url_for('clients.create') }}" class="btn-neon-emerald">
+                        <span>👤</span> ثبت متقاضی جدید
+                    </a>
+                </div>
+            </header>
+
+            <!-- Flash Notifications -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div style="padding: 1.5rem 2rem 0;">
+                        {% for category, message in messages %}
+                            <div class="glass-card" style="margin-bottom: 1rem; border-right: 4px solid {% if category == 'success' %}#10b981{% elif category == 'error' %}#f43f5e{% else %}#00f2fe{% endif %}; padding: 0.9rem 1.4rem; display: flex; align-items: center; justify-content: space-between;">
+                                <div>{{ message }}</div>
+                                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem;">✕</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Page Dynamic Body -->
+            <main class="page-content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

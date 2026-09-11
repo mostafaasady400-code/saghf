@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}اتاق مانیتورینگ کراولر دیوار و شیپور | سقف{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            اتاق مانیتورینگ و استخراج زنده املاک <span class="text-neon-cyan">(دیوار و شیپور)</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            پویش لحظه‌ای آگهی‌های جدید تهران، جداسازی فایل‌های بدون واسطه و ذخیره خودکار در دیتابیس SQLite
+        </p>
+    </div>
+    <div id="crawler-status-pill" class="badge-neon badge-neon-cyan">
+        <span class="neon-pulse-dot cyan"></span> آماده به کار
+    </div>
+</div>
+
+<!-- Crawler Control & Real-Time Stats -->
+<div class="grid-2" style="margin-bottom: 2rem;">
+    <!-- Control Form Panel -->
+    <div class="glass-panel" style="padding: 1.75rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>⚙️</span> تنظیمات و شروع فرآیند کراولینگ
+        </h3>
+
+        <form id="crawler-start-form">
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.88rem; color: #94a3b8; margin-bottom: 0.5rem;">
+                    پلتفرم‌های مبدا (Sources)
+                </label>
+                <div style="display: flex; gap: 1.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="sources" value="divar" checked style="accent-color: #00f2fe; transform: scale(1.2);">
+                        <span>پلتفرم دیوار (Divar API)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="sources" value="sheypoor" checked style="accent-color: #10b981; transform: scale(1.2);">
+                        <span>پلتفرم شیپور (Sheypoor)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.88rem; color: #94a3b8; margin-bottom: 0.5rem;">
+                    دسته‌بندی‌های ملکی
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="categories" value="buy-apartment" checked style="accent-color: #00f2fe;">
+                        <span>فروش آپارتمان مسکونی</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="categories" value="rent-apartment" checked style="accent-color: #00f2fe;">
+                        <span>رهن و اجاره آپارتمان</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="categories" value="buy-residential" style="accent-color: #00f2fe;">
+                        <span>فروش ویلایی و خانه</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="categories" value="commercial-rent" style="accent-color: #00f2fe;">
+                        <span>اجاره اداری و تجاری</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.88rem; color: #94a3b8; margin-bottom: 0.5rem;">
+                    تعداد فایل در هر دسته‌بندی (بچ سایز)
+                </label>
+                <select id="crawler-limit" class="glass-select">
+                    <option value="6">۶ فایل در هر دسته (سریع)</option>
+                    <option value="12" selected>۱۲ فایل در هر دسته (استاندارد)</option>
+                    <option value="20">۲۰ فایل در هر دسته (جامع)</option>
+                </select>
+            </div>
+
+            <button type="submit" id="start-crawl-btn" class="btn-neon-cyan" style="width: 100%; justify-content: center; padding: 0.85rem;">
+                <span>⚡</span> شروع کراولینگ دیوار و شیپور
+            </button>
+        </form>
+    </div>
+
+    <!-- Live Terminal & Live Stats -->
+    <div class="glass-panel" style="padding: 1.75rem; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                <span>📟</span> کنسول و گزارش زنده کراولر
+            </h3>
+            <div style="font-size: 0.8rem; color: #64748b;">
+                استریم بلادرنگ رویدادها
+            </div>
+        </div>
+
+        <div id="crawler-terminal" class="terminal-box">
+            <div class="terminal-line" style="color: #64748b;">[آماده] سیستم آماده دریافت دستور کراولینگ است...</div>
+        </div>
+
+        <!-- Quick Stats Counters -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 1.25rem;">
+            <div class="glass-card" style="padding: 0.75rem; text-align: center;">
+                <div style="font-size: 0.75rem; color: #94a3b8;">کل پویش‌شده</div>
+                <div id="stat-total-crawled" style="font-size: 1.2rem; font-weight: 800; color: #00f2fe;">0</div>
+            </div>
+            <div class="glass-card" style="padding: 0.75rem; text-align: center;">
+                <div style="font-size: 0.75rem; color: #94a3b8;">فایل‌های جدید</div>
+                <div id="stat-new-saved" style="font-size: 1.2rem; font-weight: 800; color: #10b981;">0</div>
+            </div>
+            <div class="glass-card" style="padding: 0.75rem; text-align: center;">
+                <div style="font-size: 0.75rem; color: #94a3b8;">تکراری (Skip)</div>
+                <div id="stat-skipped" style="font-size: 1.2rem; font-weight: 800; color: #f59e0b;">0</div>
+            </div>
+            <div class="glass-card" style="padding: 0.75rem; text-align: center;">
+                <div style="font-size: 0.75rem; color: #94a3b8;">کل دیتابیس</div>
+                <div id="stat-total-db" style="font-size: 1.2rem; font-weight: 800; color: #8b5cf6;">{{ crawled_properties | length }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Table of Recently Crawled Listings -->
+<div class="glass-panel" style="padding: 1.75rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.2rem; font-weight: 700;">
+            فایل‌های استخراج‌شده اخیر از دیوار و شیپور
+        </h3>
+        <span class="badge-neon badge-neon-purple">
+            {{ crawled_properties | length | pnum }} فایل در صف بررسی
+        </span>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="glass-table">
+            <thead>
+                <tr>
+                    <th>منبع</th>
+                    <th>عنوان فایل</th>
+                    <th>منطقه / شهر</th>
+                    <th>نوع معامله</th>
+                    <th>متراژ و خواب</th>
+                    <th>قیمت / ودیعه</th>
+                    <th>امتیاز</th>
+                    <th>وضعیت</th>
+                    <th>عملیات کارشناسی</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in crawled_properties %}
+                    <tr class="glass-row">
+                        <td>
+                            {% if p.source == 'divar' %}
+                                <span class="badge-neon badge-neon-cyan" style="font-size: 0.75rem;">دیوار</span>
+                            {% else %}
+                                <span class="badge-neon badge-neon-emerald" style="font-size: 0.75rem;">شیپور</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('properties.detail', id=p.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 600;">
+                                {{ p.title }}
+                            </a>
+                        </td>
+                        <td>{{ p.district }}</td>
+                        <td>
+                            <span class="badge-neon {% if p.deal_type == 'sale' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
+                                {{ p.deal_type | deal_name }}
+                            </span>
+                        </td>
+                        <td>{{ p.area | pnum }} متر ({{ p.rooms | pnum }}خواب)</td>
+                        <td>
+                            {% if p.deal_type == 'sale' %}
+                                <span style="font-weight: 700; color: #00f2fe;">{{ p.total_price | toman }}</span>
+                            {% else %}
+                                <span style="font-weight: 700; color: #10b981;">{{ p.deposit | toman }} رهن</span>
+                                {% if p.monthly_rent > 0 %}<div style="font-size: 0.75rem; color: #94a3b8;">{{ p.monthly_rent | toman }} اجاره</div>{% endif %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span style="font-weight: 700; color: #8b5cf6;">{{ p.score | pnum }}</span>
+                        </td>
+                        <td>
+                            {% if p.status == 'verified' %}
+                                <span class="badge-neon badge-neon-emerald">تأیید شده</span>
+                            {% else %}
+                                <span class="badge-neon badge-neon-amber">خام (کراول)</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
+                                    مشاهده
+                                </a>
+                                {% if p.status != 'verified' %}
+                                    <form action="{{ url_for('properties.verify', id=p.id) }}" method="POST" style="display: inline;">
+                                        <button type="submit" class="btn-neon-emerald" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
+                                            ✓ تأیید و ثبت در دفتر
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: #64748b; padding: 2rem;">
+                            هنوز فایلی کراول نشده است. با کلیک بر روی دکمه «شروع کراولینگ»، فرآیند استخراج را آغاز نمایید.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/crawler.js') }}"></script>
+{% endblock %}

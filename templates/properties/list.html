@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}فایلینگ املاک سقف | مدیریت املاک و فایل‌ها{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            بانک و ویترین فایلینگ املاک <span class="text-neon-cyan">«سقف»</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            مجموعه کامل فایل‌های کارشناسی‌شده، فایل‌های دیوار و شیپور و املاک مالکین مستقیم
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="{{ url_for('properties.create') }}" class="btn-neon-cyan">
+            <span>➕</span> ثبت فایل جدید با مشخصات مالک
+        </a>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="glass-panel" style="padding: 1.25rem; margin-bottom: 2rem;">
+    <form method="GET" action="{{ url_for('properties.list_properties') }}" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 1rem; align-items: flex-end;">
+        <div>
+            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">جستجو در عنوان یا محله</label>
+            <input type="text" name="q" value="{{ search_query }}" placeholder="مثلاً: ۳ خوابه سعادت آباد..." class="glass-input">
+        </div>
+        <div>
+            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">نوع معامله</label>
+            <select name="deal_type" class="glass-select">
+                <option value="all" {% if selected_deal_type == 'all' %}selected{% endif %}>همه معاملات</option>
+                <option value="sale" {% if selected_deal_type == 'sale' %}selected{% endif %}>فروش</option>
+                <option value="rent" {% if selected_deal_type == 'rent' %}selected{% endif %}>رهن و اجاره</option>
+            </select>
+        </div>
+        <div>
+            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">منطقه / محله</label>
+            <select name="district" class="glass-select">
+                <option value="all">همه مناطق</option>
+                {% for d in districts %}
+                    <option value="{{ d }}" {% if selected_district == d %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">منبع فایل</label>
+            <select name="source" class="glass-select">
+                <option value="all">همه منابع</option>
+                <option value="divar" {% if selected_source == 'divar' %}selected{% endif %}>دیوار</option>
+                <option value="sheypoor" {% if selected_source == 'sheypoor' %}selected{% endif %}>شیپور</option>
+                <option value="direct_owner" {% if selected_source == 'direct_owner' %}selected{% endif %}>مالک مستقیم دفتر</option>
+            </select>
+        </div>
+        <div>
+            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">وضعیت</label>
+            <select name="status" class="glass-select">
+                <option value="all">همه وضعیت‌ها</option>
+                <option value="verified" {% if selected_status == 'verified' %}selected{% endif %}>تأیید شده (دفتر)</option>
+                <option value="raw_crawled" {% if selected_status == 'raw_crawled' %}selected{% endif %}>خام (کراول شده)</option>
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="glass-btn" style="height: 44px;">
+                <span>🔍</span> اعمال فیلتر
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Properties Grid -->
+<div class="grid-3">
+    {% for p in properties %}
+        <div class="glass-card property-card">
+            <!-- Thumbnail Image -->
+            <div style="position: relative;">
+                {% if p.images and p.images[0] %}
+                    <img src="{{ p.images[0] }}" alt="{{ p.title }}" class="property-thumb">
+                {% else %}
+                    <div class="property-thumb" style="display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 2.5rem;">
+                        🏢
+                    </div>
+                {% endif %}
+                
+                <!-- Source Badge -->
+                <div style="position: absolute; top: 12px; right: 12px;">
+                    {% if p.source == 'divar' %}
+                        <span class="badge-neon badge-neon-cyan">دیوار</span>
+                    {% elif p.source == 'sheypoor' %}
+                        <span class="badge-neon badge-neon-emerald">شیپور</span>
+                    {% else %}
+                        <span class="badge-neon badge-neon-purple">مالک دفتر</span>
+                    {% endif %}
+                </div>
+
+                <!-- Quality Score Pill -->
+                <div style="position: absolute; top: 12px; left: 12px;">
+                    <span class="badge-neon" style="background: rgba(15, 23, 42, 0.85); color: #f8fafc; border: 1px solid rgba(255,255,255,0.2);">
+                        امتیاز: {{ p.score | pnum }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="property-card-body">
+                <div class="property-meta">
+                    <span class="badge-neon {% if p.deal_type == 'sale' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
+                        {{ p.deal_type | deal_name }}
+                    </span>
+                    <span style="font-size: 0.82rem; color: #94a3b8;">📍 {{ p.district }}</span>
+                </div>
+
+                <a href="{{ url_for('properties.detail', id=p.id) }}" class="property-title">
+                    {{ p.title }}
+                </a>
+
+                <div class="property-specs">
+                    <div class="property-spec-item">
+                        <span>📐</span>
+                        <span>{{ p.area | pnum }} متر</span>
+                    </div>
+                    <div class="property-spec-item">
+                        <span>🛏️</span>
+                        <span>{{ p.rooms | pnum }} خواب</span>
+                    </div>
+                    <div class="property-spec-item">
+                        <span>🏢</span>
+                        <span>طبقه {{ p.floor | pnum }}</span>
+                    </div>
+                </div>
+
+                <!-- Price & Matching Action -->
+                <div class="property-price">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;">
+                            {% if p.deal_type == 'sale' %}قیمت کل{% else %}ودیعه / رهن{% endif %}
+                        </div>
+                        <div class="price-val">
+                            {% if p.deal_type == 'sale' %}
+                                {{ p.total_price | toman }}
+                            {% else %}
+                                {{ p.deposit | toman }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.45rem 0.9rem; font-size: 0.82rem; border-color: rgba(0, 242, 254, 0.3);">
+                        <span>⚡</span> جزئیات و تطبیق
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div style="grid-column: 1 / -1; text-align: center; color: #64748b; padding: 4rem;">
+            هیچ فایلی با معیارهای انتخاب شده یافت نشد.
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

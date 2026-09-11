@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}قیف فروش و وضعیت معاملات (Kanban) | سقف CRM{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            قیف فروش و چرخه معاملات ملکی <span class="text-neon-cyan">(Kanban Pipeline)</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            پیگیری سرنخ‌های متقاضی از مرحله ثبت تا بازدید، نشست مذاکره و عقد قرارداد رسمی
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="{{ url_for('clients.create') }}" class="btn-neon-cyan">
+            <span>➕</span> ثبت سرنخ جدید
+        </a>
+    </div>
+</div>
+
+<!-- Kanban Columns -->
+<div class="kanban-board">
+    <!-- Stage 1: New -->
+    <div class="kanban-col">
+        <div class="kanban-header">
+            <div class="kanban-title" style="color: #38bdf8;">
+                <span class="neon-pulse-dot cyan"></span> سرنخ جدید
+            </div>
+            <span class="kanban-counter">{{ stages.new | length | pnum }}</span>
+        </div>
+        <div class="kanban-cards">
+            {% for c in stages.new %}
+                <div class="kanban-card">
+                    <div style="font-weight: 700; margin-bottom: 0.35rem;">
+                        <a href="{{ url_for('clients.detail', id=c.id) }}" style="color: #ffffff; text-decoration: none;">
+                            {{ c.full_name }}
+                        </a>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">
+                        💰 {{ c.max_budget | toman if c.preferred_deal_type == 'sale' else c.max_deposit | toman }}
+                    </div>
+                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">
+                        📍 {{ c.preferred_districts | join('، ') if c.preferred_districts else 'تمام مناطق' }}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.72rem; color: #38bdf8;">{{ c.agent.name if c.agent else 'بدون مشاور' }}</span>
+                        <button onclick="advanceStage({{ c.id }}, 'contacted')" class="glass-btn" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                            تماس اولیه ←
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Stage 2: Contacted -->
+    <div class="kanban-col">
+        <div class="kanban-header">
+            <div class="kanban-title" style="color: #60a5fa;">
+                <span>📞</span> تماس و پیگیری
+            </div>
+            <span class="kanban-counter">{{ stages.contacted | length | pnum }}</span>
+        </div>
+        <div class="kanban-cards">
+            {% for c in stages.contacted %}
+                <div class="kanban-card">
+                    <div style="font-weight: 700; margin-bottom: 0.35rem;">
+                        <a href="{{ url_for('clients.detail', id=c.id) }}" style="color: #ffffff; text-decoration: none;">
+                            {{ c.full_name }}
+                        </a>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">
+                        💰 {{ c.max_budget | toman if c.preferred_deal_type == 'sale' else c.max_deposit | toman }}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.72rem; color: #60a5fa;">{{ c.agent.name if c.agent else 'مشاور' }}</span>
+                        <button onclick="advanceStage({{ c.id }}, 'visiting')" class="glass-btn" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                            هماهنگی بازدید ←
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Stage 3: Visiting -->
+    <div class="kanban-col">
+        <div class="kanban-header">
+            <div class="kanban-title" style="color: #c084fc;">
+                <span>📅</span> در حال بازدید
+            </div>
+            <span class="kanban-counter">{{ stages.visiting | length | pnum }}</span>
+        </div>
+        <div class="kanban-cards">
+            {% for c in stages.visiting %}
+                <div class="kanban-card" style="border-color: rgba(139, 92, 246, 0.3);">
+                    <div style="font-weight: 700; margin-bottom: 0.35rem;">
+                        <a href="{{ url_for('clients.detail', id=c.id) }}" style="color: #ffffff; text-decoration: none;">
+                            {{ c.full_name }}
+                        </a>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">
+                        💰 {{ c.max_budget | toman if c.preferred_deal_type == 'sale' else c.max_deposit | toman }}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.72rem; color: #c084fc;">{{ c.agent.name if c.agent else 'مشاور' }}</span>
+                        <button onclick="advanceStage({{ c.id }}, 'negotiating')" class="glass-btn" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                            ورود به نشست ←
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Stage 4: Negotiating -->
+    <div class="kanban-col">
+        <div class="kanban-header">
+            <div class="kanban-title" style="color: #fbbf24;">
+                <span>🤝</span> نشست و مذاکره
+            </div>
+            <span class="kanban-counter">{{ stages.negotiating | length | pnum }}</span>
+        </div>
+        <div class="kanban-cards">
+            {% for c in stages.negotiating %}
+                <div class="kanban-card" style="border-color: rgba(245, 158, 11, 0.4);">
+                    <div style="font-weight: 700; margin-bottom: 0.35rem;">
+                        <a href="{{ url_for('clients.detail', id=c.id) }}" style="color: #ffffff; text-decoration: none;">
+                            {{ c.full_name }}
+                        </a>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">
+                        💰 {{ c.max_budget | toman if c.preferred_deal_type == 'sale' else c.max_deposit | toman }}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.72rem; color: #fbbf24;">{{ c.agent.name if c.agent else 'مشاور' }}</span>
+                        <button onclick="advanceStage({{ c.id }}, 'contract_won')" class="btn-neon-emerald" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                            عقد قرارداد ✓
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Stage 5: Won -->
+    <div class="kanban-col">
+        <div class="kanban-header">
+            <div class="kanban-title" style="color: #34d399;">
+                <span>🏆</span> قرارداد بسته شده
+            </div>
+            <span class="kanban-counter">{{ stages.contract_won | length | pnum }}</span>
+        </div>
+        <div class="kanban-cards">
+            {% for c in stages.contract_won %}
+                <div class="kanban-card" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05);">
+                    <div style="font-weight: 700; margin-bottom: 0.35rem; color: #34d399;">
+                        {{ c.full_name }}
+                    </div>
+                    <div style="font-size: 0.8rem; color: #cbd5e1; margin-bottom: 0.35rem;">
+                        معامله موفق
+                    </div>
+                    <div style="font-size: 0.75rem; color: #10b981;">
+                        کارشناس: {{ c.agent.name if c.agent else 'تیم فروش' }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function advanceStage(clientId, nextStage) {
+        try {
+            const res = await fetch(`/crm/clients/${clientId}/move-stage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stage: nextStage })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('مرحله معامله با موفقیت ارتقا یافت.', 'success');
+                setTimeout(() => window.location.reload(), 600);
+            }
+        } catch (e) {
+            showToast('خطا در تغییر مرحله', 'error');
+        }
+    }
+</script>
+{% endblock %}

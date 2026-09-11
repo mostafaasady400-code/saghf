@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}داشبورد مدیریتی سقف | مانیتورینگ جامع املاک و تطبیق هوشمند{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            میزکار مدیریتی و هوش مصنوعی املاک <span class="text-neon-cyan">«سقف»</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            مانیتورینگ لحظه‌ای فایل‌های کراول شده، تحلیل تقاضای مشتریان و پیشنهاد فرصت‌های طلایی معامله
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <form action="{{ url_for('matching.refresh_all') }}" method="POST">
+            <button type="submit" class="glass-btn" style="border-color: rgba(139, 92, 246, 0.4); color: #c084fc;">
+                <span>⚡</span> بروزرسانی تطبیق هوشمند سراسری
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- 4 Neon KPI Cards -->
+<div class="kpi-grid">
+    <div class="glass-panel kpi-card" style="--accent-color: #00f2fe;">
+        <div class="kpi-header">
+            <span class="kpi-title">موجودی فایلینگ و کراولینگ</span>
+            <div class="kpi-icon text-neon-cyan">🏢</div>
+        </div>
+        <div class="kpi-value text-neon-cyan">{{ kpis.total_properties | pnum }}</div>
+        <div class="kpi-sub">
+            <span class="text-neon-emerald">▲ {{ kpis.crawled_today | pnum }}</span> فایل جدید کراول شده امروز
+        </div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="--accent-color: #10b981;">
+        <div class="kpi-header">
+            <span class="kpi-title">متقاضیان فعال و لیدها</span>
+            <div class="kpi-icon text-neon-emerald">👥</div>
+        </div>
+        <div class="kpi-value text-neon-emerald">{{ kpis.active_leads | pnum }}</div>
+        <div class="kpi-sub">
+            از مجموع <span style="color:#ffffff;">{{ kpis.total_clients | pnum }}</span> متقاضی در سامانه
+        </div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="--accent-color: #8b5cf6;">
+        <div class="kpi-header">
+            <span class="kpi-title">تطابق‌های طلایی (بالای ۸۰٪)</span>
+            <div class="kpi-icon text-neon-purple">⚡</div>
+        </div>
+        <div class="kpi-value text-neon-purple">{{ kpis.high_matches_count | pnum }}</div>
+        <div class="kpi-sub">
+            فرصت‌های معامله با شانس موفقیت بالا
+        </div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="--accent-color: #f59e0b;">
+        <div class="kpi-header">
+            <span class="kpi-title">بازدیدهای امروز و نرخ تبدیل</span>
+            <div class="kpi-icon text-neon-amber">📅</div>
+        </div>
+        <div class="kpi-value text-neon-amber">{{ kpis.today_visits | pnum }}</div>
+        <div class="kpi-sub">
+            نرخ تبدیل قرارداد: <span class="text-neon-emerald">{{ kpis.conversion_rate | pnum }}٪</span>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid-2" style="margin-bottom: 2rem;">
+    <!-- District Distribution -->
+    <div class="glass-panel" style="padding: 1.75rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 700;">توزیع فایل‌های ملکی در مناطق هدف تهران</h3>
+            <span class="badge-neon badge-neon-cyan">دیوار + شیپور + دفاتر</span>
+        </div>
+        <div style="height: 260px; position: relative;">
+            <canvas id="districtChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Sales Pipeline Chart -->
+    <div class="glass-panel" style="padding: 1.75rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 700;">وضعیت چرخه فروش (Sales Pipeline)</h3>
+            <span class="badge-neon badge-neon-purple">متقاضیان</span>
+        </div>
+        <div style="height: 260px; position: relative;">
+            <canvas id="pipelineChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Section: High Value Matches & Consultant Activity -->
+<div class="grid-2">
+    <!-- Top Matches Ready for Deal -->
+    <div class="glass-panel" style="padding: 1.75rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 700;">
+                <span class="text-neon-emerald">⚡</span> پیشنهادهای تطبیق هوشمند فوری (High Matches)
+            </h3>
+            <a href="{{ url_for('matching.console') }}" class="glass-btn" style="padding: 0.35rem 0.85rem; font-size: 0.82rem;">
+                مشاهده همه
+            </a>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for match in top_matches %}
+                <div class="glass-card" style="padding: 1.1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                            {{ match.property.title }}
+                        </div>
+                        <div style="font-size: 0.82rem; color: #94a3b8; display: flex; gap: 1rem;">
+                            <span>👤 متقاضی: <strong style="color: #ffffff;">{{ match.client.full_name }}</strong></span>
+                            <span>📍 {{ match.property.district }}</span>
+                            <span>💰 {% if match.property.deal_type == 'sale' %}{{ match.property.total_price | toman }}{% else %}{{ match.property.deposit | toman }} رهن{% endif %}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div class="match-score-pill {% if match.match_score >= 85 %}match-high{% else %}match-medium{% endif %}">
+                            {{ match.match_score | pnum }}٪
+                        </div>
+                        <a href="{{ url_for('properties.detail', id=match.property.id) }}" class="glass-btn" style="padding: 0.5rem 0.8rem; font-size: 0.82rem;">
+                            بررسی
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <div style="text-align: center; color: #64748b; padding: 2rem;">
+                    هنوز تطبیقی ثبت نشده است. از دکمه «بروزرسانی تطبیق» در بالای صفحه استفاده کنید.
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Consultant Performance -->
+    <div class="glass-panel" style="padding: 1.75rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 700;">عملکرد مشاوران و کارشناسان املاک</h3>
+            <span class="badge-neon badge-neon-emerald">تیم فروش</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+            {% for ag in agents %}
+                <div class="glass-card" style="padding: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 0.85rem;">
+                        <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid {{ ag.avatar_color }}; color: {{ ag.avatar_color }}; display: flex; align-items: center; justify-content: center; font-weight: 700; box-shadow: 0 0 12px {{ ag.avatar_color }}33;">
+                            {{ ag.name[0] }}
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.95rem;">{{ ag.name }}</div>
+                            <div style="font-size: 0.78rem; color: #94a3b8;">{{ ag.role }}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1.25rem; font-size: 0.85rem; text-align: center;">
+                        <div>
+                            <div style="font-weight: 700; color: #10b981;">{{ ag.closed_deals | pnum }}</div>
+                            <div style="font-size: 0.72rem; color: #64748b;">قرارداد</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; color: #00f2fe;">{{ ag.visits_done | pnum }}</div>
+                            <div style="font-size: 0.72rem; color: #64748b;">بازدید</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; color: #f59e0b;">{{ ag.calls_made | pnum }}</div>
+                            <div style="font-size: 0.72rem; color: #64748b;">تماس</div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Chart 1: District Distribution
+    const districtCtx = document.getElementById('districtChart').getContext('2d');
+    const districtLabels = {{ kpis.district_labels | tojson }};
+    const districtValues = {{ kpis.district_values | tojson }};
+
+    new Chart(districtCtx, {
+        type: 'bar',
+        data: {
+            labels: districtLabels.length ? districtLabels : ['سعادت آباد', 'نیاوران', 'شهرک غرب', 'تهرانپارس', 'پاسداران'],
+            datasets: [{
+                label: 'تعداد فایل‌ها',
+                data: districtValues.length ? districtValues : [12, 9, 7, 6, 5],
+                backgroundColor: [
+                    'rgba(0, 242, 254, 0.65)',
+                    'rgba(16, 185, 129, 0.65)',
+                    'rgba(139, 92, 246, 0.65)',
+                    'rgba(245, 158, 11, 0.65)',
+                    'rgba(244, 63, 94, 0.65)',
+                    'rgba(56, 189, 248, 0.65)'
+                ],
+                borderColor: [
+                    '#00f2fe',
+                    '#10b981',
+                    '#8b5cf6',
+                    '#f59e0b',
+                    '#f43f5e',
+                    '#38bdf8'
+                ],
+                borderWidth: 1.5,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8', font: { family: 'Vazirmatn' } }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8', font: { family: 'Vazirmatn' }, stepSize: 2 }
+                }
+            }
+        }
+    });
+
+    // Chart 2: Pipeline Stages
+    const pipelineCtx = document.getElementById('pipelineChart').getContext('2d');
+    const stages = {{ kpis.pipeline_stages | tojson }};
+
+    new Chart(pipelineCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['سرنخ جدید', 'تماس اولیه', 'در حال بازدید', 'مذاکره/نشست', 'عقد قرارداد'],
+            datasets: [{
+                data: [
+                    stages.new || 2,
+                    stages.contacted || 3,
+                    stages.visiting || 4,
+                    stages.negotiating || 2,
+                    stages.contract_won || 1
+                ],
+                backgroundColor: [
+                    'rgba(0, 242, 254, 0.75)',
+                    'rgba(56, 189, 248, 0.75)',
+                    'rgba(139, 92, 246, 0.75)',
+                    'rgba(245, 158, 11, 0.75)',
+                    'rgba(16, 185, 129, 0.75)'
+                ],
+                borderColor: '#0f172a',
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#cbd5e1', font: { family: 'Vazirmatn', size: 11 }, padding: 15 }
+                }
+            },
+            cutout: '70%'
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}پرونده {{ client.full_name }} | سقف CRM{% endblock %}
+
+{% block content %}
+<!-- Back & Actions -->
+<div style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+    <a href="{{ url_for('clients.list_clients') }}" class="glass-btn">
+        <span>←</span> بازگشت به بانک متقاضیان
+    </a>
+    <div style="display: flex; gap: 0.75rem;">
+        <button onclick="openModal('logCallModal')" class="glass-btn">
+            <span>📞</span> ثبت لاگ تماس و پیگیری
+        </button>
+        <button onclick="openModal('scheduleVisitModal')" class="btn-neon-cyan">
+            <span>📅</span> هماهنگی بازدید جدید
+        </button>
+    </div>
+</div>
+
+<div class="grid-2" style="margin-bottom: 2rem;">
+    <!-- Left Column: Client Requirements -->
+    <div class="glass-panel" style="padding: 1.75rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <div>
+                <span class="badge-neon {% if client.lead_status == 'contract_won' %}badge-neon-emerald{% elif client.lead_status == 'negotiating' %}badge-neon-purple{% elif client.lead_status == 'visiting' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
+                    {{ client.lead_status | lead_name }}
+                </span>
+                <span class="badge-neon badge-neon-purple" style="margin-right: 0.5rem;">
+                    فوریت: {{ client.urgency }}
+                </span>
+            </div>
+
+            <!-- Stage Changer Form -->
+            <form action="{{ url_for('clients.update_status', id=client.id) }}" method="POST" style="display: flex; align-items: center; gap: 0.5rem;">
+                <select name="status" class="glass-select" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;" onchange="this.form.submit()">
+                    <option value="new" {% if client.lead_status == 'new' %}selected{% endif %}>سرنخ جدید</option>
+                    <option value="contacted" {% if client.lead_status == 'contacted' %}selected{% endif %}>تماس اولیه</option>
+                    <option value="visiting" {% if client.lead_status == 'visiting' %}selected{% endif %}>هماهنگی بازدید</option>
+                    <option value="negotiating" {% if client.lead_status == 'negotiating' %}selected{% endif %}>در حال مذاکره</option>
+                    <option value="contract_won" {% if client.lead_status == 'contract_won' %}selected{% endif %}>عقد قرارداد (موفق)</option>
+                    <option value="lost" {% if client.lead_status == 'lost' %}selected{% endif %}>انصرافی</option>
+                </select>
+            </form>
+        </div>
+
+        <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem;">
+            {{ client.full_name }}
+        </h2>
+        <div style="color: #00f2fe; font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem; direction: ltr; display: inline-block;">
+            <a href="tel:{{ client.phone_number }}" style="color: inherit; text-decoration: none;">
+                {{ client.phone_number }}
+            </a>
+        </div>
+
+        <!-- Budget Box -->
+        <div class="glass-card" style="margin-bottom: 1.5rem; background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.25);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <div style="font-size: 0.8rem; color: #94a3b8;">نوع معامله درخواستی</div>
+                    <div style="font-size: 1.25rem; font-weight: 700; color: #ffffff;">
+                        {% if client.preferred_deal_type == 'sale' %}خرید ملک{% else %}رهن و اجاره{% endif %}
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: #94a3b8;">سقف بودجه پرداختی</div>
+                    <div style="font-size: 1.35rem; font-weight: 800; color: #10b981;">
+                        {% if client.preferred_deal_type == 'sale' %}
+                            {{ client.max_budget | toman }}
+                        {% else %}
+                            {{ client.max_deposit | toman }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Criteria Specs -->
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.85rem;">معیارهای انتخابی متقاضی</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="glass-card" style="padding: 0.85rem;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">مناطق و محله‌های مورد نظر</div>
+                <div style="font-weight: 700; margin-top: 0.25rem;">
+                    {{ client.preferred_districts | join('، ') if client.preferred_districts else 'نامحدود (کل تهران)' }}
+                </div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">بازه متراژ و خواب</div>
+                <div style="font-weight: 700; margin-top: 0.25rem;">
+                    {{ client.min_area | pnum }}{% if client.max_area %} تا {{ client.max_area | pnum }}{% endif %} متر (حداقل {{ client.min_rooms | pnum }} خواب)
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
+            <span class="badge-neon {% if client.must_have_parking %}badge-neon-emerald{% else %}badge-neon-amber{% endif %}">
+                پارکینگ: {% if client.must_have_parking %}الزامی{% else %}اختیاری{% endif %}
+            </span>
+            <span class="badge-neon {% if client.must_have_elevator %}badge-neon-emerald{% else %}badge-neon-amber{% endif %}">
+                آسانسور: {% if client.must_have_elevator %}الزامی{% else %}اختیاری{% endif %}
+            </span>
+            <span class="badge-neon {% if client.must_have_warehouse %}badge-neon-emerald{% else %}badge-neon-amber{% endif %}">
+                انباری: {% if client.must_have_warehouse %}الزامی{% else %}اختیاری{% endif %}
+            </span>
+        </div>
+
+        {% if client.notes %}
+            <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem;">یادداشت مشاور درباره متقاضی</h3>
+            <div style="background: rgba(255,255,255,0.04); padding: 0.85rem; border-radius: 12px; font-size: 0.9rem; color: #cbd5e1; line-height: 1.7;">
+                {{ client.notes }}
+            </div>
+        {% endif %}
+
+        <!-- Follow-up & Visits history -->
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>📞</span> تاریخچه تماس‌ها و پیگیری‌ها
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for it in interactions %}
+                <div class="glass-card" style="padding: 0.85rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                        <span class="badge-neon badge-neon-cyan" style="font-size: 0.75rem;">
+                            {{ it.type }} - {{ it.agent.name if it.agent else 'مشاور' }}
+                        </span>
+                        <span style="font-size: 0.75rem; color: #64748b;">{{ it.created_at.strftime('%Y-%m-%d %H:%M') if it.created_at else '' }}</span>
+                    </div>
+                    <div style="font-size: 0.88rem; color: #e2e8f0; margin-bottom: 0.35rem;">
+                        {{ it.summary }}
+                    </div>
+                    <div style="font-size: 0.78rem; color: #10b981;">
+                        نتیجه: {{ it.outcome }}
+                    </div>
+                </div>
+            {% else %}
+                <div style="color: #64748b; font-size: 0.85rem;">هنوز لاگ تماسی برای این مشتری ثبت نشده است.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Right Column: Matching Properties (AI Engine) -->
+    <div class="glass-panel" style="padding: 1.75rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                <span class="text-neon-cyan">⚡</span> املاک پیشنهادی و منطبق (AI Matching)
+            </h3>
+            <span class="badge-neon badge-neon-cyan">
+                {{ matching_props | length | pnum }} ملک سازگار
+            </span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for m in matching_props %}
+                <div class="glass-card" style="padding: 1.1rem; border-right: 4px solid {% if m.score >= 85 %}#10b981{% else %}#00f2fe{% endif %};">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem;">
+                        <div>
+                            <a href="{{ url_for('properties.detail', id=m.property.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 700; font-size: 1rem; line-height: 1.4;">
+                                {{ m.property.title }}
+                            </a>
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">
+                                📍 {{ m.property.district }} | {{ m.property.area | pnum }} متر ({{ m.property.rooms | pnum }} خواب)
+                            </div>
+                        </div>
+                        <div class="match-score-pill {% if m.score >= 85 %}match-high{% else %}match-medium{% endif %}" style="font-size: 0.88rem; padding: 0.25rem 0.65rem;">
+                            {{ m.score | pnum }}٪
+                        </div>
+                    </div>
+
+                    <!-- Price -->
+                    <div style="font-size: 0.95rem; font-weight: 700; color: #00f2fe; margin-bottom: 0.6rem;">
+                        {% if m.property.deal_type == 'sale' %}
+                            {{ m.property.total_price | toman }}
+                        {% else %}
+                            {{ m.property.deposit | toman }} رهن
+                            {% if m.property.monthly_rent > 0 %} + {{ m.property.monthly_rent | toman }} اجاره{% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Reasons -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.85rem;">
+                        {% for r in m.reasons %}
+                            <span class="badge-neon" style="font-size: 0.72rem; background: rgba(0, 242, 254, 0.08); border-color: rgba(0, 242, 254, 0.2); color: #38bdf8;">
+                                ✓ {{ r }}
+                            </span>
+                        {% endfor %}
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="{{ url_for('properties.detail', id=m.property.id) }}" class="glass-btn" style="padding: 0.35rem 0.75rem; font-size: 0.78rem; flex: 1; justify-content: center;">
+                            مشخصات ملک و مالک
+                        </a>
+                        <button onclick="scheduleVisitForProperty({{ m.property.id }}, '{{ m.property.title }}')" class="btn-neon-cyan" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
+                            هماهنگی بازدید
+                        </button>
+                    </div>
+                </div>
+            {% else %}
+                <div style="color: #64748b; font-size: 0.88rem; text-align: center; padding: 2rem;">
+                    هیچ ملکی در بانک فایلینگ با حداقل ۵۰٪ انطباق برای این متقاضی یافت نشد.
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Log Call -->
+<div id="logCallModal" class="glass-modal-overlay">
+    <div class="glass-modal-box">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">ثبت تماس با {{ client.full_name }}</h3>
+        <form action="{{ url_for('crm.create_call') }}" method="POST">
+            <input type="hidden" name="target_type" value="client">
+            <input type="hidden" name="target_id" value="{{ client.id }}">
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">نوع ارتباط</label>
+                <select name="type" class="glass-select">
+                    <option value="call">تماس تلفنی</option>
+                    <option value="whatsapp">پیام‌رسان واتساپ/تلگرام</option>
+                    <option value="meeting">جلسه حضوری در دفتر</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">نتیجه گفتگو</label>
+                <select name="outcome" class="glass-select">
+                    <option value="interested">علاقه‌مند به فایل‌های معرفی شده</option>
+                    <option value="requested_visit">درخواست بازدید ملک</option>
+                    <option value="call_back">درخواست تماس در زمان دیگر</option>
+                    <option value="rejected">عدم تمایل / انصراف</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">خلاصه صحبت‌ها و فایل‌های معرفی شده</label>
+                <textarea name="summary" rows="3" class="glass-textarea" required placeholder="فایل‌های پیشنهادی را برایشان شرح دادم و..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="closeModal('logCallModal')" class="glass-btn">انصراف</button>
+                <button type="submit" class="btn-neon-emerald">ثبت گزارش</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Schedule Visit -->
+<div id="scheduleVisitModal" class="glass-modal-overlay">
+    <div class="glass-modal-box">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">هماهنگی و برنامه‌ریزی بازدید ملک برای متقاضی</h3>
+        <form action="{{ url_for('crm.schedule_visit') }}" method="POST">
+            <input type="hidden" name="client_id" value="{{ client.id }}">
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">انتخاب ملک مورد بازدید</label>
+                <select id="modal_property_select" name="property_id" class="glass-select" required>
+                    {% for m in matching_props %}
+                        <option value="{{ m.property.id }}">{{ m.property.title }} ({{ m.score }}٪ تطابق)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">کارشناس همراه بازدید</label>
+                <select name="agent_id" class="glass-select">
+                    {% for ag in agents %}
+                        <option value="{{ ag.id }}">{{ ag.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">زمان بازدید</label>
+                <input type="datetime-local" name="scheduled_time" class="glass-input" required>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="closeModal('scheduleVisitModal')" class="glass-btn">انصراف</button>
+                <button type="submit" class="btn-neon-cyan">ثبت هماهنگی بازدید</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function scheduleVisitForProperty(propertyId, propertyTitle) {
+        const select = document.getElementById('modal_property_select');
+        if (select) {
+            select.value = propertyId;
+        }
+        openModal('scheduleVisitModal');
+    }
+</script>
+{% endblock %}

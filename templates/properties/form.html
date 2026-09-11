@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}ثبت فایل جدید املاک | سقف{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            ثبت فایل جدید با اطلاعات مالک <span class="text-neon-cyan">«سقف»</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            ثبت ملک کارشناسی‌شده در سیستم و تطبیق فوری خودکار با متقاضیان فعال
+        </p>
+    </div>
+    <a href="{{ url_for('properties.list_properties') }}" class="glass-btn">
+        <span>←</span> انصراف و بازگشت
+    </a>
+</div>
+
+<form method="POST" action="{{ url_for('properties.create') }}">
+    <div class="grid-2">
+        <!-- Property Data -->
+        <div class="glass-panel" style="padding: 1.75rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>🏢</span> اطلاعات و مشخصات ملک
+            </h3>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">عنوان کامل فایل *</label>
+                <input type="text" name="title" required placeholder="مثلاً: آپارتمان ۱۶۰ متری ۳ خوابه کلیدنخورده سعادت آباد" class="glass-input">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">نوع معامله *</label>
+                    <select name="deal_type" id="deal_type_select" class="glass-select" onchange="togglePriceFields()">
+                        <option value="sale">فروش</option>
+                        <option value="rent">رهن و اجاره</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">نوع کاربری / ملک</label>
+                    <select name="property_type" class="glass-select">
+                        <option value="apartment">آپارتمان مسکونی</option>
+                        <option value="villa">ویلا و خانه حیاط‌دار</option>
+                        <option value="commercial">مغازه و تجاری</option>
+                        <option value="office">دفتر کار و اداری</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">منطقه / محله *</label>
+                    <input type="text" name="district" required placeholder="مثلاً: سعادت آباد" class="glass-input">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">آدرس دقیق یا کوچه</label>
+                    <input type="text" name="address" placeholder="بلوار ۲۴ متری، کوچه نهم..." class="glass-input">
+                </div>
+            </div>
+
+            <!-- Price Fields -->
+            <div id="sale_prices_box" style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">قیمت کل فروش (تومان)</label>
+                    <input type="number" name="total_price" placeholder="مثلاً: 25000000000" class="glass-input">
+                </div>
+            </div>
+
+            <div id="rent_prices_box" style="display: none; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">مبلغ ودیعه (تومان)</label>
+                    <input type="number" name="deposit" placeholder="مثلاً: 1500000000" class="glass-input">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">اجاره ماهانه (تومان)</label>
+                    <input type="number" name="monthly_rent" placeholder="مثلاً: 35000000" class="glass-input">
+                </div>
+            </div>
+
+            <!-- Dimensions -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">متراژ (مترمربع) *</label>
+                    <input type="number" name="area" required placeholder="140" class="glass-input">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">تعداد خواب</label>
+                    <input type="number" name="rooms" value="2" class="glass-input">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">طبقه</label>
+                    <input type="number" name="floor" value="3" class="glass-input">
+                </div>
+            </div>
+
+            <!-- Amenities Checkboxes -->
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem;">امکانات اصلی ملک</label>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer;">
+                        <input type="checkbox" name="has_parking" checked style="accent-color: #00f2fe;">
+                        <span>پارکینگ سندی</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer;">
+                        <input type="checkbox" name="has_elevator" checked style="accent-color: #00f2fe;">
+                        <span>آسانسور</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer;">
+                        <input type="checkbox" name="has_warehouse" checked style="accent-color: #00f2fe;">
+                        <span>انباری</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer;">
+                        <input type="checkbox" name="has_balcony" checked style="accent-color: #00f2fe;">
+                        <span>بالکن / تراس</span>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">توضیحات و نکات تکمیلی فایل</label>
+                <textarea name="description" rows="3" class="glass-textarea" placeholder="متریال، نورگیر، دید و ویو، شرایط سند..."></textarea>
+            </div>
+        </div>
+
+        <!-- Owner & Consultant -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Owner Info -->
+            <div class="glass-panel" style="padding: 1.75rem; border-right: 4px solid #10b981;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>👤</span> اطلاعات تماس و روان‌شناسی مالک
+                </h3>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">نام و نام خانوادگی مالک *</label>
+                    <input type="text" name="owner_name" required placeholder="مثلاً: آقای دکتر رحیمی" class="glass-input">
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">شماره موبایل مالک *</label>
+                    <input type="text" name="owner_phone" required placeholder="09121112233" style="direction: ltr;" class="glass-input">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">میزان فوریت فروش</label>
+                        <select name="owner_urgency" class="glass-select">
+                            <option value="high">فوری و پول لازم</option>
+                            <option value="medium" selected>معمولی</option>
+                            <option value="low">بدون عجله</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">تخفیف‌پذیری و انعطاف</label>
+                        <select name="owner_flexibility" class="glass-select">
+                            <option value="تخفیف خوب پای قرارداد">تخفیف خوب پای قرارداد</option>
+                            <option value="معمولی">معمولی</option>
+                            <option value="قیمت مقطوع">قیمت مقطوع</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">یادداشت محرمانه درباره مالک</label>
+                    <textarea name="owner_notes" rows="2" class="glass-textarea" placeholder="ساعات مناسب تماس، خلقیات، علت فروش..."></textarea>
+                </div>
+            </div>
+
+            <!-- Consultant Assignment -->
+            <div class="glass-panel" style="padding: 1.75rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>👔</span> کارشناس مسئول فایل
+                </h3>
+                <select name="assigned_agent_id" class="glass-select" style="margin-bottom: 1.5rem;">
+                    <option value="">-- بدون مشاور اختصاصی --</option>
+                    {% for ag in agents %}
+                        <option value="{{ ag.id }}">{{ ag.name }} ({{ ag.role }})</option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit" class="btn-neon-cyan" style="width: 100%; justify-content: center; padding: 0.9rem;">
+                    <span>✓</span> ذخیره فایل و اجرای موتور تطبیق
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function togglePriceFields() {
+        const deal = document.getElementById('deal_type_select').value;
+        const saleBox = document.getElementById('sale_prices_box');
+        const rentBox = document.getElementById('rent_prices_box');
+        if (deal === 'sale') {
+            saleBox.style.display = 'grid';
+            rentBox.style.display = 'none';
+        } else {
+            saleBox.style.display = 'none';
+            rentBox.style.display = 'grid';
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}کنسول هوشمند تطبیق ملک و مشتری | سقف AI{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            کنسول تطبیق هوشمند دوطرفه <span class="text-neon-cyan">«سقف AI»</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            کشف سریع ارتباط میان فایل‌های ملکی و تقاضای خریداران بر پایه الگوریتم وزن‌دهی چندمعیاره
+        </p>
+    </div>
+    <form action="{{ url_for('matching.refresh_all') }}" method="POST">
+        <button type="submit" class="btn-neon-purple">
+            <span>⚡</span> محاسبه مجدد و تحلیل تطابق‌های سراسری
+        </button>
+    </form>
+</div>
+
+<!-- Filters Bar -->
+<div class="glass-panel" style="padding: 1.25rem; margin-bottom: 2rem;">
+    <form method="GET" action="{{ url_for('matching.console') }}" style="display: flex; gap: 1.5rem; align-items: center;">
+        <div>
+            <label style="font-size: 0.82rem; color: #94a3b8; margin-left: 0.5rem;">حداقل درصد تطابق:</label>
+            <select name="min_score" class="glass-select" style="width: 140px; display: inline-block;" onchange="this.form.submit()">
+                <option value="50" {% if min_score == 50 %}selected{% endif %}>۵۰٪ و بالاتر</option>
+                <option value="65" {% if min_score == 65 %}selected{% endif %}>۶۵٪ و بالاتر</option>
+                <option value="80" {% if min_score == 80 %}selected{% endif %}>۸۰٪ و بالاتر (طلایی)</option>
+                <option value="90" {% if min_score == 90 %}selected{% endif %}>۹۰٪ و بالاتر (قطعی)</option>
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size: 0.82rem; color: #94a3b8; margin-left: 0.5rem;">نوع معامله:</label>
+            <select name="deal_type" class="glass-select" style="width: 140px; display: inline-block;" onchange="this.form.submit()">
+                <option value="all" {% if deal_type == 'all' %}selected{% endif %}>همه</option>
+                <option value="sale" {% if deal_type == 'sale' %}selected{% endif %}>فروش</option>
+                <option value="rent" {% if deal_type == 'rent' %}selected{% endif %}>رهن و اجاره</option>
+            </select>
+        </div>
+
+        <div style="margin-right: auto;">
+            <span class="badge-neon badge-neon-cyan">
+                {{ records | length | pnum }} فرصت معامله فعال شناسایی شده
+            </span>
+        </div>
+    </form>
+</div>
+
+<!-- Matching Cards Grid -->
+<div style="display: flex; flex-direction: column; gap: 1.25rem;">
+    {% for rec in records %}
+        <div class="glass-panel" style="padding: 1.5rem; border-right: 5px solid {% if rec.match_score >= 85 %}#10b981{% elif rec.match_score >= 70 %}#00f2fe{% else %}#f59e0b{% endif %};">
+            <div style="display: grid; grid-template-columns: 1.5fr auto 1.5fr 1fr; gap: 1.5rem; align-items: center;">
+                <!-- Property Box -->
+                <div class="glass-card" style="padding: 1rem;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem;">ملک عرضه شده (Filing)</div>
+                    <a href="{{ url_for('properties.detail', id=rec.property.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.95rem; line-height: 1.4; display: block; margin-bottom: 0.4rem;">
+                        {{ rec.property.title }}
+                    </a>
+                    <div style="font-size: 0.8rem; color: #cbd5e1; display: flex; gap: 0.85rem;">
+                        <span>📍 {{ rec.property.district }}</span>
+                        <span>📐 {{ rec.property.area | pnum }} متر</span>
+                        <span style="color: #00f2fe; font-weight: 700;">
+                            {% if rec.property.deal_type == 'sale' %}
+                                {{ rec.property.total_price | toman }}
+                            {% else %}
+                                {{ rec.property.deposit | toman }} رهن
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Match Connector Badge -->
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem;">
+                    <div class="match-score-pill {% if rec.match_score >= 85 %}match-high{% elif rec.match_score >= 70 %}match-medium{% else %}match-low{% endif %}">
+                        {{ rec.match_score | pnum }}٪
+                    </div>
+                    <div style="font-size: 0.72rem; color: #94a3b8;">تطابق الگوریتم</div>
+                    <div style="color: #00f2fe; font-size: 1.2rem;">⟷</div>
+                </div>
+
+                <!-- Client Box -->
+                <div class="glass-card" style="padding: 1rem;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem;">متقاضی و خریدار (Demand)</div>
+                    <a href="{{ url_for('clients.detail', id=rec.client.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.95rem; display: block; margin-bottom: 0.4rem;">
+                        {{ rec.client.full_name }}
+                    </a>
+                    <div style="font-size: 0.8rem; color: #cbd5e1; display: flex; gap: 0.85rem;">
+                        <span>📞 <span style="direction: ltr; display: inline-block;">{{ rec.client.phone_number }}</span></span>
+                        <span style="color: #10b981; font-weight: 700;">
+                            سقف بودجه: 
+                            {% if rec.client.preferred_deal_type == 'sale' %}
+                                {{ rec.client.max_budget | toman }}
+                            {% else %}
+                                {{ rec.client.max_deposit | toman }}
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Actions & Match Reasons -->
+                <div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.85rem;">
+                        {% for r in rec.match_reasons %}
+                            <span class="badge-neon" style="font-size: 0.7rem; background: rgba(0, 242, 254, 0.08); border-color: rgba(0, 242, 254, 0.2); color: #38bdf8;">
+                                ✓ {{ r }}
+                            </span>
+                        {% endfor %}
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.45rem;">
+                        <a href="{{ url_for('properties.detail', id=rec.property.id) }}" class="btn-neon-cyan" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; justify-content: center;">
+                            <span>⚡</span> معرفی و هماهنگی بازدید
+                        </a>
+                        <button onclick="markSuggested({{ rec.id }}, this)" class="glass-btn" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; justify-content: center;">
+                            {% if rec.is_suggested %}✓ معرفی‌شده به مشتری{% else %}نشانه‌گذاری به عنوان پیشنهاد{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="glass-panel" style="padding: 4rem; text-align: center; color: #64748b;">
+            فرصت تطابقی با این درصد سازگاری یافت نشد. می‌توانید از بالای صفحه «محاسبه مجدد تطابق‌ها» را کلیک کنید یا فیلتر حداقل درصد را کاهش دهید.
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function markSuggested(recordId, btn) {
+        try {
+            const res = await fetch(`/matching/${recordId}/suggest`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                btn.innerHTML = '✓ معرفی‌شده به مشتری';
+                btn.style.borderColor = '#10b981';
+                btn.style.color = '#10b981';
+                showToast(data.message, 'success');
+            }
+        } catch (e) {
+            showToast('خطا در ثبت وضعیت پیشنهاد', 'error');
+        }
+    }
+</script>
+{% endblock %}

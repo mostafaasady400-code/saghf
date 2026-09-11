@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}ثبت متقاضی جدید | سقف{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            ثبت متقاضی جدید و تعریف نیاز ملکی <span class="text-neon-emerald">«سقف»</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            دریافت اطلاعات خریدار یا مستاجر جهت اتصال فوری به فایل‌های متناسب موجود در پایگاه داده
+        </p>
+    </div>
+    <a href="{{ url_for('clients.list_clients') }}" class="glass-btn">
+        <span>←</span> انصراف و بازگشت
+    </a>
+</div>
+
+<form method="POST" action="{{ url_for('clients.create') }}">
+    <div class="grid-2">
+        <!-- Client Identity & Budget -->
+        <div class="glass-panel" style="padding: 1.75rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>👤</span> مشخصات متقاضی و بودجه
+            </h3>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">نام و نام خانوادگی خریدار / متقاضی *</label>
+                <input type="text" name="full_name" required placeholder="مثلاً: مهندس آرش رستگار" class="glass-input">
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">شماره موبایل *</label>
+                <input type="text" name="phone_number" required placeholder="09123456789" style="direction: ltr;" class="glass-input">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">نوع معامله درخواستی *</label>
+                    <select name="preferred_deal_type" id="deal_type_select" class="glass-select" onchange="toggleBudgetFields()">
+                        <option value="sale">خرید ملک</option>
+                        <option value="rent">رهن و اجاره</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">درجه فوریت خرید</label>
+                    <select name="urgency" class="glass-select">
+                        <option value="immediate">فوری (آماده واریز وجه)</option>
+                        <option value="urgent">طی یک هفته آینده</option>
+                        <option value="normal" selected>معمولی (طی ماه جاری)</option>
+                        <option value="looking">در حال بررسی بازار</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Sale Budgets -->
+            <div id="sale_budget_box" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">حداقل بودجه (تومان)</label>
+                    <input type="number" name="min_budget" placeholder="15000000000" class="glass-input">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">سقف بودجه خرید (تومان) *</label>
+                    <input type="number" name="max_budget" placeholder="25000000000" class="glass-input">
+                </div>
+            </div>
+
+            <!-- Rent Budgets -->
+            <div id="rent_budget_box" style="display: none; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">سقف مبلغ ودیعه (تومان)</label>
+                    <input type="number" name="max_deposit" placeholder="2000000000" class="glass-input">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">سقف اجاره ماهانه (تومان)</label>
+                    <input type="number" name="max_rent" placeholder="40000000" class="glass-input">
+                </div>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">توضیحات و نیازمندی‌های ویژه</label>
+                <textarea name="notes" rows="3" class="glass-textarea" placeholder="مثلاً: متقاضی حتماً واحد جنوبی با نور مستقیم می‌خواهد..."></textarea>
+            </div>
+        </div>
+
+        <!-- Property Specifications Preferences -->
+        <div class="glass-panel" style="padding: 1.75rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>🎯</span> سلایق منطقه‌ای و فیزیکی
+            </h3>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">مناطق و محله‌های مورد نظر (با کاما جدا کنید)</label>
+                <input type="text" name="preferred_districts" placeholder="سعادت آباد، شهرک غرب، پونک" class="glass-input">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">حداقل متراژ</label>
+                    <input type="number" name="min_area" placeholder="100" class="glass-input">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">حداکثر متراژ</label>
+                    <input type="number" name="max_area" placeholder="160" class="glass-input">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">حداقل خواب</label>
+                    <input type="number" name="min_rooms" value="2" class="glass-input">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem;">امکانات غیرقابل مذاکره (الزامی)</label>
+                <div style="display: flex; gap: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer;">
+                        <input type="checkbox" name="must_have_parking" checked style="accent-color: #10b981;">
+                        <span>پارکینگ الزامی</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer;">
+                        <input type="checkbox" name="must_have_elevator" checked style="accent-color: #10b981;">
+                        <span>آسانسور الزامی</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer;">
+                        <input type="checkbox" name="must_have_warehouse" style="accent-color: #10b981;">
+                        <span>انباری الزامی</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">مشاور پیگیر متقاضی</label>
+                <select name="assigned_agent_id" class="glass-select">
+                    <option value="">-- بدون مشاور اختصاصی --</option>
+                    {% for ag in agents %}
+                        <option value="{{ ag.id }}">{{ ag.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn-neon-emerald" style="width: 100%; justify-content: center; padding: 0.9rem;">
+                <span>⚡</span> ثبت متقاضی و استخراج املاک پیشنهادی
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function toggleBudgetFields() {
+        const deal = document.getElementById('deal_type_select').value;
+        const saleBox = document.getElementById('sale_budget_box');
+        const rentBox = document.getElementById('rent_budget_box');
+        if (deal === 'sale') {
+            saleBox.style.display = 'grid';
+            rentBox.style.display = 'none';
+        } else {
+            saleBox.style.display = 'none';
+            rentBox.style.display = 'grid';
+        }
+    }
+</script>
+{% endblock %}

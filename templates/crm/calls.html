@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}تاریخچه تماس‌ها و پیگیری‌ها | سقف CRM{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            تاریخچه تماس‌ها و پیگیری‌های مشاوران <span class="text-neon-cyan">«سقف CRM»</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            ثبت و رصد مکالمات تلفنی با مالکین و خریداران و یادآوری تاریخ پیگیری‌های آتی
+        </p>
+    </div>
+    <button onclick="openModal('newCallModal')" class="btn-neon-cyan">
+        <span>➕</span> ثبت تماس جدید
+    </button>
+</div>
+
+<!-- Interaction Logs Table -->
+<div class="glass-panel" style="padding: 1.75rem;">
+    <div style="overflow-x: auto;">
+        <table class="glass-table">
+            <thead>
+                <tr>
+                    <th>زمان ثبت</th>
+                    <th>نوع ارتباط</th>
+                    <th>مخاطب (مشتری / مالک)</th>
+                    <th>فایل مرتبط</th>
+                    <th>مشاور ثبت‌کننده</th>
+                    <th>خلاصه گفتگو</th>
+                    <th>نتیجه و خروجی</th>
+                    <th>پیگیری بعدی</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in interactions %}
+                    <tr class="glass-row">
+                        <td style="color: #94a3b8; font-size: 0.82rem;">
+                            {{ it.created_at.strftime('%Y-%m-%d %H:%M') if it.created_at else '' }}
+                        </td>
+                        <td>
+                            <span class="badge-neon badge-neon-purple">
+                                {% if it.type == 'call' %}تماس تلفنی{% elif it.type == 'whatsapp' %}واتساپ{% else %}جلسه حضوری{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="font-weight: 700; color: #ffffff;">
+                                {% if it.target_type == 'client' %}
+                                    مشتری کد {{ it.target_id }}
+                                {% else %}
+                                    مالک کد {{ it.target_id }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if it.property %}
+                                <a href="{{ url_for('properties.detail', id=it.property.id) }}" style="color: #00f2fe; text-decoration: none;">
+                                    {{ it.property.title[:35] }}...
+                                </a>
+                            {% else %}
+                                <span style="color: #64748b;">کلی</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ it.agent.name if it.agent else 'مشاور سیستم' }}</td>
+                        <td style="max-width: 320px; line-height: 1.5; font-size: 0.88rem;">
+                            {{ it.summary }}
+                        </td>
+                        <td>
+                            <span class="badge-neon {% if it.outcome == 'requested_visit' or it.outcome == 'interested' %}badge-neon-emerald{% else %}badge-neon-amber{% endif %}">
+                                {{ it.outcome }}
+                            </span>
+                        </td>
+                        <td style="color: #38bdf8; font-size: 0.85rem;">
+                            {{ it.next_followup_date.strftime('%Y-%m-%d %H:%M') if it.next_followup_date else '-' }}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: #64748b; padding: 2rem;">
+                            هنوز تماس یا پیگیری ثبت نشده است.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: New Call -->
+<div id="newCallModal" class="glass-modal-overlay">
+    <div class="glass-modal-box">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">ثبت سریع تماس / پیگیری</h3>
+        <form action="{{ url_for('crm.create_call') }}" method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">نوع مخاطب</label>
+                    <select name="target_type" class="glass-select">
+                        <option value="client">متقاضی (خریدار/مستاجر)</option>
+                        <option value="owner">مالک ملک</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">شناسه مخاطب</label>
+                    <input type="number" name="target_id" value="1" required class="glass-input">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">نوع ارتباط</label>
+                    <select name="type" class="glass-select">
+                        <option value="call">تماس تلفنی</option>
+                        <option value="whatsapp">پیام‌رسان واتساپ/تلگرام</option>
+                        <option value="meeting">جلسه حضوری</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">کارشناس ثبت‌کننده</label>
+                    <select name="agent_id" class="glass-select">
+                        {% for ag in agents %}
+                            <option value="{{ ag.id }}">{{ ag.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">نتیجه پیگیری</label>
+                <select name="outcome" class="glass-select">
+                    <option value="interested">علاقه‌مند و همراه</option>
+                    <option value="requested_visit">هماهنگی ساعت بازدید</option>
+                    <option value="call_back">درخواست تماس مجدد</option>
+                    <option value="price_high">ایراد قیمت بالا</option>
+                    <option value="rejected">رد شد / عدم تمایل</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">خلاصه گفتگو</label>
+                <textarea name="summary" rows="3" class="glass-textarea" required placeholder="نکات مهم و تصمیمات طرفین..."></textarea>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">تاریخ و ساعت پیگیری بعدی (اختیاری)</label>
+                <input type="datetime-local" name="next_followup_date" class="glass-input">
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="closeModal('newCallModal')" class="glass-btn">انصراف</button>
+                <button type="submit" class="btn-neon-cyan">ثبت لاگ</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
