@@ -15,11 +15,26 @@ def parse_price(val: Any) -> int:
     if not val:
         return 0
     if isinstance(val, (int, float)):
-        return int(val)
+        return min(int(val), 500_000_000_000)
     text = persian_to_english_numbers(str(val))
-    digits = re.findall(r'\d+', text.replace(',', '').replace('،', ''))
+    # 1. Comma-separated currency formatting (e.g. 22,000,000,000)
+    m = re.search(r'(\d{1,3}(?:[,\،]\d{3})+)', text)
+    if m:
+        cleaned = m.group(1).replace(',', '').replace('،', '')
+        return min(int(cleaned), 500_000_000_000)
+
+    # 2. Text words like میلیارد or میلیون
+    m2 = re.search(r'(\d+)\s*(?:میلیارد|همت)', text)
+    if m2:
+        return min(int(m2.group(1)) * 1_000_000_000, 500_000_000_000)
+    m3 = re.search(r'(\d+)\s*(?:میلیون)', text)
+    if m3:
+        return min(int(m3.group(1)) * 1_000_000, 500_000_000_000)
+
+    # 3. Discrete numbers
+    digits = re.findall(r'\b\d{5,13}\b', text.replace(',', '').replace('،', ''))
     if digits:
-        return int(''.join(digits))
+        return min(int(digits[0]), 500_000_000_000)
     return 0
 
 class OwnerSchema(BaseModel):

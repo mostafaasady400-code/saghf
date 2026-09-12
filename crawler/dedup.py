@@ -38,6 +38,11 @@ class DeduplicationEngine:
         with self.lock:
             self._seen_tokens.add(token)
 
+    def clear(self):
+        with self.lock:
+            self._seen_tokens.clear()
+            self._is_initialized = False
+
     def size(self) -> int:
         with self.lock:
             return len(self._seen_tokens)

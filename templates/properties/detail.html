@@ -8,7 +8,12 @@
     <a href="{{ url_for('properties.list_properties') }}" class="glass-btn">
         <span>←</span> بازگشت به لیست فایل‌ها
     </a>
-    <div style="display: flex; gap: 0.75rem;">
+    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        {% if prop.source_url %}
+            <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" class="btn-neon-cyan" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(79, 172, 254, 0.3)); border: 1px solid #00f2fe; text-decoration: none; box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);">
+                <span>🌐</span> مشاهده آگهی اصلی در {{ 'دیوار' if prop.source == 'divar' else ('شیپور' if prop.source == 'sheypoor' else 'منبع') }}
+            </a>
+        {% endif %}
         {% if prop.status != 'verified' %}
             <form action="{{ url_for('properties.verify', id=prop.id) }}" method="POST" style="display: inline;">
                 <button type="submit" class="btn-neon-emerald">
@@ -25,7 +30,7 @@
 <div class="grid-2" style="margin-bottom: 2rem;">
     <!-- Main Property Info -->
     <div class="glass-panel" style="padding: 1.75rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span class="badge-neon {% if prop.deal_type == 'sale' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
                     {{ prop.deal_type | deal_name }}
@@ -33,6 +38,11 @@
                 <span class="badge-neon badge-neon-purple">
                     منبع: {% if prop.source == 'divar' %}دیوار{% elif prop.source == 'sheypoor' %}شیپور{% else %}مالک مستقیم{% endif %}
                 </span>
+                {% if prop.source_url %}
+                    <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none;">
+                        🔗 لینک مستقیم آگهی
+                    </a>
+                {% endif %}
             </div>
             <div class="match-score-pill match-high">
                 امتیاز کارشناسی: {{ prop.score | pnum }}

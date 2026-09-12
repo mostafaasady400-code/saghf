@@ -137,6 +137,7 @@
                 <tr>
                     <th>منبع</th>
                     <th>عنوان فایل</th>
+                    <th>لینک مبدأ</th>
                     <th>منطقه / شهر</th>
                     <th>نوع معامله</th>
                     <th>متراژ و خواب</th>
@@ -160,6 +161,15 @@
                             <a href="{{ url_for('properties.detail', id=p.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 600;">
                                 {{ p.title }}
                             </a>
+                        </td>
+                        <td>
+                            {% if p.source_url %}
+                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none; font-size: 0.75rem; white-space: nowrap;">
+                                    🌐 مشاهده آگهی
+                                </a>
+                            {% else %}
+                                <span style="color: #64748b; font-size: 0.75rem;">-</span>
+                            {% endif %}
                         </td>
                         <td>{{ p.district }}</td>
                         <td>
@@ -187,14 +197,19 @@
                             {% endif %}
                         </td>
                         <td>
-                            <div style="display: flex; gap: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                {% if p.source_url %}
+                                    <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.78rem; border-color: rgba(0, 242, 254, 0.4); color: #00f2fe; text-decoration: none;" title="مشاهده در پلتفرم اصلی">
+                                        🌐 منبع
+                                    </a>
+                                {% endif %}
                                 <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
                                     مشاهده
                                 </a>
                                 {% if p.status != 'verified' %}
                                     <form action="{{ url_for('properties.verify', id=p.id) }}" method="POST" style="display: inline;">
                                         <button type="submit" class="btn-neon-emerald" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
-                                            ✓ تأیید و ثبت در دفتر
+                                            ✓ تأیید
                                         </button>
                                     </form>
                                 {% endif %}
@@ -203,7 +218,7 @@
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="9" style="text-align: center; color: #64748b; padding: 2rem;">
+                        <td colspan="10" style="text-align: center; color: #64748b; padding: 2rem;">
                             هنوز فایلی کراول نشده است. با کلیک بر روی دکمه «شروع کراولینگ»، فرآیند استخراج را آغاز نمایید.
                         </td>
                     </tr>
