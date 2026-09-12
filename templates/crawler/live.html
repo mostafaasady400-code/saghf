@@ -164,8 +164,8 @@
                         </td>
                         <td>
                             {% if p.source_url %}
-                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none; font-size: 0.75rem; white-space: nowrap;">
-                                    🌐 مشاهده آگهی
+                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none; font-size: 0.78rem; white-space: nowrap;">
+                                    لینک آگهی
                                 </a>
                             {% else %}
                                 <span style="color: #64748b; font-size: 0.75rem;">-</span>
@@ -199,8 +199,8 @@
                         <td>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
                                 {% if p.source_url %}
-                                    <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.78rem; border-color: rgba(0, 242, 254, 0.4); color: #00f2fe; text-decoration: none;" title="مشاهده در پلتفرم اصلی">
-                                        🌐 منبع
+                                    <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.78rem; border-color: rgba(0, 242, 254, 0.4); color: #00f2fe; text-decoration: none;">
+                                        لینک آگهی
                                     </a>
                                 {% endif %}
                                 <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">

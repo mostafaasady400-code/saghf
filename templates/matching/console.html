@@ -71,6 +71,13 @@
                             {% endif %}
                         </span>
                     </div>
+                    {% if rec.property.source_url %}
+                        <div style="margin-top: 0.45rem;">
+                            <a href="{{ rec.property.source_url }}" target="_blank" rel="noopener noreferrer" style="color: #00f2fe; text-decoration: underline; font-size: 0.78rem; font-weight: 600;">
+                                لینک آگهی
+                            </a>
+                        </div>
+                    {% endif %}
                 </div>
 
                 <!-- Match Connector Badge -->

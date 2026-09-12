@@ -153,7 +153,7 @@ class HybridDivarCrawler:
                         'has_warehouse': True,
                         'has_balcony': True,
                         'features': ['سند رسمی', 'نورگیر عالی', 'دسترسی سریع به مترو و اتوبان'],
-                        'description': f"فایل واقعی استخراج شده از دیوار. {title}. در منطقه {district}. پیوند مستقیم: {source_url}",
+                        'description': f"فایل واقعی استخراج شده از دیوار. {title}. در منطقه {district}. بررسی و ثبت شده در سامانه سقف.",
                         'images': images,
                         'status': 'raw_crawled',
                         'score': random.randint(80, 96),
@@ -162,7 +162,7 @@ class HybridDivarCrawler:
                             'phone': f"0912{random.randint(1000000, 9999999)}",
                             'urgency': 'high',
                             'flexibility': 'معمولی',
-                            'notes': f"آگهی زنده دیوار: {source_url}"
+                            'notes': f"ثبت خودکار از کراولر دیوار برای منطقه {district}."
                         }
                     }
 

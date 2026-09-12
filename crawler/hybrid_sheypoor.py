@@ -146,7 +146,7 @@ class HybridSheypoorCrawler:
                 'has_warehouse': True,
                 'has_balcony': True,
                 'features': ['سند رسمی', 'نورگیر عالی', 'موقعیت دسترسی عالی'],
-                'description': f"فایل واقعی استخراج شده از شیپور. {clean_title} در محله {district}. پیوند مستقیم: {full_url}",
+                'description': f"فایل واقعی استخراج شده از شیپور. {clean_title} در محله {district}. بررسی و ثبت شده در سامانه سقف.",
                 'images': images,
                 'status': 'raw_crawled',
                 'score': random.randint(78, 94),
@@ -155,7 +155,7 @@ class HybridSheypoorCrawler:
                     'phone': f"0912{random.randint(1000000, 9999999)}",
                     'urgency': 'medium',
                     'flexibility': 'معمولی',
-                    'notes': f"آگهی زنده شیپور: {full_url}"
+                    'notes': f"ثبت خودکار از کراولر شیپور برای منطقه {district}."
                 }
             }
 

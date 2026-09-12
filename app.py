@@ -87,6 +87,17 @@ def create_app(config_class=Config):
         }
         return mapping.get(status, status)
 
+    @app.template_filter('linkify_ad')
+    def linkify_ad_filter(text):
+        if not text:
+            return ''
+        import re
+        pattern = r'https?://[^\s<>"]+'
+        def repl(match):
+            url = match.group(0)
+            return f'<a href="{url}" target="_blank" rel="noopener noreferrer" style="color: #00f2fe; text-decoration: underline; font-weight: 700;">لینک آگهی</a>'
+        return re.sub(pattern, repl, str(text))
+
     with app.app_context():
         db.create_all()
 

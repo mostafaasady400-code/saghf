@@ -11,7 +11,7 @@
     <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
         {% if prop.source_url %}
             <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" class="btn-neon-cyan" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(79, 172, 254, 0.3)); border: 1px solid #00f2fe; text-decoration: none; box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);">
-                <span>🌐</span> مشاهده آگهی اصلی در {{ 'دیوار' if prop.source == 'divar' else ('شیپور' if prop.source == 'sheypoor' else 'منبع') }}
+                <span>🔗</span> لینک آگهی
             </a>
         {% endif %}
         {% if prop.status != 'verified' %}
@@ -40,7 +40,7 @@
                 </span>
                 {% if prop.source_url %}
                     <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none;">
-                        🔗 لینک مستقیم آگهی
+                        لینک آگهی
                     </a>
                 {% endif %}
             </div>
@@ -139,7 +139,7 @@
         <!-- Description -->
         <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">توضیحات و یادداشت کارشناسی</h3>
         <p style="color: #cbd5e1; line-height: 1.8; font-size: 0.95rem; margin-bottom: 1.5rem;">
-            {{ prop.description or 'توضیحاتی برای این فایل درج نشده است.' }}
+            {{ (prop.description or 'توضیحاتی برای این فایل درج نشده است.') | linkify_ad | safe }}
         </p>
 
         <!-- Features Pills -->
@@ -187,7 +187,15 @@
                     </div>
                     {% if prop.owner.notes %}
                         <div style="background: rgba(255,255,255,0.04); padding: 0.75rem; border-radius: 10px; font-size: 0.82rem; color: #cbd5e1;">
-                            {{ prop.owner.notes }}
+                            {{ prop.owner.notes | linkify_ad | safe }}
+                        </div>
+                    {% endif %}
+                    {% if prop.source_url %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                            <span style="color: #94a3b8; font-size: 0.88rem;">صفحه منبع:</span>
+                            <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" style="color: #00f2fe; text-decoration: underline; font-weight: 700;">
+                                لینک آگهی
+                            </a>
                         </div>
                     {% endif %}
                 </div>

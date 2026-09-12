@@ -184,7 +184,12 @@
                         {% endfor %}
                     </div>
 
-                    <div style="display: flex; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        {% if m.property.source_url %}
+                            <a href="{{ m.property.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; border-color: rgba(0, 242, 254, 0.4); color: #00f2fe; text-decoration: none;">
+                                لینک آگهی
+                            </a>
+                        {% endif %}
                         <a href="{{ url_for('properties.detail', id=m.property.id) }}" class="glass-btn" style="padding: 0.35rem 0.75rem; font-size: 0.78rem; flex: 1; justify-content: center;">
                             مشخصات ملک و مالک
                         </a>

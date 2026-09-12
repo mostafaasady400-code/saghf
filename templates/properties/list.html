@@ -144,8 +144,8 @@
                         </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         {% if p.source_url %}
-                            <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; border-color: rgba(0, 242, 254, 0.4); color: #00f2fe; text-decoration: none;" title="مشاهده مستقیم آگهی اصلی در {{ 'دیوار' if p.source == 'divar' else ('شیپور' if p.source == 'sheypoor' else 'سایت مبدأ') }}">
-                                <span>🌐</span> آگهی اصلی
+                            <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; border-color: rgba(0, 242, 254, 0.4); color: #00f2fe; text-decoration: none;" title="مشاهده مستقیم آگهی اصلی">
+                                <span>🔗</span> لینک آگهی
                             </a>
                         {% endif %}
                         <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.45rem 0.9rem; font-size: 0.82rem; border-color: rgba(255, 255, 255, 0.2);">
