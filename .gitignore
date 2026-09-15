@@ -21,3 +21,17 @@ Desktop.ini
 
 # Logs
 *.log
+
+# Agent & local instructions
+AGENTS.md
+agents.md
+
+# Temporary scratch & inspection files
+scratch/
+divar_token.json
+divar_parsed_sample.txt
+divar_rent_sample.json
+divar_sample_post.json
+.claude/
+.codex/
+.cursor/

@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}یادآوری پیگیری مجدد فایل‌های ۷ روزه | سامانه سقف{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #ef4444); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 0 15px rgba(239,68,68,0.35);">
+                ⏰
+            </div>
+            <div>
+                <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.2rem;">
+                    یادآوری پیگیری مجدد فایل‌ها <span style="color: #f59e0b;">(چرخه ۷ روزه)</span>
+                </h2>
+                <p style="color: #94a3b8; font-size: 0.92rem;">
+                    فایل‌هایی که از بازه ۷ روزه عبور کرده و جهت حفظ سلامت و اصالت فایلینگ باید وضعیت موجودی آن‌ها استعلام و تعیین‌تکلیف شود.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <span class="badge-neon badge-neon-amber" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+            تعداد کل در انتظار پیگیری: {{ total_count | pnum }} فایل
+        </span>
+        <a href="{{ url_for('properties.list_properties') }}" class="glass-btn" style="text-decoration: none;">
+            <span>🏢</span> بازگشت به فایل‌های فعال
+        </a>
+    </div>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div style="margin-bottom: 1.5rem;">
+            {% for category, msg in messages %}
+                <div class="glass-panel" style="padding: 1rem; margin-bottom: 0.5rem; border-right: 4px solid {% if category == 'success' %}#10b981{% else %}#00f2fe{% endif %};">
+                    {{ msg }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+{% if properties | length == 0 %}
+    <!-- Empty State -->
+    <div class="glass-card" style="padding: 4rem 2rem; text-align: center; max-width: 650px; margin: 3rem auto;">
+        <div style="font-size: 3.5rem; margin-bottom: 1rem;">🎉</div>
+        <h3 style="font-size: 1.4rem; font-weight: 700; color: #10b981; margin-bottom: 0.75rem;">
+            تمام فایل‌های سامانه به‌روز هستند!
+        </h3>
+        <p style="color: #94a3b8; line-height: 1.7; font-size: 0.95rem; margin-bottom: 1.5rem;">
+            هیچ فایلی با عمر بیش از ۷ روز در صف پیگیری قرار ندارد. تمام املاک موجود در ویترین فعال بوده و با استعلام قبلی تایید شده‌اند.
+        </p>
+        <a href="{{ url_for('properties.list_properties') }}" class="btn-neon-cyan" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+            <span>🏢</span> مشاهده فایل‌های فعال
+        </a>
+    </div>
+{% else %}
+    <!-- Expired Properties Grid -->
+    <div class="grid-3">
+        {% for p in properties %}
+            <div class="glass-card property-card" style="border: 1px solid rgba(245, 158, 11, 0.35); box-shadow: 0 8px 30px rgba(245, 158, 11, 0.08);">
+                <!-- Thumbnail Image & Badges -->
+                <div style="position: relative;">
+                    {% if p.images and p.images[0] %}
+                        <img src="{{ p.images[0] }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/assets/placeholder.png';" alt="{{ p.title }}" class="property-thumb">
+                    {% else %}
+                        <div class="property-thumb" style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; background: rgba(15, 23, 42, 0.7);">
+                            <span style="font-size: 2.2rem;">🏢</span>
+                            <span style="font-size: 0.72rem; color: #94a3b8; margin-top: 0.25rem;">بدون عکس در دیوار</span>
+                        </div>
+                    {% endif %}
+
+                    <!-- Elapsed Days Pill -->
+                    <div style="position: absolute; top: 12px; right: 12px;">
+                        <span class="badge-neon" style="background: rgba(239, 68, 68, 0.9); color: #fff; border: 1px solid rgba(239, 68, 68, 0.6); font-weight: 800; font-size: 0.75rem;">
+                            ⏰ {{ p.age_in_days | pnum }} روز گذشته
+                        </span>
+                    </div>
+
+                    <!-- Deal Type Pill -->
+                    <div style="position: absolute; top: 12px; left: 12px;">
+                        <span class="badge-neon {% if p.deal_type == 'sale' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
+                            {{ p.deal_type | deal_name }}
+                        </span>
+                    </div>
+
+                    <!-- Inquiry Status Badge -->
+                    <div style="position: absolute; bottom: 10px; right: 12px;">
+                        {% if p.inquiry_status == 'waiting_reply' %}
+                            <span class="badge-neon" style="background: rgba(59, 130, 246, 0.85); color: #fff; font-size: 0.72rem;">
+                                📩 استعلام پیام‌رسان ارسال شده
+                            </span>
+                        {% else %}
+                            <span class="badge-neon badge-neon-gray" style="font-size: 0.72rem;">
+                                ⏳ نیازمند استعلام وضعیت
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class="property-card-body">
+                    <div class="property-meta">
+                        <span style="font-size: 0.82rem; color: #38bdf8; font-weight: 600;">📍 {{ p.district }}</span>
+                        <span style="font-size: 0.75rem; color: #94a3b8;">ثبت: {{ p.created_at.strftime('%Y/%m/%d') }}</span>
+                    </div>
+
+                    <a href="{{ url_for('properties.detail', id=p.id) }}" class="property-title">
+                        {{ p.title }}
+                    </a>
+
+                    <!-- Specs -->
+                    <div class="property-specs" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                        <div class="property-spec-item">
+                            <span>📐</span> <span>{{ p.area | pnum }} متر</span>
+                        </div>
+                        <div class="property-spec-item">
+                            <span>🛏️</span> <span>{{ p.rooms | pnum }} خواب</span>
+                        </div>
+                        <div class="property-spec-item">
+                            <span>🏢</span> <span>طبقه {{ p.floor | pnum }}{% if p.total_floors %} از {{ p.total_floors | pnum }}{% endif %}</span>
+                        </div>
+                    </div>
+
+                    <!-- Price -->
+                    <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem;">
+                        <div style="font-size: 0.75rem; color: #94a3b8;">
+                            {% if p.deal_type == 'sale' %}قیمت کل{% else %}ودیعه / اجاره ماهانه{% endif %}
+                        </div>
+                        <div style="font-size: 0.98rem; font-weight: 800; color: #38bdf8;">
+                            {% if p.deal_type == 'sale' %}
+                                {{ p.total_price | toman }}
+                            {% else %}
+                                {{ p.deposit | toman }} / {{ p.monthly_rent | toman }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Dedicated Direct Contact Option Bar -->
+                    <div class="contact-option-box" style="margin-top: 0.65rem; margin-bottom: 0.75rem; background: {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.1){% else %}rgba(0, 242, 254, 0.07){% endif %}; border: 1px solid {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.35){% else %}rgba(0, 242, 254, 0.25){% endif %}; border-radius: 10px; padding: 0.55rem 0.75rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; padding-bottom: 0.35rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                            <span style="font-size: 0.76rem; font-weight: 700; color: #cbd5e1; display: flex; align-items: center; gap: 0.35rem;">
+                                <span>📞</span> گزینه تماس مستقیم با آگهی‌دهنده:
+                            </span>
+                            {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                                <span class="badge-neon badge-neon-emerald" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">
+                                    ✓ استخراج شده
+                                </span>
+                            {% else %}
+                                <span class="badge-neon badge-neon-amber" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">
+                                    🔒 نیاز به استخراج
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                            <!-- Real Extracted Phone Display & 1-Click Calling -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                                <a href="tel:{{ p.owner.phone_number }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); padding: 0.3rem 0.65rem; border-radius: 8px; color: #10b981; font-weight: 800; font-size: 0.95rem; letter-spacing: 1.5px; direction: ltr;">
+                                    <span>📲</span>
+                                    <span>{{ p.owner.phone_number }}</span>
+                                </a>
+                                
+                                <div style="display: flex; gap: 0.35rem; align-items: center;">
+                                    <a href="tel:{{ p.owner.phone_number }}" class="btn-neon-emerald" style="padding: 0.28rem 0.65rem; font-size: 0.74rem; text-decoration: none; font-weight: 700;" title="تماس تلفنی مستقیم">
+                                        تماس فوری
+                                    </a>
+                                    <button type="button" onclick="navigator.clipboard.writeText('{{ p.owner.phone_number }}'); alert('شماره در حافظه کپی شد: {{ p.owner.phone_number }}');" class="glass-btn" style="padding: 0.28rem 0.5rem; font-size: 0.74rem; color: #10b981;" title="کپی شماره">
+                                        📋
+                                    </button>
+                                    <button type="button" onclick="openMessengerModal({{ p.id }})" class="glass-btn" style="padding: 0.28rem 0.55rem; font-size: 0.74rem; color: #38bdf8;" title="استعلام وضعیت در ۵ پیام‌رسان">
+                                        💬
+                                    </button>
+                                    <button type="button" onclick="promptSavePhone({{ p.id }}, '{{ p.owner.phone_number }}', '{{ p.owner.full_name }}')" class="glass-btn" style="padding: 0.28rem 0.5rem; font-size: 0.74rem; color: #94a3b8;" title="ویرایش شماره">
+                                        ✏️
+                                    </button>
+                                </div>
+                            </div>
+                        {% else %}
+                            <!-- Extraction & Manual Input Actions -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; flex-wrap: wrap;">
+                                <button type="button" onclick="fetchDivarPhoneDirect({{ p.id }})" class="btn-neon-cyan" style="flex: 1; min-width: 130px; justify-content: center; padding: 0.35rem 0.55rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;" title="استخراج خودکار شماره واقعی با توکن نشست دیوار">
+                                    <span>⚡</span> استخراج خودکار شماره
+                                </button>
+                                <button type="button" onclick="promptSavePhone({{ p.id }}, '', '{{ p.owner.full_name if p.owner else '' }}')" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #10b981; border-color: rgba(16, 185, 129, 0.3);" title="ثبت دستی شماره تلفن">
+                                    <span>✏️</span> ثبت شماره
+                                </button>
+                                {% if p.source_url %}
+                                    <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #00f2fe; text-decoration: none; border-color: rgba(0, 242, 254, 0.3);" title="مشاهده اطلاعات تماس در دیوار">
+                                        🌐 دیوار
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Lifecycle Decisions Bar (3 Main Actions) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                        <!-- 1. Reactivate (Confirm Available) -->
+                        <form method="POST" action="{{ url_for('properties.reactivate', id=p.id) }}" style="margin: 0;">
+                            <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #10b981; font-weight: 700; font-size: 0.78rem; padding: 0.45rem;">
+                                <span>✓</span> تایید موجودی (تمدید ۷ روز)
+                            </button>
+                        </form>
+
+                        <!-- 2. Archive (Owner Confirmed Sold/Unavailable) -->
+                        <form method="POST" action="{{ url_for('properties.archive', id=p.id) }}" style="margin: 0;">
+                            <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.35); color: #f59e0b; font-weight: 700; font-size: 0.78rem; padding: 0.45rem;">
+                                <span>📦</span> واگذار شد (بایگانی)
+                            </button>
+                        </form>
+
+                        <!-- 3. Permanent Delete -->
+                        <form method="POST" action="{{ url_for('properties.delete', id=p.id) }}" style="margin: 0; grid-column: 1 / -1;" onsubmit="return confirm('آیا از حذف قطعی این فایل از پایگاه داده اطمینان دارید؟');">
+                            <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 0.75rem; padding: 0.35rem;">
+                                <span>🗑️</span> حذف قطعی از دیتابیس
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% endblock %}
+

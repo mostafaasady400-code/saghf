@@ -3,232 +3,573 @@
 {% block title %}اتاق مانیتورینگ کراولر دیوار و شیپور | سقف{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+<div style="margin-bottom: 1.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
     <div>
         <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
             اتاق مانیتورینگ و استخراج زنده املاک <span class="text-neon-cyan">(دیوار و شیپور)</span>
         </h2>
         <p style="color: #94a3b8; font-size: 0.95rem;">
-            پویش لحظه‌ای آگهی‌های جدید تهران، جداسازی فایل‌های بدون واسطه و ذخیره خودکار در دیتابیس SQLite
+            پایش هوشمند فایل‌های شخصی تا ۵ روز گذشته، فیلتر حذف قطعی مشاوران و تفکیک دپارتمان‌های فروش و اجاره
         </p>
     </div>
-    <div id="crawler-status-pill" class="badge-neon badge-neon-cyan">
-        <span class="neon-pulse-dot cyan"></span> آماده به کار
+    <div id="crawler-status-pill" class="badge-neon badge-neon-cyan" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+        <span class="neon-pulse-dot cyan"></span> موتور آماده به کار
     </div>
 </div>
 
-<!-- Crawler Control & Real-Time Stats -->
+<!-- Crawler Control & Real-Time Stats (Grid Layout) -->
 <div class="grid-2" style="margin-bottom: 2rem;">
-    <!-- Control Form Panel -->
-    <div class="glass-panel" style="padding: 1.75rem;">
-        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-            <span>⚙️</span> تنظیمات و شروع فرآیند کراولینگ
-        </h3>
-
-        <form id="crawler-start-form">
-            <div style="margin-bottom: 1.25rem;">
-                <label style="display: block; font-size: 0.88rem; color: #94a3b8; margin-bottom: 0.5rem;">
-                    پلتفرم‌های مبدا (Sources)
-                </label>
-                <div style="display: flex; gap: 1.5rem;">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                        <input type="checkbox" name="sources" value="divar" checked style="accent-color: #00f2fe; transform: scale(1.2);">
-                        <span>پلتفرم دیوار (Divar API)</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                        <input type="checkbox" name="sources" value="sheypoor" checked style="accent-color: #10b981; transform: scale(1.2);">
-                        <span>پلتفرم شیپور (Sheypoor)</span>
-                    </label>
-                </div>
-            </div>
-
-            <div style="margin-bottom: 1.25rem;">
-                <label style="display: block; font-size: 0.88rem; color: #94a3b8; margin-bottom: 0.5rem;">
-                    دسته‌بندی‌های ملکی
-                </label>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                        <input type="checkbox" name="categories" value="buy-apartment" checked style="accent-color: #00f2fe;">
-                        <span>فروش آپارتمان مسکونی</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                        <input type="checkbox" name="categories" value="rent-apartment" checked style="accent-color: #00f2fe;">
-                        <span>رهن و اجاره آپارتمان</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                        <input type="checkbox" name="categories" value="buy-residential" style="accent-color: #00f2fe;">
-                        <span>فروش ویلایی و خانه</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                        <input type="checkbox" name="categories" value="commercial-rent" style="accent-color: #00f2fe;">
-                        <span>اجاره اداری و تجاری</span>
-                    </label>
-                </div>
-            </div>
-
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; font-size: 0.88rem; color: #94a3b8; margin-bottom: 0.5rem;">
-                    تعداد فایل در هر دسته‌بندی (بچ سایز)
-                </label>
-                <select id="crawler-limit" class="glass-select">
-                    <option value="6">۶ فایل در هر دسته (سریع)</option>
-                    <option value="12" selected>۱۲ فایل در هر دسته (استاندارد)</option>
-                    <option value="20">۲۰ فایل در هر دسته (جامع)</option>
-                </select>
-            </div>
-
-            <button type="submit" id="start-crawl-btn" class="btn-neon-cyan" style="width: 100%; justify-content: center; padding: 0.85rem;">
-                <span>⚡</span> شروع کراولینگ دیوار و شیپور
-            </button>
-        </form>
-    </div>
-
-    <!-- Live Terminal & Live Stats -->
-    <div class="glass-panel" style="padding: 1.75rem; display: flex; flex-direction: column;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <h3 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+    <!-- Column 1: Live Terminal & Live Stats -->
+    <div class="glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
                 <span>📟</span> کنسول و گزارش زنده کراولر
             </h3>
-            <div style="font-size: 0.8rem; color: #64748b;">
+            <div style="font-size: 0.78rem; color: #64748b;">
                 استریم بلادرنگ رویدادها
             </div>
         </div>
 
-        <div id="crawler-terminal" class="terminal-box">
+        <div id="crawler-terminal" class="terminal-box" style="height: 250px;">
             <div class="terminal-line" style="color: #64748b;">[آماده] سیستم آماده دریافت دستور کراولینگ است...</div>
         </div>
 
         <!-- Quick Stats Counters -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 1.25rem;">
-            <div class="glass-card" style="padding: 0.75rem; text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8;">کل پویش‌شده</div>
-                <div id="stat-total-crawled" style="font-size: 1.2rem; font-weight: 800; color: #00f2fe;">0</div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.75rem;">
+            <div class="glass-card" style="padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8;">کل پویش‌شده</div>
+                <div id="stat-total-crawled" style="font-size: 1.1rem; font-weight: 800; color: #00f2fe;">0</div>
             </div>
-            <div class="glass-card" style="padding: 0.75rem; text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8;">فایل‌های جدید</div>
-                <div id="stat-new-saved" style="font-size: 1.2rem; font-weight: 800; color: #10b981;">0</div>
+            <div class="glass-card" style="padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8;">فایل‌های جدید</div>
+                <div id="stat-new-saved" style="font-size: 1.1rem; font-weight: 800; color: #10b981;">0</div>
             </div>
-            <div class="glass-card" style="padding: 0.75rem; text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8;">تکراری (Skip)</div>
-                <div id="stat-skipped" style="font-size: 1.2rem; font-weight: 800; color: #f59e0b;">0</div>
+            <div class="glass-card" style="padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8;">تکراری (Skip)</div>
+                <div id="stat-skipped" style="font-size: 1.1rem; font-weight: 800; color: #f59e0b;">0</div>
             </div>
-            <div class="glass-card" style="padding: 0.75rem; text-align: center;">
-                <div style="font-size: 0.75rem; color: #94a3b8;">کل دیتابیس</div>
-                <div id="stat-total-db" style="font-size: 1.2rem; font-weight: 800; color: #8b5cf6;">{{ crawled_properties | length }}</div>
+            <div class="glass-card" style="padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8;">کل دیتابیس</div>
+                <div id="stat-total-db" style="font-size: 1.1rem; font-weight: 800; color: #8b5cf6;">{{ (sale_properties | length) + (rent_properties | length) }}</div>
             </div>
+        </div>
+    </div>
+
+    <!-- Column 2: Control Form Panel (Enhanced with City, District and Depth) -->
+    <div class="glass-panel" style="padding: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem; margin-top: 0;">
+            <span>⚙️</span> تنظیمات استخراج هوشمند و فیلترها
+        </h3>
+
+        <form id="crawler-start-form">
+            <!-- City & District Live Filters -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.75rem;">
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.25rem;">
+                        📍 شهر مبدا
+                    </label>
+                    <select id="crawler-city" name="city" class="glass-select" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                        <option value="tehran" selected>تهران (پیش‌فرض)</option>
+                        <option value="pardis">پردیس</option>
+                        <option value="parand">پرند</option>
+                        <option value="karaj">کرج</option>
+                        <option value="shiraz">شیراز</option>
+                        <option value="isfahan">اصفهان</option>
+                        <option value="mashhad">مشهد</option>
+                        <option value="tabriz">تبریز</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.25rem;">
+                        🔍 محله / کلمه کلیدی
+                    </label>
+                    <input type="text" id="crawler-district" name="district" placeholder="مثلاً: سعادت آباد، پونک..." class="glass-input" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                </div>
+            </div>
+
+            <!-- Platforms -->
+            <div style="margin-bottom: 0.75rem;">
+                <label style="display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.35rem;">
+                    پلتفرم‌های مبدا (با فیلتر حذف قطعی املاک و واسطه)
+                </label>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; font-weight: 700; background: linear-gradient(135deg, rgba(0, 242, 254, 0.14), rgba(245, 158, 11, 0.08)); padding: 0.45rem 0.85rem; border-radius: 10px; border: 1.5px solid rgba(0, 242, 254, 0.45); box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);">
+                        <input type="checkbox" name="sources" value="divar" checked style="accent-color: #00f2fe; width: 16px; height: 16px;">
+                        <span>⭐ دیوار (مرجع اصلی و طلایی)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.82rem; background: rgba(16, 185, 129, 0.06); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.25);">
+                        <input type="checkbox" name="sources" value="sheypoor" checked style="accent-color: #10b981;">
+                        <span>شیپور (مکمل)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div style="margin-bottom: 0.75rem;">
+                <label style="display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.35rem;">
+                    دسته‌بندی‌های هدف
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.82rem;">
+                    <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; padding: 0.25rem 0.4rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <input type="checkbox" name="categories" value="buy-apartment" checked style="accent-color: #00f2fe;">
+                        <span>🏢 فروش آپارتمان</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; padding: 0.25rem 0.4rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <input type="checkbox" name="categories" value="rent-apartment" checked style="accent-color: #f59e0b;">
+                        <span>🔑 رهن و اجاره آپارتمان</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; padding: 0.25rem 0.4rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <input type="checkbox" name="categories" value="buy-residential" style="accent-color: #00f2fe;">
+                        <span>🏡 فروش ویلایی / خانه</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; padding: 0.25rem 0.4rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <input type="checkbox" name="categories" value="commercial-rent" style="accent-color: #f59e0b;">
+                        <span>🏬 اجاره اداری و تجاری</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Limit, Submit and Reset Buttons -->
+            <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 0.6rem; align-items: flex-end; margin-top: 0.85rem;">
+                <div>
+                    <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem;">
+                        حجم استخراج در هر دسته
+                    </label>
+                    <select id="crawler-limit" class="glass-select" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                        <option value="6">۶ فایل (سریع)</option>
+                        <option value="12" selected>۱۲ فایل (استاندارد)</option>
+                        <option value="25">۲۵ فایل (عمیق - تا ۵ روز)</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 0.4rem;">
+                    <button type="submit" id="start-crawl-btn" class="btn-neon-cyan" style="flex: 2; justify-content: center; padding: 0.55rem 0.6rem; font-size: 0.85rem;">
+                        <span>⚡</span> شروع کراولینگ
+                    </button>
+                    <button type="button" id="reset-data-btn" class="glass-btn" style="flex: 1; justify-content: center; padding: 0.55rem 0.5rem; font-size: 0.78rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" title="پاک‌سازی کامل کلیه فایل‌های کراول‌شده قبلی">
+                        <span>🧹</span> ریست
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- DEPARTMENTS: INDEPENDENT SALES & RENTAL PANELS -->
+<!-- ======================================================== -->
+
+<!-- Master Department Switcher Tabs -->
+<div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; background: rgba(15, 23, 42, 0.6); padding: 0.5rem; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.06);">
+    <button type="button" id="tab-btn-sale" onclick="switchDepartment('sale')" class="glass-btn" style="flex: 1; padding: 0.65rem 1.25rem; font-size: 0.95rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #0b0f19; border: none; box-shadow: 0 0 15px rgba(0,242,254,0.3);">
+        🏢 پنل اختصاصی کارشناسان فروش (<span id="tab-sale-count">{{ sale_properties | length | pnum }}</span>)
+    </button>
+    <button type="button" id="tab-btn-rent" onclick="switchDepartment('rent')" class="glass-btn" style="flex: 1; padding: 0.65rem 1.25rem; font-size: 0.95rem; font-weight: 700; border-radius: 10px; background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1);">
+        🔑 پنل اختصاصی کارشناسان رهن و اجاره (<span id="tab-rent-count">{{ rent_properties | length | pnum }}</span>)
+    </button>
+    <button type="button" id="tab-btn-all" onclick="switchDepartment('all')" class="glass-btn" style="padding: 0.65rem 1.25rem; font-size: 0.95rem; font-weight: 700; border-radius: 10px; background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1);">
+        🌐 مشاهده همزمان هر دو دپارتمان
+    </button>
+</div>
+
+<!-- PANEL 1: DEDICATED SALES DEPARTMENT -->
+<div id="panel-sale" class="department-panel" style="margin-bottom: 2.5rem;">
+    <div class="glass-panel" style="padding: 1.25rem; border-right: 4px solid #00f2fe;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.5rem;">🏢</span>
+                <div>
+                    <h3 style="font-size: 1.2rem; font-weight: 800; margin: 0; color: #00f2fe;">
+                        فایل‌های اختصاصی دپارتمان فروش
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin: 0.2rem 0 0 0;">
+                        فایل‌های شخصی بدون واسطه (فروش آپارتمان، ویلا، کلنگی و تجاری) استخراج‌شده تا ۵ روز گذشته
+                    </p>
+                </div>
+            </div>
+            <span id="panel-sale-count" class="badge-neon badge-neon-cyan">
+                {{ sale_properties | length | pnum }} فایل ثبت‌شده
+            </span>
+        </div>
+
+        <div id="sale-cards-container" class="grid-2" style="gap: 1rem;">
+            {% if sale_properties and sale_properties | length > 0 %}
+                {% for p in sale_properties %}
+                    <div id="prop-card-{{ p.id }}" class="glass-card" style="padding: 1.15rem; border: 1px solid rgba(0, 242, 254, 0.15); display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <!-- Header: Source & Links -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    {% if p.source == 'divar' %}
+                                        <span class="badge-neon badge-neon-cyan" style="font-size: 0.72rem;">دیوار</span>
+                                    {% else %}
+                                        <span class="badge-neon badge-neon-emerald" style="font-size: 0.72rem;">شیپور</span>
+                                    {% endif %}
+                                    <span style="font-size: 0.75rem; color: #94a3b8;">📍 {{ p.district }}</span>
+                                    <span class="badge-neon badge-neon-purple" style="font-size: 0.7rem;">امتیاز: {{ p.score | pnum }}</span>
+                                </div>
+                                <div>
+                                    {% if p.source_url %}
+                                        <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none; font-size: 0.75rem; font-weight: 700;">
+                                            🔗 لینک آگهی
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Title -->
+                            <h4 style="font-size: 1rem; font-weight: 700; margin: 0 0 0.6rem 0; line-height: 1.4;">
+                                <a href="{{ url_for('properties.detail', id=p.id) }}" style="color: #f8fafc; text-decoration: none;">
+                                    {{ p.title }}
+                                </a>
+                            </h4>
+
+                            <!-- Key Specs -->
+                            <div style="display: flex; gap: 0.75rem; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.6rem; background: rgba(0,0,0,0.25); padding: 0.4rem 0.65rem; border-radius: 8px;">
+                                <span>📐 {{ p.area | pnum }} متر</span>
+                                <span>🛏️ {{ p.rooms | pnum }} خواب</span>
+                                <span>🏢 طبقه {{ p.floor | pnum }}{% if p.total_floors %} از {{ p.total_floors | pnum }}{% endif %}</span>
+                                <span>🏗️ ساخت {{ p.build_year | pnum }}</span>
+                            </div>
+
+                            <!-- Core Amenities -->
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.65rem; font-size: 0.72rem;">
+                                <span class="badge-neon {% if p.has_elevator %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">
+                                    آسانسور {% if p.has_elevator %}✓{% else %}✕{% endif %}
+                                </span>
+                                <span class="badge-neon {% if p.has_parking %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">
+                                    پارکینگ {% if p.has_parking %}✓{% else %}✕{% endif %}
+                                </span>
+                                <span class="badge-neon {% if p.has_warehouse %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">
+                                    انباری {% if p.has_warehouse %}✓{% else %}✕{% endif %}
+                                </span>
+                                {% if p.has_balcony %}
+                                    <span class="badge-neon badge-neon-cyan">بالکن ✓</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Owner Phone Number Card -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.1){% else %}rgba(0, 242, 254, 0.08){% endif %}; border: 1px solid {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.3){% else %}rgba(0, 242, 254, 0.25){% endif %}; padding: 0.45rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-size: 1rem;">📞</span>
+                                    <span style="font-size: 0.8rem; color: #94a3b8;">شماره مالک:</span>
+                                    {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                                        <a href="tel:{{ p.owner.phone_number }}" style="font-size: 0.95rem; font-weight: 800; color: #10b981; text-decoration: none; letter-spacing: 1px;">
+                                            {{ p.owner.phone_number }}
+                                        </a>
+                                        <span style="font-size: 0.65rem; color: #10b981; background: rgba(16,185,129,0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">استخراج از متن</span>
+                                    {% else %}
+                                        <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 600;">محفوظ در دیوار</span>
+                                    {% endif %}
+                                </div>
+                                {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                                    <button type="button" onclick="copyToClipboard('{{ p.owner.phone_number }}', event)" class="glass-btn" style="padding: 0.2rem 0.45rem; font-size: 0.72rem; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+                                        کپی
+                                    </button>
+                                {% elif p.source_url %}
+                                    <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.25rem 0.55rem; font-size: 0.74rem; color: #00f2fe; border-color: rgba(0, 242, 254, 0.4); text-decoration: none; font-weight: 700;">
+                                        📞 دریافت شماره از دیوار
+                                    </a>
+                                {% endif %}
+                            </div>
+
+                            <!-- Price Display -->
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                                <span style="font-size: 0.8rem; color: #94a3b8;">قیمت فروش:</span>
+                                <span style="font-size: 1.15rem; font-weight: 800; color: #00f2fe;">
+                                    {{ p.total_price | toman }}
+                                </span>
+                            </div>
+
+                            <!-- Real Photos Gallery Thumbnails -->
+                            {% if p.images and p.images | length > 0 %}
+                                <div style="margin-bottom: 0.75rem;">
+                                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.35rem; display: flex; justify-content: space-between;">
+                                        <span>📷 عکس‌های واقعی آگهی ({{ p.images | length | pnum }} تصویر):</span>
+                                    </div>
+                                    <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.25rem;">
+                                        {% for img in p.images[:4] %}
+                                            <a href="{{ img }}" target="_blank" rel="noopener noreferrer" style="flex-shrink: 0;">
+                                                <img src="{{ img }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/assets/placeholder.png';" alt="ملک" style="width: 60px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Expandable Full Description -->
+                            <details style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; font-size: 0.8rem; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.05);">
+                                <summary style="cursor: pointer; font-weight: 700; color: #94a3b8; outline: none;">
+                                    📄 مشاهده متن کامل آگهی
+                                </summary>
+                                <div style="margin-top: 0.5rem; line-height: 1.6; white-space: pre-line; color: #e2e8f0; font-size: 0.82rem; max-height: 160px; overflow-y: auto; padding-right: 0.25rem;">
+                                    {{ p.description or "توضیحات تکمیلی در صفحه اصلی آگهی درج شده است." }}
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- Card Action Footer -->
+                        <div style="display: flex; gap: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem; margin-top: 0.5rem;">
+                            <a href="{{ url_for('properties.detail', id=p.id) }}" class="btn-neon-cyan" style="flex: 1; justify-content: center; padding: 0.4rem 0.6rem; font-size: 0.82rem;">
+                                ⚡ پرونده ملک
+                            </a>
+                            {% if p.source_url %}
+                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.4rem 0.6rem; font-size: 0.82rem; color: #00f2fe; text-decoration: none;">
+                                    لینک آگهی
+                                </a>
+                            {% endif %}
+                            {% if p.status != 'verified' %}
+                                <form action="{{ url_for('properties.verify', id=p.id) }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn-neon-emerald" style="padding: 0.4rem 0.6rem; font-size: 0.82rem;" title="تأیید فایل توسط کارشناس فروش">
+                                        ✓
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-placeholder" style="grid-column: 1 / -1; text-align: center; color: #64748b; padding: 3rem; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏢</div>
+                    <div>هنوز فایل فروشی استخراج نشده است. با شروع کراولینگ، آگهی‌های جدید به‌صورت زنده به این کادر اضافه می‌شوند.</div>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Table of Recently Crawled Listings -->
-<div class="glass-panel" style="padding: 1.75rem;">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
-        <h3 style="font-size: 1.2rem; font-weight: 700;">
-            فایل‌های استخراج‌شده اخیر از دیوار و شیپور
-        </h3>
-        <span class="badge-neon badge-neon-purple">
-            {{ crawled_properties | length | pnum }} فایل در صف بررسی
-        </span>
-    </div>
+<!-- PANEL 2: DEDICATED RENT & MORTGAGE DEPARTMENT -->
+<div id="panel-rent" class="department-panel" style="margin-bottom: 2.5rem; display: none;">
+    <div class="glass-panel" style="padding: 1.25rem; border-right: 4px solid #f59e0b;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.5rem;">🔑</span>
+                <div>
+                    <h3 style="font-size: 1.2rem; font-weight: 800; margin: 0; color: #f59e0b;">
+                        فایل‌های اختصاصی دپارتمان رهن و اجاره
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin: 0.2rem 0 0 0;">
+                        فایل‌های شخصی بدون واسطه رهن و اجاره استخراج‌شده تا ۵ روز گذشته با حذف آژانس‌های املاک
+                    </p>
+                </div>
+            </div>
+            <span id="panel-rent-count" class="badge-neon badge-neon-amber">
+                {{ rent_properties | length | pnum }} فایل ثبت‌شده
+            </span>
+        </div>
 
-    <div style="overflow-x: auto;">
-        <table class="glass-table">
-            <thead>
-                <tr>
-                    <th>منبع</th>
-                    <th>عنوان فایل</th>
-                    <th>لینک مبدأ</th>
-                    <th>منطقه / شهر</th>
-                    <th>نوع معامله</th>
-                    <th>متراژ و خواب</th>
-                    <th>قیمت / ودیعه</th>
-                    <th>امتیاز</th>
-                    <th>وضعیت</th>
-                    <th>عملیات کارشناسی</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in crawled_properties %}
-                    <tr class="glass-row">
-                        <td>
-                            {% if p.source == 'divar' %}
-                                <span class="badge-neon badge-neon-cyan" style="font-size: 0.75rem;">دیوار</span>
-                            {% else %}
-                                <span class="badge-neon badge-neon-emerald" style="font-size: 0.75rem;">شیپور</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('properties.detail', id=p.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 600;">
-                                {{ p.title }}
-                            </a>
-                        </td>
-                        <td>
-                            {% if p.source_url %}
-                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none; font-size: 0.78rem; white-space: nowrap;">
-                                    لینک آگهی
+        <div id="rent-cards-container" class="grid-2" style="gap: 1rem;">
+            {% if rent_properties and rent_properties | length > 0 %}
+                {% for p in rent_properties %}
+                    <div id="prop-card-{{ p.id }}" class="glass-card" style="padding: 1.15rem; border: 1px solid rgba(245, 158, 11, 0.18); display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <!-- Header: Source & Links -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    {% if p.source == 'divar' %}
+                                        <span class="badge-neon badge-neon-cyan" style="font-size: 0.72rem;">دیوار</span>
+                                    {% else %}
+                                        <span class="badge-neon badge-neon-emerald" style="font-size: 0.72rem;">شیپور</span>
+                                    {% endif %}
+                                    <span style="font-size: 0.75rem; color: #94a3b8;">📍 {{ p.district }}</span>
+                                    <span class="badge-neon badge-neon-amber" style="font-size: 0.7rem;">امتیاز: {{ p.score | pnum }}</span>
+                                </div>
+                                <div>
+                                    {% if p.source_url %}
+                                        <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-amber" style="text-decoration: none; font-size: 0.75rem; font-weight: 700;">
+                                            🔗 لینک آگهی
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Title -->
+                            <h4 style="font-size: 1rem; font-weight: 700; margin: 0 0 0.6rem 0; line-height: 1.4;">
+                                <a href="{{ url_for('properties.detail', id=p.id) }}" style="color: #f8fafc; text-decoration: none;">
+                                    {{ p.title }}
                                 </a>
-                            {% else %}
-                                <span style="color: #64748b; font-size: 0.75rem;">-</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ p.district }}</td>
-                        <td>
-                            <span class="badge-neon {% if p.deal_type == 'sale' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
-                                {{ p.deal_type | deal_name }}
-                            </span>
-                        </td>
-                        <td>{{ p.area | pnum }} متر ({{ p.rooms | pnum }}خواب)</td>
-                        <td>
-                            {% if p.deal_type == 'sale' %}
-                                <span style="font-weight: 700; color: #00f2fe;">{{ p.total_price | toman }}</span>
-                            {% else %}
-                                <span style="font-weight: 700; color: #10b981;">{{ p.deposit | toman }} رهن</span>
-                                {% if p.monthly_rent > 0 %}<div style="font-size: 0.75rem; color: #94a3b8;">{{ p.monthly_rent | toman }} اجاره</div>{% endif %}
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span style="font-weight: 700; color: #8b5cf6;">{{ p.score | pnum }}</span>
-                        </td>
-                        <td>
-                            {% if p.status == 'verified' %}
-                                <span class="badge-neon badge-neon-emerald">تأیید شده</span>
-                            {% else %}
-                                <span class="badge-neon badge-neon-amber">خام (کراول)</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                {% if p.source_url %}
-                                    <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.78rem; border-color: rgba(0, 242, 254, 0.4); color: #00f2fe; text-decoration: none;">
-                                        لینک آگهی
-                                    </a>
-                                {% endif %}
-                                <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
-                                    مشاهده
-                                </a>
-                                {% if p.status != 'verified' %}
-                                    <form action="{{ url_for('properties.verify', id=p.id) }}" method="POST" style="display: inline;">
-                                        <button type="submit" class="btn-neon-emerald" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
-                                            ✓ تأیید
-                                        </button>
-                                    </form>
+                            </h4>
+
+                            <!-- Key Specs -->
+                            <div style="display: flex; gap: 0.75rem; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.6rem; background: rgba(0,0,0,0.25); padding: 0.4rem 0.65rem; border-radius: 8px;">
+                                <span>📐 {{ p.area | pnum }} متر</span>
+                                <span>🛏️ {{ p.rooms | pnum }} خواب</span>
+                                <span>🏢 طبقه {{ p.floor | pnum }}{% if p.total_floors %} از {{ p.total_floors | pnum }}{% endif %}</span>
+                                <span>🏗️ ساخت {{ p.build_year | pnum }}</span>
+                            </div>
+
+                            <!-- Core Amenities -->
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.65rem; font-size: 0.72rem;">
+                                <span class="badge-neon {% if p.has_elevator %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">
+                                    آسانسور {% if p.has_elevator %}✓{% else %}✕{% endif %}
+                                </span>
+                                <span class="badge-neon {% if p.has_parking %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">
+                                    پارکینگ {% if p.has_parking %}✓{% else %}✕{% endif %}
+                                </span>
+                                <span class="badge-neon {% if p.has_warehouse %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">
+                                    انباری {% if p.has_warehouse %}✓{% else %}✕{% endif %}
+                                </span>
+                                {% if p.has_balcony %}
+                                    <span class="badge-neon badge-neon-cyan">بالکن ✓</span>
                                 {% endif %}
                             </div>
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr>
-                        <td colspan="10" style="text-align: center; color: #64748b; padding: 2rem;">
-                            هنوز فایلی کراول نشده است. با کلیک بر روی دکمه «شروع کراولینگ»، فرآیند استخراج را آغاز نمایید.
-                        </td>
-                    </tr>
+
+                            <!-- Owner Phone Number Card -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.1){% else %}rgba(245, 158, 11, 0.08){% endif %}; border: 1px solid {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.3){% else %}rgba(245, 158, 11, 0.25){% endif %}; padding: 0.45rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-size: 1rem;">📞</span>
+                                    <span style="font-size: 0.8rem; color: #94a3b8;">شماره مالک:</span>
+                                    {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                                        <a href="tel:{{ p.owner.phone_number }}" style="font-size: 0.95rem; font-weight: 800; color: #10b981; text-decoration: none; letter-spacing: 1px;">
+                                            {{ p.owner.phone_number }}
+                                        </a>
+                                        <span style="font-size: 0.65rem; color: #10b981; background: rgba(16,185,129,0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">استخراج از متن</span>
+                                    {% else %}
+                                        <span style="font-size: 0.78rem; color: #fbbf24; font-weight: 600;">محفوظ در دیوار</span>
+                                    {% endif %}
+                                </div>
+                                {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                                    <button type="button" onclick="copyToClipboard('{{ p.owner.phone_number }}', event)" class="glass-btn" style="padding: 0.2rem 0.45rem; font-size: 0.72rem; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+                                        کپی
+                                    </button>
+                                {% elif p.source_url %}
+                                    <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.25rem 0.55rem; font-size: 0.74rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); text-decoration: none; font-weight: 700;">
+                                        📞 دریافت شماره از دیوار
+                                    </a>
+                                {% endif %}
+                            </div>
+
+                            <!-- Deposit and Rent Display -->
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                                <div>
+                                    <div style="font-size: 0.75rem; color: #94a3b8;">ودیعه (رهن):</div>
+                                    <div style="font-size: 1.1rem; font-weight: 800; color: #f59e0b;">
+                                        {{ p.deposit | toman }}
+                                    </div>
+                                </div>
+                                {% if p.monthly_rent and p.monthly_rent > 0 %}
+                                    <div style="text-align: left;">
+                                        <div style="font-size: 0.75rem; color: #94a3b8;">اجاره ماهانه:</div>
+                                        <div style="font-size: 1rem; font-weight: 800; color: #10b981;">
+                                            {{ p.monthly_rent | toman }}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Real Photos Gallery Thumbnails -->
+                            {% if p.images and p.images | length > 0 %}
+                                <div style="margin-bottom: 0.75rem;">
+                                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.35rem; display: flex; justify-content: space-between;">
+                                        <span>📷 عکس‌های واقعی آگهی ({{ p.images | length | pnum }} تصویر):</span>
+                                    </div>
+                                    <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.25rem;">
+                                        {% for img in p.images[:4] %}
+                                            <a href="{{ img }}" target="_blank" rel="noopener noreferrer" style="flex-shrink: 0;">
+                                                <img src="{{ img }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/assets/placeholder.png';" alt="ملک" style="width: 60px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Expandable Full Description -->
+                            <details style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; font-size: 0.8rem; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.05);">
+                                <summary style="cursor: pointer; font-weight: 700; color: #94a3b8; outline: none;">
+                                    📄 مشاهده متن کامل آگهی
+                                </summary>
+                                <div style="margin-top: 0.5rem; line-height: 1.6; white-space: pre-line; color: #e2e8f0; font-size: 0.82rem; max-height: 160px; overflow-y: auto; padding-right: 0.25rem;">
+                                    {{ p.description or "توضیحات تکمیلی در صفحه اصلی آگهی درج شده است." }}
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- Card Action Footer -->
+                        <div style="display: flex; gap: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem; margin-top: 0.5rem;">
+                            <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="flex: 1; justify-content: center; padding: 0.4rem 0.6rem; font-size: 0.82rem; border-color: rgba(245, 158, 11, 0.4); color: #f59e0b;">
+                                ⚡ پرونده ملک
+                            </a>
+                            {% if p.source_url %}
+                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.4rem 0.6rem; font-size: 0.82rem; color: #f59e0b; text-decoration: none;">
+                                    لینک آگهی
+                                </a>
+                            {% endif %}
+                            {% if p.status != 'verified' %}
+                                <form action="{{ url_for('properties.verify', id=p.id) }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn-neon-emerald" style="padding: 0.4rem 0.6rem; font-size: 0.82rem;" title="تأیید فایل توسط کارشناس رهن و اجاره">
+                                        ✓
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
                 {% endfor %}
-            </tbody>
-        </table>
+            {% else %}
+                <div class="empty-placeholder" style="grid-column: 1 / -1; text-align: center; color: #64748b; padding: 3rem; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔑</div>
+                    <div>هنوز فایل رهن و اجاره استخراج نشده است. با شروع کراولینگ، آگهی‌های جدید به‌صورت زنده به این کادر اضافه می‌شوند.</div>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+@keyframes liveCardPulse {
+    0% { transform: translateY(-10px) scale(0.98); box-shadow: 0 0 25px rgba(0, 242, 254, 0.6); }
+    50% { transform: translateY(0) scale(1.01); box-shadow: 0 0 35px rgba(0, 242, 254, 0.4); }
+    100% { transform: translateY(0) scale(1); box-shadow: none; }
+}
+.live-card-pulse {
+    animation: liveCardPulse 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+</style>
+<script>
+window.highestPropertyId = {{ (sale_properties + rent_properties) | map(attribute='id') | max if (sale_properties or rent_properties) else 0 }};
+</script>
 <script src="{{ url_for('static', filename='js/crawler.js') }}"></script>
+<script>
+function switchDepartment(type) {
+    const salePanel = document.getElementById('panel-sale');
+    const rentPanel = document.getElementById('panel-rent');
+    const tabSale = document.getElementById('tab-btn-sale');
+    const tabRent = document.getElementById('tab-btn-rent');
+    const tabAll = document.getElementById('tab-btn-all');
+
+    // Reset tabs
+    [tabSale, tabRent, tabAll].forEach(t => {
+        if (!t) return;
+        t.style.background = 'transparent';
+        t.style.color = '#94a3b8';
+        t.style.border = '1px solid rgba(255,255,255,0.1)';
+        t.style.boxShadow = 'none';
+    });
+
+    if (type === 'sale') {
+        salePanel.style.display = 'block';
+        rentPanel.style.display = 'none';
+        tabSale.style.background = 'linear-gradient(135deg, #00f2fe, #4facfe)';
+        tabSale.style.color = '#0b0f19';
+        tabSale.style.border = 'none';
+        tabSale.style.boxShadow = '0 0 15px rgba(0,242,254,0.3)';
+    } else if (type === 'rent') {
+        salePanel.style.display = 'none';
+        rentPanel.style.display = 'block';
+        tabRent.style.background = 'linear-gradient(135deg, #f59e0b, #fbbf24)';
+        tabRent.style.color = '#0b0f19';
+        tabRent.style.border = 'none';
+        tabRent.style.boxShadow = '0 0 15px rgba(245,158,11,0.3)';
+    } else {
+        salePanel.style.display = 'block';
+        rentPanel.style.display = 'block';
+        tabAll.style.background = 'linear-gradient(135deg, #8b5cf6, #c084fc)';
+        tabAll.style.color = '#0b0f19';
+        tabAll.style.border = 'none';
+        tabAll.style.boxShadow = '0 0 15px rgba(139,92,246,0.3)';
+    }
+}
+</script>
 {% endblock %}

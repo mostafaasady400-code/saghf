@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <title>{% block title %}سامانه هوشمند فایلینگ و املاک سقف{% endblock %}</title>
     
     <!-- Design System: Glassmorphism + Neon Dark -->
@@ -15,117 +16,78 @@
 
     {% block extra_head %}{% endblock %}
 </head>
-<body>
-    <div class="app-shell">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar glass-sidebar">
-            <a href="{{ url_for('dashboard.index') }}" class="brand-logo">
-                <div class="brand-icon">🏛️</div>
-                <div class="brand-text">
-                    <h1>سامانه سقف</h1>
-                    <span>Real Estate Intelligence</span>
-                </div>
-            </a>
+<body dir="rtl">
+    <!-- Luxury Architectural Mansion Scroll Background Engine -->
+    <div id="luxury-scroll-bg-container" aria-hidden="true">
+        <div class="luxury-bg-slide active" data-zone="living" style="background-image: url('{{ url_for('static', filename='images/luxury/living_room.jpg') }}');"></div>
+        <div class="luxury-bg-slide" data-zone="terrace" style="background-image: url('{{ url_for('static', filename='images/luxury/terrace_pool.jpg') }}');"></div>
+        <div class="luxury-bg-slide" data-zone="kitchen" style="background-image: url('{{ url_for('static', filename='images/luxury/kitchen_dining.jpg') }}');"></div>
+        <div class="luxury-bg-slide" data-zone="bedroom" style="background-image: url('{{ url_for('static', filename='images/luxury/master_bedroom.jpg') }}');"></div>
+        <div class="luxury-bg-overlay"></div>
+    </div>
 
-            <ul class="nav-menu">
-                <li class="nav-section-title">داشبورد و هوش مصنوعی</li>
-                <li class="nav-item">
-                    <a href="{{ url_for('dashboard.index') }}" class="{% if request.endpoint == 'dashboard.index' %}active{% endif %}">
-                        <span>📊</span>
-                        <span>داشبورد مدیریتی</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ url_for('crawler.live_monitor') }}" class="{% if 'crawler' in request.endpoint %}active{% endif %}">
-                        <span>🕷️</span>
-                        <span>کراولر زنده دیوار و شیپور</span>
-                        <span class="neon-pulse-dot emerald" style="margin-right: auto;"></span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ url_for('matching.console') }}" class="{% if 'matching' in request.endpoint %}active{% endif %}">
-                        <span>⚡</span>
-                        <span>کنسول تطبیق هوشمند</span>
-                        <span class="nav-badge">AI</span>
-                    </a>
-                </li>
-
-                <li class="nav-section-title">پایگاه‌های داده متصل</li>
-                <li class="nav-item">
-                    <a href="{{ url_for('properties.list_properties') }}" class="{% if 'properties' in request.endpoint %}active{% endif %}">
-                        <span>🏢</span>
-                        <span>فایلینگ املاک و مالکین</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ url_for('clients.list_clients') }}" class="{% if 'clients' in request.endpoint %}active{% endif %}">
-                        <span>👥</span>
-                        <span>بانک مشتریان و تقاضا</span>
-                    </a>
-                </li>
-
-                <li class="nav-section-title">مدیریت فروش و پیگیری (CRM)</li>
-                <li class="nav-item">
-                    <a href="{{ url_for('crm.pipeline') }}" class="{% if request.endpoint == 'crm.pipeline' %}active{% endif %}">
-                        <span>📈</span>
-                        <span>قیف فروش و معاملات</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ url_for('crm.calls') }}" class="{% if request.endpoint == 'crm.calls' %}active{% endif %}">
-                        <span>📞</span>
-                        <span>تاریخچه تماس‌ها</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ url_for('crm.visits') }}" class="{% if request.endpoint == 'crm.visits' %}active{% endif %}">
-                        <span>📅</span>
-                        <span>هماهنگی بازدیدها</span>
-                    </a>
-                </li>
-            </ul>
-
-            <!-- Bottom Consultant Status -->
-            <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08);">
-                <div class="glass-card" style="padding: 0.85rem; display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #00f2fe, #8b5cf6); display: flex; align-items: center; justify-content: center; font-weight: 700;">
-                        س
-                    </div>
-                    <div>
-                        <div style="font-size: 0.88rem; font-weight: 700;">مشاور ارشد سیستم</div>
-                        <div style="font-size: 0.75rem; color: #10b981; display: flex; align-items: center; gap: 0.35rem;">
-                            <span class="neon-pulse-dot emerald"></span> آنلاین و آماده تطبیق
-                        </div>
-                    </div>
-                </div>
+    <!-- Floating 3D Glass Navbar -->
+    <header class="floating-3d-navbar">
+        <!-- Brand Logo -->
+        <a href="{{ url_for('dashboard.index') }}" class="floating-nav-brand">
+            <div class="brand-icon" style="width: 38px; height: 38px; font-size: 1.15rem; border-radius: 10px; box-shadow: 0 0 15px rgba(0, 242, 254, 0.45);">🏛️</div>
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 900; font-size: 1.12rem; color: #ffffff; line-height: 1.1; letter-spacing: -0.5px;">سامانه سقف</span>
+                <span style="font-size: 0.65rem; color: #00f2fe; font-weight: 700; letter-spacing: 0.5px;">Real Estate Intelligence</span>
             </div>
-        </aside>
+        </a>
 
-        <!-- Main Workspace -->
+        <!-- Center Nav Links -->
+        <nav class="floating-nav-links">
+            <a href="{{ url_for('dashboard.index') }}" class="floating-nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                <span>📊</span> <span>داشبورد</span>
+            </a>
+            <a href="{{ url_for('properties.list_properties') }}" class="floating-nav-link {% if 'properties' in request.endpoint and not request.args.get('deal_type') or request.args.get('deal_type') == 'all' %}active{% endif %}">
+                <span>🏢</span> <span>فایل‌ها</span>
+            </a>
+            <a href="{{ url_for('properties.list_properties', deal_type='sale') }}" class="floating-nav-link {% if 'properties' in request.endpoint and request.args.get('deal_type') == 'sale' %}active{% endif %}">
+                <span>🏷️</span> <span>خرید و فروش</span>
+            </a>
+            <a href="{{ url_for('properties.list_properties', deal_type='rent') }}" class="floating-nav-link {% if 'properties' in request.endpoint and request.args.get('deal_type') == 'rent' %}active{% endif %}">
+                <span>🔑</span> <span>رهن و اجاره</span>
+            </a>
+            <a href="{{ url_for('crawler.live_monitor') }}" class="floating-nav-link {% if 'crawler' in request.endpoint %}active{% endif %}">
+                <span>🕷️</span> <span>کراولر زنده</span>
+                <span class="neon-pulse-dot emerald"></span>
+            </a>
+            <a href="{{ url_for('matching.console') }}" class="floating-nav-link {% if 'matching' in request.endpoint %}active{% endif %}">
+                <span>⚡</span> <span>تطبیق AI</span>
+            </a>
+            <a href="{{ url_for('properties.followup') }}" class="floating-nav-link {% if request.endpoint == 'properties.followup' %}active{% endif %}">
+                <span>⏰</span> <span>پیگیری ۷ روزه</span>
+                {% if expired_properties_count and expired_properties_count > 0 %}
+                    <span class="badge-neon badge-neon-amber" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">{{ expired_properties_count | pnum }}</span>
+                {% endif %}
+            </a>
+            <a href="{{ url_for('clients.list_clients') }}" class="floating-nav-link {% if 'clients' in request.endpoint %}active{% endif %}">
+                <span>👥</span> <span>مشتریان</span>
+            </a>
+        </nav>
+
+        <!-- Left Actions -->
+        <div class="floating-nav-actions">
+            <button type="button" onclick="openModal('divarSessionModal')" class="glass-btn" style="border-color: rgba(0, 242, 254, 0.4); color: #00f2fe; padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 9999px;" title="اتصال حساب دیوار جهت استخراج ۱۰۰٪ خودکار شماره‌های واقعی">
+                <span>🔐</span> اتصال دیوار
+            </button>
+            <a href="{{ url_for('properties.create') }}" class="btn-neon-cyan" style="padding: 0.42rem 0.95rem; font-size: 0.82rem; border-radius: 9999px;">
+                <span>➕</span> ثبت فایل
+            </a>
+            <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.06); padding: 0.3rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.1);">
+                <div style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #00f2fe, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">
+                    س
+                </div>
+                <span class="neon-pulse-dot emerald" title="مشاور ارشد سیستم آنلاین"></span>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-shell">
         <div class="main-wrapper">
-            <!-- Top Navbar -->
-            <header class="top-navbar glass-nav">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <span style="font-weight: 600; color: #94a3b8; font-size: 0.95rem;">
-                        سامانه جامع مدیریت و فایلینگ املاک سقف
-                    </span>
-                    <span class="badge-neon badge-neon-cyan">
-                        <span class="neon-pulse-dot cyan"></span> دیتابیس SQLite متصل
-                    </span>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 0.85rem;">
-                    <a href="{{ url_for('crawler.live_monitor') }}" class="glass-btn" style="border-color: rgba(0, 242, 254, 0.3);">
-                        <span>⚡</span> کراول سریع
-                    </a>
-                    <a href="{{ url_for('properties.create') }}" class="btn-neon-cyan">
-                        <span>➕</span> ثبت فایل جدید
-                    </a>
-                    <a href="{{ url_for('clients.create') }}" class="btn-neon-emerald">
-                        <span>👤</span> ثبت متقاضی جدید
-                    </a>
-                </div>
-            </header>
 
             <!-- Flash Notifications -->
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -148,8 +110,14 @@
         </div>
     </div>
 
+    <!-- Omni-Messenger & Divar Session Phone Modals (Global) -->
+    {% include "properties/phone_modal.html" %}
+    {% include "properties/messenger_modal.html" %}
+
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/luxury_tour.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mansion_tour.js') }}"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

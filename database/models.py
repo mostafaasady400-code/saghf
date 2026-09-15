@@ -94,8 +94,17 @@ class Property(db.Model):
     images_json = db.Column(db.Text, default='[]')
     
     # Status & scoring
-    status = db.Column(db.String(30), default='raw_crawled', index=True) # raw_crawled, verified, available, reserved, sold, archived
+    status = db.Column(db.String(30), default='raw_crawled', index=True) # raw_crawled, verified, available, reserved, sold, archived, needs_followup
     score = db.Column(db.Integer, default=70) # 0 to 100 quality score
+    
+    # 7-Day Lifecycle & Omni-Messenger Inquiry
+    inquiry_status = db.Column(db.String(30), default='none', index=True) # none, waiting_reply, confirmed_available, confirmed_sold
+    last_inquiry_at = db.Column(db.DateTime, nullable=True)
+    
+    # Owner verification and filtering
+    owner_type = db.Column(db.String(30), default='personal', index=True) # personal, agency
+    is_personal_owner = db.Column(db.Boolean, default=True, index=True)
+    filter_log = db.Column(db.String(250), nullable=True)
     
     owner_id = db.Column(db.Integer, db.ForeignKey('owners.id'), nullable=True)
     assigned_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
@@ -106,6 +115,35 @@ class Property(db.Model):
     matches = db.relationship('MatchRecord', backref='property', lazy='dynamic', cascade="all, delete-orphan")
     visits = db.relationship('Visit', backref='property', lazy=True)
     interactions = db.relationship('Interaction', backref='property', lazy=True)
+
+    @property
+    def age_in_days(self):
+        """محاسبه دقیق تعداد روزهای سپری شده از زمان ثبت یا آخرین تمدید"""
+        if not self.created_at:
+            return 0
+        delta = datetime.utcnow() - self.created_at
+        return max(0, delta.days)
+
+    @property
+    def is_expired(self):
+        """بررسی رد شدن از بازه ۷ روزه یا وضعیت نیازمند پیگیری"""
+        return self.age_in_days >= 7 or self.status == 'needs_followup'
+
+    def reactivate(self):
+        """تایید مجدد موجودی توسط مالک یا کارشناس: بازنشانی تایمر ۷ روزه و انتقال به فایل‌های فعال"""
+        self.created_at = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
+        self.status = 'available'
+        self.inquiry_status = 'confirmed_available'
+
+    def archive(self, reason='sold'):
+        """بایگانی قطعی ملک به دلیل واگذاری یا انصراف مالک"""
+        self.status = 'archived'
+        self.updated_at = datetime.utcnow()
+        if reason == 'sold':
+            self.inquiry_status = 'confirmed_sold'
+        else:
+            self.inquiry_status = 'archived'
 
     @property
     def features(self):
@@ -120,14 +158,107 @@ class Property(db.Model):
 
     @property
     def images(self):
+        """لیست URLهای مستقیم تصاویر در CDN مبدأ (بدون ذخیره فایل فیزیکی یا باینری)"""
         try:
-            return json.loads(self.images_json or '[]')
+            urls = json.loads(self.images_json or '[]')
+            if isinstance(urls, list):
+                # فقط URLهای معتبر و مستقیم CDN برگردانده می‌شوند (عدم اجازه به Base64)
+                return [
+                    u for u in urls
+                    if isinstance(u, str) and u.startswith(('http://', 'https://')) and not u.startswith('data:')
+                ]
+            elif isinstance(urls, str) and urls.startswith(('http://', 'https://')):
+                return [urls]
+            return []
         except Exception:
             return []
 
     @images.setter
     def images(self, val):
-        self.images_json = json.dumps(val, ensure_ascii=False)
+        """
+        قانون بهینه‌سازی دیتابیس (جلوگیری از اشغال فضای دیتابیس):
+        - به هیچ عنوان داده باینری (Base64 / Blob) یا فایل فیزیکی در دیتابیس ذخیره نمی‌شود.
+        - فقط آدرس مستقیم تصویر در سایت مبدأ (URL مستقیم CDN منبع) به عنوان آرایه‌ای از رشته‌ها ذخیره می‌شود.
+        """
+        clean_urls = []
+        if isinstance(val, str):
+            val = val.strip()
+            if val.startswith('[') and val.endswith(']'):
+                try:
+                    val = json.loads(val)
+                except Exception:
+                    val = [val]
+            else:
+                val = [val]
+
+        if isinstance(val, (list, tuple)):
+            for item in val:
+                if isinstance(item, str):
+                    item = item.strip()
+                    # اکیداً فیلتر و رد کردن هرگونه رشته Base64 یا باینری
+                    if item.startswith('data:') or ';base64,' in item or len(item) > 1500:
+                        continue
+                    if item.startswith(('http://', 'https://')):
+                        clean_urls.append(item)
+
+        self.images_json = json.dumps(clean_urls, ensure_ascii=False)
+
+    def to_messenger_dict(self):
+        """ساختار استاندارد و آماده جهت ارسال به پایپ‌لاین پیام‌رسان‌ها (تلگرام، بله، ایتا و پیامک)"""
+        deal_label = 'فروش' if self.deal_type == 'sale' else 'رهن و اجاره'
+        if self.deal_type == 'sale':
+            price_txt = f"{self.total_price:,} تومان" if self.total_price else "توافقی"
+        else:
+            price_txt = f"ودیعه: {self.deposit:,} تومان | اجاره: {self.monthly_rent:,} تومان"
+
+        owner_name = self.owner.full_name if self.owner else 'مالک محترم'
+        owner_phone = self.owner.phone_number if self.owner else 'ثبت در سیستم'
+
+        features_str = ' | '.join(self.features) if self.features else 'سند رسمی، نورگیر عالی'
+        messenger_text = (
+            f"💎 **فایل شخصی (مالک مستقیم)**\n\n"
+            f"📌 **{self.title}**\n"
+            f"📍 **منطقه:** {self.city}، {self.district}\n"
+            f"📐 **متراژ:** {self.area} متر | {self.rooms} خواب | طبقه {self.floor}\n"
+            f"💰 **قیمت:** {price_txt}\n"
+            f"👤 **مالک:** {owner_name}\n"
+            f"📞 **تماس:** `{owner_phone}`\n"
+            f"🔗 **لینک آگهی:** {self.source_url}\n"
+            f"✨ **امکانات:** {features_str}\n\n"
+            f"🆔 #فایل_شخصی #{self.district.replace(' ', '_')} #{deal_label}"
+        )
+
+        return {
+            'property_id': self.id,
+            'source': self.source,
+            'source_url': self.source_url,
+            'is_personal_owner': self.is_personal_owner if self.is_personal_owner is not None else True,
+            'owner_type': self.owner_type or 'personal',
+            'title': self.title,
+            'deal_type': self.deal_type,
+            'deal_label': deal_label,
+            'city': self.city,
+            'district': self.district,
+            'address': self.address,
+            'total_price': self.total_price,
+            'deposit': self.deposit,
+            'monthly_rent': self.monthly_rent,
+            'price_formatted': price_txt,
+            'area': self.area,
+            'rooms': self.rooms,
+            'floor': self.floor,
+            'build_year': self.build_year,
+            'has_elevator': self.has_elevator,
+            'has_parking': self.has_parking,
+            'has_warehouse': self.has_warehouse,
+            'has_balcony': self.has_balcony,
+            'features': self.features,
+            'images': self.images,
+            'owner_name': owner_name,
+            'owner_phone': owner_phone,
+            'messenger_text': messenger_text,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
 
     def to_dict(self):
         return {
@@ -158,8 +289,16 @@ class Property(db.Model):
             'images': self.images,
             'status': self.status,
             'score': self.score,
+            'age_in_days': self.age_in_days,
+            'is_expired': self.is_expired,
+            'inquiry_status': self.inquiry_status or 'none',
+            'last_inquiry_at': self.last_inquiry_at.strftime('%Y-%m-%d %H:%M') if self.last_inquiry_at else '',
+            'is_personal_owner': self.is_personal_owner if self.is_personal_owner is not None else True,
+            'owner_type': self.owner_type or 'personal',
+            'filter_log': self.filter_log,
             'owner': self.owner.to_dict() if self.owner else None,
             'agent_name': self.agent.name if self.agent else 'مشخص نشده',
+            'messenger_payload': self.to_messenger_dict(),
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
         }
 

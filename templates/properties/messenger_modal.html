@@ -1,0 +1,210 @@
+<!-- Omni-Messenger Inquiry Modal -->
+<div id="messengerInquiryModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(10px); z-index: 9999; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="glass-card" style="width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; padding: 1.75rem; border: 1px solid rgba(0, 242, 254, 0.35); box-shadow: 0 0 35px rgba(0, 242, 254, 0.15); border-radius: 16px;">
+        <!-- Modal Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.85rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.5rem;">📱</span>
+                <div>
+                    <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0;">
+                        استعلام خودکار وضعیت از طریق پیام‌رسان‌ها
+                    </h3>
+                    <span id="modalPropertyTitle" style="font-size: 0.8rem; color: #94a3b8;">در حال بارگذاری...</span>
+                </div>
+            </div>
+            <button type="button" onclick="closeMessengerModal()" class="glass-btn" style="padding: 0.35rem 0.65rem; border-radius: 50%; font-size: 1.1rem; line-height: 1;">
+                ✕
+            </button>
+        </div>
+
+        <!-- Phone & Warning State if masked -->
+        <div id="modalPhoneBanner" style="margin-bottom: 1.25rem; padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+            <!-- Dynamic Content -->
+        </div>
+
+        <!-- Polite Inquiry Message Box -->
+        <div style="margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <label style="font-size: 0.82rem; color: #94a3b8; font-weight: 600;">
+                    ✉️ متن پیام استعلام (ارسال محترمانه و کوتاه):
+                </label>
+                <button type="button" id="copyMsgBtn" onclick="copyInquiryMessage()" class="glass-btn" style="padding: 0.2rem 0.6rem; font-size: 0.72rem; color: #00f2fe;">
+                    📋 کپی کامل متن
+                </button>
+            </div>
+            <textarea id="modalInquiryText" class="glass-input" rows="5" readonly style="font-size: 0.85rem; line-height: 1.5; resize: none; background: rgba(15, 23, 42, 0.6); color: #f8fafc; font-family: inherit;"></textarea>
+        </div>
+
+        <!-- 5 Platforms Buttons Grid -->
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-size: 0.82rem; color: #94a3b8; font-weight: 600; margin-bottom: 0.6rem;">
+                🚀 ارسال مستقیم در پیام‌رسان مد نظر:
+            </label>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 0.6rem;" id="platformsGrid">
+                <!-- 1. WhatsApp -->
+                <a id="btnPlatformWhatsapp" href="#" target="_blank" rel="noopener noreferrer" class="glass-btn platform-btn" style="flex-direction: column; padding: 0.65rem 0.35rem; text-align: center; gap: 0.25rem; text-decoration: none; border-color: rgba(37, 211, 102, 0.35); background: rgba(37, 211, 102, 0.1);">
+                    <span style="font-size: 1.4rem;">💬</span>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #25D366;">واتساپ</span>
+                </a>
+                <!-- 2. Telegram -->
+                <a id="btnPlatformTelegram" href="#" target="_blank" rel="noopener noreferrer" class="glass-btn platform-btn" style="flex-direction: column; padding: 0.65rem 0.35rem; text-align: center; gap: 0.25rem; text-decoration: none; border-color: rgba(34, 158, 217, 0.35); background: rgba(34, 158, 217, 0.1);">
+                    <span style="font-size: 1.4rem;">✈️</span>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #229ED9;">تلگرام</span>
+                </a>
+                <!-- 3. Bale -->
+                <a id="btnPlatformBale" href="#" target="_blank" rel="noopener noreferrer" class="glass-btn platform-btn" style="flex-direction: column; padding: 0.65rem 0.35rem; text-align: center; gap: 0.25rem; text-decoration: none; border-color: rgba(24, 179, 104, 0.35); background: rgba(24, 179, 104, 0.1);">
+                    <span style="font-size: 1.4rem;">🌿</span>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #18b368;">بله</span>
+                </a>
+                <!-- 4. Eitaa -->
+                <a id="btnPlatformEitaa" href="#" target="_blank" rel="noopener noreferrer" class="glass-btn platform-btn" style="flex-direction: column; padding: 0.65rem 0.35rem; text-align: center; gap: 0.25rem; text-decoration: none; border-color: rgba(230, 126, 34, 0.35); background: rgba(230, 126, 34, 0.1);">
+                    <span style="font-size: 1.4rem;">🟠</span>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #e67e22;">ایتا</span>
+                </a>
+                <!-- 5. Rubika -->
+                <a id="btnPlatformRubika" href="#" target="_blank" rel="noopener noreferrer" class="glass-btn platform-btn" style="flex-direction: column; padding: 0.65rem 0.35rem; text-align: center; gap: 0.25rem; text-decoration: none; border-color: rgba(139, 92, 246, 0.35); background: rgba(139, 92, 246, 0.1);">
+                    <span style="font-size: 1.4rem;">🟣</span>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #a78bfa;">روبیکا</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Rapid Response Recorder & Automated Action -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.1rem;">
+            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.4rem;">
+                ⚡ ثبت وضعیت پاسخ مالک (تعیین تکلیف خودکار در دیتابیس):
+            </label>
+            <p style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.85rem;">
+                بر اساس پاسخ پیامکی یا پیام‌رسان مالک، گزینه مربوطه را انتخاب کنید تا وضعیت فایل در دیتابیس بلافاصله ثبت و بروزرسانی شود:
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
+                <button type="button" onclick="recordOwnerResponse('1')" class="glass-btn" style="justify-content: center; background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.45); color: #10b981; font-weight: 700; padding: 0.65rem; font-size: 0.82rem;">
+                    <span>🟢 ۱. تایید موجودی (تمدید ۷ روزه)</span>
+                </button>
+                <button type="button" onclick="recordOwnerResponse('2')" class="glass-btn" style="justify-content: center; background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.45); color: #f59e0b; font-weight: 700; padding: 0.65rem; font-size: 0.82rem;">
+                    <span>📦 ۲. واگذار شد (بایگانی قطعی)</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="modalStatusAlert" style="display: none; margin-top: 1rem; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; text-align: center;"></div>
+    </div>
+</div>
+
+<script>
+var currentPropertyInquiryId = window.currentPropertyInquiryId || null;
+
+window.openMessengerModal = async function(propertyId) {
+    currentPropertyInquiryId = propertyId;
+    window.currentPropertyInquiryId = propertyId;
+    const modal = document.getElementById('messengerInquiryModal');
+    if (modal) modal.style.display = 'flex';
+    const alertEl = document.getElementById('modalStatusAlert');
+    if (alertEl) alertEl.style.display = 'none';
+
+    try {
+        const response = await fetch(`/api/messenger/package/${propertyId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            alert(data.message || 'خطا در دریافت اطلاعات استعلام');
+            return;
+        }
+
+        const pkg = data.package;
+        document.getElementById('modalPropertyTitle').textContent = `${pkg.title} (${pkg.district})`;
+        document.getElementById('modalInquiryText').value = pkg.message;
+
+        // Phone Banner
+        const banner = document.getElementById('modalPhoneBanner');
+        if (pkg.has_direct_phone) {
+            banner.style.background = 'rgba(16, 185, 129, 0.12)';
+            banner.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            banner.innerHTML = `
+                <span style="color: #10b981; font-weight: 700;">📞 شماره مالک مستقیم: ${pkg.phone}</span>
+                <span class="badge-neon badge-neon-emerald" style="font-size: 0.72rem;">آماده ارسال</span>
+            `;
+        } else {
+            banner.style.background = 'rgba(0, 242, 254, 0.1)';
+            banner.style.border = '1px solid rgba(0, 242, 254, 0.25)';
+            banner.innerHTML = `
+                <span style="color: #38bdf8;">📞 شماره در دیوار محفوظ است؛ جهت دریافت دکمه آگهی را باز کنید:</span>
+                <a href="${pkg.source_url}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none;">لینک آگهی دیوار</a>
+            `;
+        }
+
+        // Setup links
+        if (pkg.links) {
+            if (pkg.links.whatsapp) document.getElementById('btnPlatformWhatsapp').href = pkg.links.whatsapp.url;
+            if (pkg.links.telegram) document.getElementById('btnPlatformTelegram').href = pkg.links.telegram.url;
+            if (pkg.links.bale) document.getElementById('btnPlatformBale').href = pkg.links.bale.url;
+            if (pkg.links.eitaa) document.getElementById('btnPlatformEitaa').href = pkg.links.eitaa.url;
+            if (pkg.links.rubika) document.getElementById('btnPlatformRubika').href = pkg.links.rubika.url;
+        }
+
+        // Notify server that inquiry was prepared
+        fetch(`/api/messenger/send/${propertyId}`, { method: 'POST' });
+
+    } catch (err) {
+        console.error('Error fetching inquiry package:', err);
+    }
+}
+
+window.closeMessengerModal = function() {
+    const modal = document.getElementById('messengerInquiryModal');
+    if (modal) modal.style.display = 'none';
+    currentPropertyInquiryId = null;
+    window.currentPropertyInquiryId = null;
+};
+
+function copyInquiryMessage() {
+    const text = document.getElementById('modalInquiryText').value;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyMsgBtn');
+        const oldText = btn.textContent;
+        btn.textContent = '✓ کپی شد!';
+        btn.style.color = '#10b981';
+        setTimeout(() => {
+            btn.textContent = oldText;
+            btn.style.color = '#00f2fe';
+        }, 2000);
+    });
+}
+
+async function recordOwnerResponse(code) {
+    if (!currentPropertyInquiryId) return;
+
+    const alertBox = document.getElementById('modalStatusAlert');
+    alertBox.style.display = 'block';
+    alertBox.style.background = 'rgba(59, 130, 246, 0.15)';
+    alertBox.style.border = '1px solid rgba(59, 130, 246, 0.3)';
+    alertBox.style.color = '#38bdf8';
+    alertBox.textContent = 'در حال ثبت پاسخ در پایگاه داده...';
+
+    try {
+        const response = await fetch(`/api/messenger/respond/${currentPropertyInquiryId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ response_code: code })
+        });
+        const res = await response.json();
+
+        if (res.success) {
+            alertBox.style.background = 'rgba(16, 185, 129, 0.2)';
+            alertBox.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+            alertBox.style.color = '#10b981';
+            alertBox.textContent = res.message || 'پاسخ با موفقیت ثبت شد!';
+            setTimeout(() => {
+                location.reload();
+            }, 1200);
+        } else {
+            alertBox.style.background = 'rgba(239, 68, 68, 0.2)';
+            alertBox.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+            alertBox.style.color = '#ef4444';
+            alertBox.textContent = res.error || 'خطا در ثبت پاسخ';
+        }
+    } catch (err) {
+        alertBox.textContent = 'خطای ارتباط با سرور';
+    }
+}
+</script>

@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from sqlalchemy import func
 from database.db import db
 from database.models import Property, Client, Interaction, Visit, Agent, MatchRecord
@@ -10,10 +10,21 @@ class AnalyticsService:
     @staticmethod
     def get_dashboard_kpis():
         today_start = datetime.combine(date.today(), datetime.min.time())
+        cutoff_7days = datetime.utcnow() - timedelta(days=7)
 
         total_properties = Property.query.count()
         crawled_today = Property.query.filter(Property.created_at >= today_start, Property.source.in_(['divar', 'sheypoor'])).count()
-        verified_properties = Property.query.filter(Property.status.in_(['verified', 'available'])).count()
+        
+        # 7-day lifecycle breakdown
+        active_properties_count = Property.query.filter(
+            Property.created_at >= cutoff_7days,
+            Property.status.notin_(['archived', 'sold', 'needs_followup'])
+        ).count()
+        expired_properties_count = Property.query.filter(
+            (Property.created_at < cutoff_7days) | (Property.status == 'needs_followup'),
+            Property.status.notin_(['archived', 'sold'])
+        ).count()
+        verified_properties = active_properties_count
         
         total_clients = Client.query.count()
         active_leads = Client.query.filter(Client.lead_status.notin_(['contract_won', 'lost'])).count()
@@ -46,6 +57,8 @@ class AnalyticsService:
 
         return {
             'total_properties': total_properties,
+            'active_properties_count': active_properties_count,
+            'expired_properties_count': expired_properties_count,
             'crawled_today': crawled_today,
             'verified_properties': verified_properties,
             'total_clients': total_clients,

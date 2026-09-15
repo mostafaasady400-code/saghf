@@ -1,0 +1,253 @@
+<!-- Quick Phone Edit & Divar Auth Modals -->
+
+<!-- 1. Quick Phone Entry Modal -->
+<div id="quickPhoneModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(10px); z-index: 9999; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="glass-card" style="width: 100%; max-width: 480px; padding: 1.75rem; border: 1px solid rgba(16, 185, 129, 0.4); box-shadow: 0 0 35px rgba(16, 185, 129, 0.15); border-radius: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.5rem; color: #10b981;">
+                <span>📞</span> ثبت / ویرایش شماره تماس واقعی مالک
+            </h3>
+            <button type="button" onclick="closeModal('quickPhoneModal')" class="glass-btn" style="padding: 0.3rem 0.6rem; border-radius: 50%;">✕</button>
+        </div>
+
+        <form id="quickPhoneForm" onsubmit="submitQuickPhone(event)">
+            <input type="hidden" id="quickPhonePropId">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">شماره موبایل مالک (مثلاً 09123456789):</label>
+                <input type="tel" id="quickPhoneInput" required placeholder="09xxxxxxxxx" class="glass-input" style="font-size: 1.1rem; font-weight: 700; direction: ltr; text-align: center; color: #10b981; letter-spacing: 2px;">
+            </div>
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">نام یا عنوان مالک (اختیاری):</label>
+                <input type="text" id="quickOwnerNameInput" placeholder="مالک محترم" class="glass-input">
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="closeModal('quickPhoneModal')" class="glass-btn">انصراف</button>
+                <button type="submit" class="btn-neon-emerald">
+                    <span>✓</span> ذخیره شماره در پرونده ملک
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. Divar Session Login Modal -->
+<div id="divarSessionModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(10px); z-index: 9999; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="glass-card" style="width: 100%; max-width: 520px; padding: 1.75rem; border: 1px solid rgba(0, 242, 254, 0.4); box-shadow: 0 0 35px rgba(0, 242, 254, 0.15); border-radius: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.5rem; color: #00f2fe;">
+                <span>🔐</span> اتصال نشست احراز هویت دیوار
+            </h3>
+            <button type="button" onclick="closeModal('divarSessionModal')" class="glass-btn" style="padding: 0.3rem 0.6rem; border-radius: 50%;">✕</button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6; margin-bottom: 1.25rem;">
+            با فعال‌سازی نشست یک‌باره دیوار، سامانه با سطح دسترسی حساب شما قادر است شماره تماس واقعی تمامی آگهی‌های دیوار را مستقیماً و به صورت ۱۰۰٪ خودکار استخراج نماید.
+        </p>
+
+        <!-- Step 1: Send SMS -->
+        <div id="divarStepPhone">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.35rem;">شماره موبایل جهت ورود به دیوار:</label>
+                <input type="tel" id="divarLoginPhone" placeholder="0912xxxxxxx" class="glass-input" style="font-size: 1.05rem; direction: ltr; text-align: center;">
+            </div>
+            <button type="button" onclick="requestDivarSmsCode()" class="btn-neon-cyan" style="width: 100%; justify-content: center;">
+                📲 ارسال پیامک کد ورود دیوار
+            </button>
+        </div>
+
+        <!-- Step 2: Confirm Code -->
+        <div id="divarStepCode" style="display: none;">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.35rem;">کد پیامک‌شده از دیوار را وارد کنید:</label>
+                <input type="text" id="divarLoginCode" placeholder="کد ۴ یا ۶ رقمی" class="glass-input" style="font-size: 1.2rem; font-weight: 800; letter-spacing: 4px; text-align: center;">
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="button" onclick="document.getElementById('divarStepPhone').style.display='block'; document.getElementById('divarStepCode').style.display='none';" class="glass-btn">ویرایش شماره</button>
+                <button type="button" onclick="confirmDivarSmsCode()" class="btn-neon-emerald" style="flex: 1; justify-content: center;">
+                    ✓ تأیید کد و فعال‌سازی اتصال
+                </button>
+            </div>
+        </div>
+
+        <!-- Option: Manual Token Input -->
+        <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08);">
+            <details style="font-size: 0.82rem; color: #94a3b8; cursor: pointer;">
+                <summary style="font-weight: 600; color: #cbd5e1; outline: none; margin-bottom: 0.5rem;">
+                    ⚙️ یا وارد کردن مستقیم توکن دیوار (اختیاری / پیشرفته)
+                </summary>
+                <div style="margin-top: 0.5rem;">
+                    <input type="text" id="divarManualToken" placeholder="توکن احراز هویت دیوار (یا کوکی)" class="glass-input" style="font-size: 0.82rem; direction: ltr; margin-bottom: 0.5rem;">
+                    <button type="button" onclick="submitManualDivarToken()" class="glass-btn" style="width: 100%; justify-content: center; font-size: 0.8rem; color: #00f2fe; border-color: rgba(0, 242, 254, 0.3);">
+                        ذخیره مستقیم توکن
+                    </button>
+                </div>
+            </details>
+        </div>
+
+        <div id="divarSessionAlert" style="display: none; margin-top: 1rem; padding: 0.75rem; border-radius: 8px; font-size: 0.82rem; text-align: center;"></div>
+    </div>
+</div>
+
+<script>
+function openModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'flex';
+}
+
+function closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+}
+
+function promptSavePhone(propertyId, currentPhone, currentName) {
+    document.getElementById('quickPhonePropId').value = propertyId;
+    document.getElementById('quickPhoneInput').value = currentPhone || '';
+    document.getElementById('quickOwnerNameInput').value = currentName || '';
+    openModal('quickPhoneModal');
+    setTimeout(() => document.getElementById('quickPhoneInput').focus(), 150);
+}
+
+async function submitQuickPhone(e) {
+    e.preventDefault();
+    const propId = document.getElementById('quickPhonePropId').value;
+    const phone = document.getElementById('quickPhoneInput').value;
+    const name = document.getElementById('quickOwnerNameInput').value;
+
+    try {
+        const resp = await fetch(`/properties/${propId}/update-phone`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone, owner_name: name })
+        });
+        const res = await resp.json();
+        if (res.success) {
+            closeModal('quickPhoneModal');
+            alert(res.message);
+            location.reload();
+        } else {
+            alert(res.message || 'خطا در ثبت شماره');
+        }
+    } catch (err) {
+        alert('خطای اتصال به سرور');
+    }
+}
+
+async function fetchDivarPhoneDirect(propertyId) {
+    const btn = event.currentTarget;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '⏳ استخراج...';
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch(`/properties/${propertyId}/fetch-divar-phone`, { method: 'POST' });
+        const res = await resp.json();
+        if (res.success) {
+            alert(res.message);
+            location.reload();
+        } else {
+            if (res.is_auth_needed) {
+                if (confirm(res.message + '\n\nآیا مایلید اکنون نشست دیوار را فعال کنید؟')) {
+                    openModal('divarSessionModal');
+                }
+            } else {
+                alert(res.message);
+            }
+            btn.innerHTML = oldText;
+            btn.disabled = false;
+        }
+    } catch (err) {
+        alert('خطای ارتباط با سرور');
+        btn.innerHTML = oldText;
+        btn.disabled = false;
+    }
+}
+
+async function requestDivarSmsCode() {
+    const phone = document.getElementById('divarLoginPhone').value.trim();
+    const alertBox = document.getElementById('divarSessionAlert');
+    alertBox.style.display = 'block';
+    alertBox.style.background = 'rgba(59, 130, 246, 0.15)';
+    alertBox.style.color = '#38bdf8';
+    alertBox.textContent = 'در حال ارتباط با سرور دیوار...';
+
+    try {
+        const resp = await fetch('/crawler/divar-session/request-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone })
+        });
+        const res = await resp.json();
+        if (res.success) {
+            alertBox.style.background = 'rgba(16, 185, 129, 0.2)';
+            alertBox.style.color = '#10b981';
+            alertBox.textContent = res.message;
+            document.getElementById('divarStepPhone').style.display = 'none';
+            document.getElementById('divarStepCode').style.display = 'block';
+            setTimeout(() => document.getElementById('divarLoginCode').focus(), 200);
+        } else {
+            alertBox.style.background = 'rgba(239, 68, 68, 0.2)';
+            alertBox.style.color = '#ef4444';
+            alertBox.textContent = res.message;
+        }
+    } catch (err) {
+        alertBox.textContent = 'خطای شبکه';
+    }
+}
+
+async function confirmDivarSmsCode() {
+    const phone = document.getElementById('divarLoginPhone').value.trim();
+    const code = document.getElementById('divarLoginCode').value.trim();
+    const alertBox = document.getElementById('divarSessionAlert');
+    alertBox.style.display = 'block';
+    alertBox.style.background = 'rgba(59, 130, 246, 0.15)';
+    alertBox.style.color = '#38bdf8';
+    alertBox.textContent = 'در حال تأیید کد در دیوار...';
+
+    try {
+        const resp = await fetch('/crawler/divar-session/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone, code: code })
+        });
+        const res = await resp.json();
+        if (res.success) {
+            alertBox.style.background = 'rgba(16, 185, 129, 0.2)';
+            alertBox.style.color = '#10b981';
+            alertBox.textContent = res.message;
+            setTimeout(() => {
+                closeModal('divarSessionModal');
+                location.reload();
+            }, 1800);
+        } else {
+            alertBox.style.background = 'rgba(239, 68, 68, 0.2)';
+            alertBox.style.color = '#ef4444';
+            alertBox.textContent = res.message;
+        }
+    } catch (err) {
+        alertBox.textContent = 'خطای شبکه';
+    }
+}
+
+async function submitManualDivarToken() {
+    const token = document.getElementById('divarManualToken').value.trim();
+    if (!token) return alert('لطفاً توکن را وارد نمایید.');
+    try {
+        const resp = await fetch('/crawler/divar-session/manual-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token })
+        });
+        const res = await resp.json();
+        if (res.success) {
+            alert(res.message);
+            closeModal('divarSessionModal');
+            location.reload();
+        } else {
+            alert(res.message || 'خطا در ثبت توکن');
+        }
+    } catch (e) {
+        alert('خطای اتصال به سرور');
+    }
+}
+</script>

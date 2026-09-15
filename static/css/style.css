@@ -12,6 +12,11 @@
     font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+html {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
 body {
     direction: rtl;
     text-align: right;
@@ -21,47 +26,121 @@ body {
     line-height: 1.6;
 }
 
-/* App Shell Layout */
-.app-shell {
-    display: flex;
-    min-height: 100vh;
+/* Custom Sleek Scrollbar on the Right */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0b0f19;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 242, 254, 0.3);
+    border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 242, 254, 0.65);
 }
 
-.sidebar {
-    width: 270px;
-    flex-shrink: 0;
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    z-index: 100;
+/* App Shell Layout - Full Width Without Rigid Sidebar */
+.app-shell {
     display: flex;
     flex-direction: column;
-    padding: 1.5rem 1rem;
-    overflow-y: auto;
+    min-height: 100vh;
+    width: 100%;
 }
 
 .main-wrapper {
     flex: 1;
-    margin-right: 270px;
+    margin-right: 0 !important;
+    width: 100%;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    padding-top: 85px; /* space for the floating 3D navbar */
 }
 
-.top-navbar {
-    height: 72px;
+/* Floating 3D Glass Navbar */
+.floating-3d-navbar {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 36px);
+    max-width: 1440px;
+    height: 68px;
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 2rem;
-    position: sticky;
-    top: 0;
-    z-index: 90;
+    padding: 0 1.25rem;
+    background: rgba(11, 17, 33, 0.75);
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 242, 254, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-3d-navbar:hover {
+    border-color: rgba(0, 242, 254, 0.25);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 35px rgba(0, 242, 254, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.floating-nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.floating-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.floating-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.42rem 0.8rem;
+    border-radius: 9999px;
+    color: #cbd5e1;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.floating-nav-link:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.floating-nav-link.active {
+    color: #00f2fe;
+    background: rgba(0, 242, 254, 0.12);
+    border: 1px solid rgba(0, 242, 254, 0.35);
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
+}
+
+.floating-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
 }
 
 .page-content {
-    padding: 2rem;
+    padding: 1.5rem 2rem;
     flex: 1;
 }
 
@@ -419,6 +498,9 @@ body {
     font-size: 0.85rem;
     height: 320px;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 242, 254, 0.3) transparent;
     color: #a7f3d0;
 }
 
@@ -445,4 +527,367 @@ body {
 @media (max-width: 768px) {
     .page-content { padding: 1rem; }
     .top-navbar { padding: 0 1rem; }
+}
+
+/* ===================================================
+   LUXURY ARCHITECTURAL SCROLL BACKGROUND ENGINE
+   (UI/UX Pro Max Design Intelligence Standard)
+   =================================================== */
+#luxury-scroll-bg-container {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.luxury-bg-slide {
+    position: absolute;
+    inset: -30px;
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transform: scale(1.06) translateZ(0);
+    transition: opacity 1.3s cubic-bezier(0.16, 1, 0.3, 1), transform 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.luxury-bg-slide.active {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+}
+
+.luxury-bg-overlay {
+    position: absolute;
+    inset: 0;
+    /* Ultra-luxury deep obsidian + twilight teal ambient vignette */
+    background: radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.70) 0%, rgba(5, 8, 18, 0.90) 65%, rgba(2, 6, 23, 0.98) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Spatial Mansion Navigator Floating Bar */
+.mansion-navigator {
+    position: fixed;
+    bottom: 22px;
+    left: 22px;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    background: rgba(11, 15, 25, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 242, 254, 0.28);
+    padding: 0.45rem 0.85rem;
+    border-radius: 9999px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 242, 254, 0.18);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mansion-navigator:hover {
+    border-color: rgba(0, 242, 254, 0.55);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 242, 254, 0.3);
+    transform: translateY(-2px);
+}
+
+.mansion-nav-badge {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #00f2fe;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    padding-left: 0.6rem;
+}
+
+.mansion-nav-zones {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.mansion-zone-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.mansion-zone-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.mansion-zone-btn.active {
+    background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(79, 172, 254, 0.25));
+    border: 1px solid rgba(0, 242, 254, 0.45);
+    color: #00f2fe;
+    box-shadow: 0 0 12px rgba(0, 242, 254, 0.35);
+}
+
+@media (max-width: 640px) {
+    .mansion-navigator {
+        left: 10px;
+        bottom: 10px;
+        padding: 0.35rem 0.6rem;
+    }
+    .mansion-zone-btn span.label {
+        display: none;
+    }
+}
+
+/* ===================================================
+   PINNED SCROLL-DRIVEN 3D LUXURY MANSION TOUR
+   =================================================== */
+#mansion-3d-tour-container {
+    position: relative;
+    width: 100%;
+    height: 250vh; /* Pinned scroll container length */
+    margin-top: -85px; /* Flush with very top under floating navbar */
+    margin-bottom: 2.5rem;
+}
+
+.tour-sticky-stage {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #060913;
+}
+
+.tour-canvas-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    perspective: 1200px;
+    transform-style: preserve-3d;
+}
+
+.tour-scene-frame {
+    position: absolute;
+    inset: -5%;
+    width: 110%;
+    height: 110%;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transform: scale(1.08) translateZ(0);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.tour-scene-frame.active {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+}
+
+.tour-scene-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(6, 9, 19, 0.25) 0%, rgba(6, 9, 19, 0.75) 80%, rgba(6, 9, 19, 0.95) 100%);
+    pointer-events: none;
+}
+
+/* Tour HUD Overlays */
+.tour-hud-header {
+    position: absolute;
+    top: 100px;
+    right: 2.5rem;
+    z-index: 20;
+    max-width: 540px;
+    pointer-events: none;
+    transition: all 0.5s ease;
+}
+
+.tour-hud-room-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 1rem;
+    background: rgba(11, 17, 33, 0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 242, 254, 0.4);
+    border-radius: 9999px;
+    color: #00f2fe;
+    font-weight: 800;
+    font-size: 0.92rem;
+    box-shadow: 0 0 25px rgba(0, 242, 254, 0.25);
+    margin-bottom: 0.75rem;
+}
+
+.tour-hud-title {
+    font-size: 2.3rem;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1.25;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    margin-bottom: 0.45rem;
+}
+
+.tour-hud-desc {
+    font-size: 0.94rem;
+    color: #cbd5e1;
+    line-height: 1.6;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+    margin-bottom: 0.85rem;
+}
+
+.tour-hud-specs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.tour-hud-spec-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #f1f5f9;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Tour Progress Tracker at Bottom */
+.tour-hud-footer {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: rgba(11, 17, 33, 0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 0.65rem 1.5rem;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
+}
+
+.tour-progress-track {
+    width: 180px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.tour-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00f2fe, #4facfe);
+    box-shadow: 0 0 12px rgba(0, 242, 254, 0.8);
+    border-radius: 3px;
+    transition: width 0.1s linear;
+}
+
+.tour-skip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(0, 242, 254, 0.15);
+    border: 1px solid rgba(0, 242, 254, 0.4);
+    color: #00f2fe;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.tour-skip-btn:hover {
+    background: rgba(0, 242, 254, 0.3);
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+    transform: translateY(-1px);
+}
+
+/* ===================================================
+   DISTINCT DEAL TABS (خرید و فروش / رهن و اجاره)
+   =================================================== */
+.deal-tabs-container {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(11, 17, 33, 0.78);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 0.4rem;
+    gap: 0.4rem;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    margin-bottom: 1.75rem;
+}
+
+.deal-tab-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.65rem 1.45rem;
+    border-radius: 9999px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid transparent;
+}
+
+.deal-tab-item:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.deal-tab-item.active-sale {
+    background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(6, 182, 212, 0.15));
+    border-color: rgba(0, 242, 254, 0.5);
+    color: #00f2fe;
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);
+}
+
+.deal-tab-item.active-rent {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.15));
+    border-color: rgba(245, 158, 11, 0.5);
+    color: #f59e0b;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+}
+
+.deal-tab-item.active-all {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(147, 51, 234, 0.15));
+    border-color: rgba(168, 85, 247, 0.5);
+    color: #c084fc;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.25);
+}
+
+.deal-tab-count-pill {
+    padding: 0.15rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }

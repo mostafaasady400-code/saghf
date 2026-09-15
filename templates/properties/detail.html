@@ -56,17 +56,39 @@
             📍 {{ prop.address or prop.district }}
         </div>
 
-        <!-- Images Carousel / Grid -->
-        {% if prop.images %}
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem; border-radius: 16px; overflow: hidden;">
-                <img src="{{ prop.images[0] }}" style="width: 100%; height: 260px; object-fit: cover;" alt="تصویر اصلی">
+        <!-- All Images Showcase Gallery -->
+        {% if prop.images and prop.images | length > 0 %}
+            <div class="property-gallery-container" style="margin-bottom: 1.75rem;">
+                <div style="position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                    <img id="mainFeaturedImage" src="{{ prop.images[0] }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/assets/placeholder.png';" style="width: 100%; height: 380px; object-fit: cover; transition: opacity 0.25s ease;" alt="تصویر شاخص آگهی">
+                    <div style="position: absolute; bottom: 12px; right: 12px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.82rem; color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); font-weight: 700;">
+                        📷 {{ prop.images | length | pnum }} تصویر ثبت‌شده از آگهی
+                    </div>
+                </div>
+
+                <!-- Thumbnails Strip for ALL Images -->
                 {% if prop.images | length > 1 %}
-                    <img src="{{ prop.images[1] }}" style="width: 100%; height: 260px; object-fit: cover;" alt="تصویر فرعی">
-                {% else %}
-                    <div style="background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; color: #64748b;">
-                        بدون عکس دیگر
+                    <div style="display: flex; gap: 0.6rem; overflow-x: auto; padding-bottom: 0.5rem;">
+                        {% for img in prop.images %}
+                            <img src="{{ img }}" 
+                                 referrerpolicy="no-referrer" 
+                                 loading="lazy" 
+                                 onerror="this.onerror=null; this.src='/assets/placeholder.png';"
+                                 onclick="document.getElementById('mainFeaturedImage').src = this.src; document.querySelectorAll('.gallery-thumb-item').forEach(t => t.style.borderColor = 'rgba(255,255,255,0.12)'); this.style.borderColor = '#00f2fe';"
+                                 class="gallery-thumb-item" 
+                                 style="width: 80px; height: 60px; object-fit: cover; border-radius: 10px; cursor: pointer; border: 2px solid {% if loop.first %}#00f2fe{% else %}rgba(255,255,255,0.12){% endif %}; transition: transform 0.2s, border-color 0.2s; flex-shrink: 0;" 
+                                 onmouseover="this.style.transform='scale(1.05)'"
+                                 onmouseout="this.style.transform='scale(1)'"
+                                 alt="تصویر شماره {{ loop.index | pnum }}">
+                        {% endfor %}
                     </div>
                 {% endif %}
+            </div>
+        {% else %}
+            <div style="margin-bottom: 1.5rem; background: rgba(15, 23, 42, 0.6); border: 1px dashed rgba(255,255,255,0.15); border-radius: 14px; padding: 2rem; text-align: center;">
+                <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🏢</div>
+                <div style="color: #94a3b8; font-size: 0.92rem; font-weight: 600;">این آگهی بدون عکس در دیوار ثبت شده است</div>
+                <div style="color: #64748b; font-size: 0.78rem; margin-top: 0.35rem;">(جهت رعایت اصالت داده‌ها، هیچ تصویر ساختگی یا فیک جایگزین نشده است)</div>
             </div>
         {% endif %}
 
@@ -120,7 +142,10 @@
             </div>
             <div class="glass-card" style="padding: 0.85rem; text-align: center;">
                 <div style="font-size: 0.8rem; color: #94a3b8;">طبقه</div>
-                <div style="font-size: 1.15rem; font-weight: 700;">طبقه {{ prop.floor | pnum }}</div>
+                <div style="font-size: 1.15rem; font-weight: 700;">
+                    طبقه {{ prop.floor | pnum }}
+                    {% if prop.total_floors %} از {{ prop.total_floors | pnum }}{% endif %}
+                </div>
             </div>
             <div class="glass-card" style="padding: 0.85rem; text-align: center;">
                 <div style="font-size: 0.8rem; color: #94a3b8;">آسانسور</div>
@@ -129,18 +154,43 @@
                 </div>
             </div>
             <div class="glass-card" style="padding: 0.85rem; text-align: center;">
-                <div style="font-size: 0.8rem; color: #94a3b8;">پارکینگ سندی</div>
+                <div style="font-size: 0.8rem; color: #94a3b8;">پارکینگ</div>
                 <div style="font-size: 1.15rem; font-weight: 700; color: {% if prop.has_parking %}#10b981{% else %}#64748b{% endif %};">
                     {% if prop.has_parking %}دارد ✓{% else %}ندارد ✕{% endif %}
                 </div>
             </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">انباری</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: {% if prop.has_warehouse %}#10b981{% else %}#64748b{% endif %};">
+                    {% if prop.has_warehouse %}دارد ✓{% else %}ندارد ✕{% endif %}
+                </div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">بالکن / تراس</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: {% if prop.has_balcony %}#10b981{% else %}#64748b{% endif %};">
+                    {% if prop.has_balcony %}دارد ✓{% else %}ندارد ✕{% endif %}
+                </div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">وضعیت آگهی‌دهنده</div>
+                <div style="font-size: 1.05rem; font-weight: 700; color: #10b981;">
+                    مالک شخصی ✓
+                </div>
+            </div>
         </div>
 
-        <!-- Description -->
-        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">توضیحات و یادداشت کارشناسی</h3>
-        <p style="color: #cbd5e1; line-height: 1.8; font-size: 0.95rem; margin-bottom: 1.5rem;">
-            {{ (prop.description or 'توضیحاتی برای این فایل درج نشده است.') | linkify_ad | safe }}
-        </p>
+        <!-- Description Box -->
+        <div style="margin-bottom: 1.5rem; background: rgba(255,255,255,0.03); border-radius: 14px; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                    <span>📝</span> توضیحات کامل آگهی
+                </h3>
+                <span class="badge-neon badge-neon-cyan" style="font-size: 0.75rem;">متن استخراج‌شده اصلی</span>
+            </div>
+            <div style="color: #e2e8f0; line-height: 2; font-size: 0.94rem; white-space: pre-line;">
+                {{ (prop.description or 'توضیحاتی برای این فایل درج نشده است.') | linkify_ad | safe }}
+            </div>
+        </div>
 
         <!-- Features Pills -->
         {% if prop.features %}
@@ -158,9 +208,9 @@
         <div class="glass-panel" style="padding: 1.5rem; border-right: 4px solid #00f2fe;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                 <h3 style="font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-                    <span>👤</span> پرونده و اطلاعات مالک
+                    <span>👤</span> مشخصات و تماس مالک
                 </h3>
-                <span class="badge-neon badge-neon-cyan">محرمانه مشاور</span>
+                <span class="badge-neon badge-neon-emerald">مالک شخصی</span>
             </div>
 
             {% if prop.owner %}
@@ -169,11 +219,43 @@
                         <span style="color: #94a3b8; font-size: 0.88rem;">نام مالک:</span>
                         <strong style="font-size: 0.95rem;">{{ prop.owner.full_name }}</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #94a3b8; font-size: 0.88rem;">شماره تماس:</span>
-                        <a href="tel:{{ prop.owner.phone_number }}" style="color: #00f2fe; text-decoration: none; font-weight: 700; direction: ltr;">
-                            {{ prop.owner.phone_number }}
-                        </a>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; background: {% if prop.owner.phone_number and prop.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.1){% else %}rgba(0, 242, 254, 0.08){% endif %}; padding: 0.75rem; border-radius: 10px; border: 1px solid {% if prop.owner.phone_number and prop.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.35){% else %}rgba(0, 242, 254, 0.25){% endif %};">
+                        <div>
+                            <span style="color: #cbd5e1; font-size: 0.85rem; font-weight: 700;">📞 شماره تماس مالک:</span>
+                        </div>
+                        {% if prop.owner.phone_number and prop.owner.phone_number.startswith('09') %}
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <a href="tel:{{ prop.owner.phone_number }}" style="color: #10b981; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); padding: 0.35rem 0.75rem; border-radius: 8px; text-decoration: none; font-weight: 800; direction: ltr; font-size: 1.1rem; letter-spacing: 1.5px;">
+                                    {{ prop.owner.phone_number }}
+                                </a>
+                                <a href="tel:{{ prop.owner.phone_number }}" class="btn-neon-emerald" style="padding: 0.3rem 0.65rem; font-size: 0.75rem; text-decoration: none;">
+                                    تماس فوری
+                                </a>
+                                <button type="button" onclick="navigator.clipboard.writeText('{{ prop.owner.phone_number }}'); alert('شماره در حافظه کپی شد');" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #10b981;" title="کپی شماره">
+                                    📋
+                                </button>
+                                <button type="button" onclick="openMessengerModal({{ prop.id }})" class="glass-btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; color: #38bdf8;" title="استعلام وضعیت در ۵ پیام‌رسان">
+                                    💬
+                                </button>
+                                <button type="button" onclick="promptSavePhone({{ prop.id }}, '{{ prop.owner.phone_number }}', '{{ prop.owner.full_name }}')" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #94a3b8;" title="ویرایش شماره">
+                                    ✏️
+                                </button>
+                            </div>
+                        {% else %}
+                            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                <button type="button" onclick="fetchDivarPhoneDirect({{ prop.id }})" class="btn-neon-cyan" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; font-weight: 700;">
+                                    <span>⚡</span> استخراج خودکار شماره
+                                </button>
+                                <button type="button" onclick="promptSavePhone({{ prop.id }}, '', '{{ prop.owner.full_name }}')" class="glass-btn" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                                    <span>✏️</span> ثبت شماره
+                                </button>
+                                {% if prop.source_url %}
+                                    <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; text-decoration: none; color: #00f2fe; border-color: rgba(0, 242, 254, 0.3);">
+                                        🌐 دیوار
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                     <div style="display: flex; justify-content: space-between;">
                         <span style="color: #94a3b8; font-size: 0.88rem;">میزان فوریت:</span>
@@ -198,6 +280,38 @@
                             </a>
                         </div>
                     {% endif %}
+                    <!-- Lifecycle Status & Omni-Messenger Inquiry -->
+                    <div style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <span style="font-size: 0.82rem; color: #94a3b8;">چرخه عمر فایل:</span>
+                            {% if prop.is_expired %}
+                                <span class="badge-neon" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #ef4444; font-weight: 700;">
+                                    ⏰ معوق ({{ prop.age_in_days | pnum }} روزه)
+                                </span>
+                            {% else %}
+                                <span class="badge-neon badge-neon-emerald">
+                                    ✓ فعال ({{ prop.age_in_days | pnum }} روز گذشته)
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <button type="button" onclick="openMessengerModal({{ prop.id }})" class="glass-btn" style="width: 100%; justify-content: center; background: linear-gradient(135deg, rgba(37, 211, 102, 0.15), rgba(34, 158, 217, 0.15)); border-color: rgba(0, 242, 254, 0.3); color: #00f2fe; font-weight: 700; margin-bottom: 0.5rem;">
+                            <span>💬</span> استعلام وضعیت در ۵ پیام‌رسان
+                        </button>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
+                            <form method="POST" action="{{ url_for('properties.reactivate', id=prop.id) }}" style="margin:0;">
+                                <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; color: #10b981; border-color: rgba(16,185,129,0.3);">
+                                    ✓ تایید موجودی
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('properties.archive', id=prop.id) }}" style="margin:0;">
+                                <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245,158,11,0.3);">
+                                    📦 واگذار شد (بایگانی)
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             {% else %}
                 <div style="color: #64748b; font-size: 0.88rem; margin-bottom: 1rem;">
@@ -205,7 +319,7 @@
                 </div>
             {% endif %}
 
-            <div style="margin-top: 1.25rem;">
+            <div style="margin-top: 1rem;">
                 <button onclick="openModal('logCallModal')" class="glass-btn" style="width: 100%; justify-content: center;">
                     <span>📞</span> ثبت گزارش تماس با مالک
                 </button>
@@ -353,6 +467,9 @@
         </form>
     </div>
 </div>
+<!-- Omni-Messenger Inquiry Modal -->
+{% include "properties/messenger_modal.html" %}
+
 {% endblock %}
 
 {% block extra_scripts %}

@@ -75,6 +75,7 @@ class NormalizedPropertySchema(BaseModel):
     area: int = Field(default=100, ge=10, le=50000)
     rooms: int = Field(default=1, ge=0, le=20)
     floor: int = Field(default=1, ge=-5, le=100)
+    total_floors: Optional[int] = Field(default=None)
     build_year: Optional[int] = Field(default=1400)
     
     # Amenities
@@ -88,6 +89,11 @@ class NormalizedPropertySchema(BaseModel):
     images: List[str] = Field(default_factory=list)
     status: str = Field(default="raw_crawled")
     score: int = Field(default=75, ge=0, le=100)
+    
+    # Owner & Filter Information
+    owner_type: str = Field(default="personal", description="personal یا agency")
+    is_personal_owner: bool = Field(default=True, description="آیا آگهی شخصی است")
+    filter_log: Optional[str] = Field(default="", description="علت و توضیحات نتیجه فیلتر")
     
     owner_info: Optional[OwnerSchema] = None
 
@@ -103,3 +109,17 @@ class NormalizedPropertySchema(BaseModel):
     @classmethod
     def clean_title(cls, v: str) -> str:
         return re.sub(r'\s+', ' ', v).strip()
+
+    @field_validator('images')
+    @classmethod
+    def clean_images(cls, v: List[str]) -> List[str]:
+        """فیلتر و تضمین عدم ذخیره داده باینری، Base64 یا محتوای فیزیکی در دیتابیس"""
+        if not v:
+            return []
+        cleaned = []
+        for item in v:
+            if isinstance(item, str):
+                s = item.strip()
+                if s.startswith(('http://', 'https://')) and not s.startswith('data:') and ';base64,' not in s:
+                    cleaned.append(s)
+        return cleaned

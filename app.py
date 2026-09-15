@@ -20,6 +20,7 @@ from routes.clients import clients_bp
 from routes.matching import matching_bp
 from routes.crm import crm_bp
 from routes.crawler_api import crawler_bp
+from routes.messenger_api import messenger_bp
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -36,6 +37,29 @@ def create_app(config_class=Config):
     app.register_blueprint(matching_bp)
     app.register_blueprint(crm_bp)
     app.register_blueprint(crawler_bp)
+    app.register_blueprint(messenger_bp)
+
+    @app.route('/assets/<path:filename>')
+    def serve_assets(filename):
+        from flask import send_from_directory
+        assets_dir = os.path.join(app.root_path, 'static', 'assets')
+        if os.path.exists(os.path.join(assets_dir, filename)):
+            return send_from_directory(assets_dir, filename)
+        return send_from_directory(os.path.join(app.root_path, 'static'), filename)
+
+    @app.context_processor
+    def inject_global_stats():
+        try:
+            from database.models import Property
+            from datetime import datetime, timedelta
+            cutoff = datetime.utcnow() - timedelta(days=7)
+            expired_count = Property.query.filter(
+                (Property.created_at < cutoff) | (Property.status == 'needs_followup'),
+                Property.status.notin_(['archived', 'sold'])
+            ).count()
+            return {'expired_properties_count': expired_count}
+        except Exception:
+            return {'expired_properties_count': 0}
 
     # Jinja Filters
     @app.template_filter('toman')
@@ -97,6 +121,39 @@ def create_app(config_class=Config):
             url = match.group(0)
             return f'<a href="{url}" target="_blank" rel="noopener noreferrer" style="color: #00f2fe; text-decoration: underline; font-weight: 700;">لینک آگهی</a>'
         return re.sub(pattern, repl, str(text))
+
+    @app.template_filter('time_ago')
+    def persian_time_ago(dt):
+        if not dt:
+            return 'نامشخص'
+        from datetime import datetime
+        now = datetime.utcnow()
+        if dt > now:
+            return 'لحظاتی پیش'
+        diff = now - dt
+        seconds = int(diff.total_seconds())
+        if seconds < 60:
+            return 'لحظاتی پیش'
+        minutes = seconds // 60
+        if minutes == 30:
+            return 'نیم ساعت پیش'
+        elif minutes < 60:
+            return f"{to_persian_num(minutes)} دقیقه پیش"
+        hours = seconds // 3600
+        if hours == 1:
+            return 'یک ساعت پیش'
+        elif hours < 24:
+            return f"{to_persian_num(hours)} ساعت پیش"
+        days = diff.days
+        if days == 1:
+            return 'دیروز'
+        elif days < 7:
+            return f"{to_persian_num(days)} روز پیش"
+        weeks = days // 7
+        if weeks < 4:
+            return f"{to_persian_num(weeks)} هفته پیش"
+        months = days // 30
+        return f"{to_persian_num(months)} ماه پیش"
 
     with app.app_context():
         db.create_all()

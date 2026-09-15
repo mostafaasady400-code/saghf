@@ -1,9 +1,10 @@
 import os
 import sys
 import random
+import time
 
-# Ensure UTF-8 output
-sys.stdout.reconfigure(encoding='utf-8')
+# Ensure UTF-8 output with unbuffered flush
+sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 
 from app import create_app
 from database.db import db
@@ -20,16 +21,23 @@ def purge_and_extract():
         print("🗑️ گام ۱: پاکسازی کامل داده‌های دمو و تستی از پایگاه داده...")
         print("=" * 60)
         
-        # 1. Purge all existing properties and their associated matches, visits, interactions
+        # 1. Purge all existing properties and their associated matches, visits, interactions, and crawled owners
         deleted_matches = MatchRecord.query.delete()
         deleted_visits = Visit.query.delete()
         deleted_interactions = Interaction.query.delete()
         deleted_properties = Property.query.delete()
+        deleted_owners = Owner.query.filter(
+            (Owner.notes.like('%ثبت خودکار از کراولر%')) | 
+            (Owner.full_name.like('%مالک آگهی%')) |
+            (Owner.full_name.like('%مالک محترم%')) |
+            (Owner.full_name.like('%مالک شیپور%'))
+        ).delete(synchronize_session=False)
         
         db.session.commit()
         dedup_engine.clear()
         
-        print(f"✓ تعداد {deleted_properties} ملک دمو حذف گردید.")
+        print(f"✓ تعداد {deleted_properties} ملک قبلی کراول حذف گردید.")
+        print(f"✓ تعداد {deleted_owners} رکورد مالک ثبت‌شده از کراولر پاکسازی شد.")
         print(f"✓ تعداد {deleted_matches} رکورد تطبیق، {deleted_visits} بازدید و {deleted_interactions} تعامل پاکسازی شدند.")
         print(f"✓ حافظه کش Dedup ریست شد (تعداد کنونی: {dedup_engine.size()}).")
 
@@ -43,7 +51,7 @@ def purge_and_extract():
             agents = Agent.query.all()
 
         print("\n" + "=" * 60)
-        print("🌐 گام ۲: استخراج داده‌های زنده و واقعی با لینک معتبر از دیوار و شیپور...")
+        print("🌐 گام ۲: استخراج داده‌های زنده و ۱۰۰٪ شخصی با لینک معتبر (فیلتر دولایه)...")
         print("=" * 60)
 
         divar_crawler = HybridDivarCrawler(city='tehran')
@@ -53,33 +61,39 @@ def purge_and_extract():
         real_extracted = []
 
         # 2. Extract Divar live listings
-        divar_cats = ['buy-apartment', 'rent-apartment', 'buy-residential']
+        divar_cats = ['buy-apartment', 'rent-apartment', 'buy-residential', 'rent-residential']
         for cat in divar_cats:
             print(f"\n[دیوار] در حال اتصال و استخراج دسته {cat}...")
             try:
-                items = divar_crawler.fetch_listings(category_key=cat, limit=15)
-                print(f"[دیوار] {len(items)} آگهی زنده استخراج و اعتبارسنجی شد.")
+                items = divar_crawler.fetch_listings(category_key=cat, limit=20)
+                print(f"[دیوار] {len(items)} آگهی زنده ۱۰۰٪ شخصی استخراج و اعتبارسنجی شد.")
                 for item in items:
-                    real_extracted.append(item)
+                    if item.is_personal_owner:
+                        real_extracted.append(item)
             except Exception as e:
                 print(f"[دیوار] خطا در استخراج {cat}: {e}")
+            time.sleep(2.0)
 
         # 3. Extract Sheypoor live listings
-        sheypoor_cats = ['buy-apartment', 'rent-apartment', 'buy-villa']
+        sheypoor_cats = ['buy-apartment', 'rent-apartment', 'real-estate']
         for cat in sheypoor_cats:
             print(f"\n[شیپور] در حال اتصال و استخراج دسته {cat}...")
             try:
-                items = sheypoor_crawler.fetch_listings(category_key=cat, limit=15)
-                print(f"[شیپور] {len(items)} آگهی زنده استخراج و اعتبارسنجی شد.")
+                items = sheypoor_crawler.fetch_listings(category_key=cat, limit=20)
+                print(f"[شیپور] {len(items)} آگهی زنده ۱۰۰٪ شخصی استخراج و اعتبارسنجی شد.")
                 for item in items:
-                    real_extracted.append(item)
+                    if item.is_personal_owner:
+                        real_extracted.append(item)
             except Exception as e:
                 print(f"[شیپور] خطا در استخراج {cat}: {e}")
+            time.sleep(2.0)
 
-        print(f"\n📦 مجموع فایل‌های واقعی دریافت شده: {len(real_extracted)}")
+        print(f"\n📦 مجموع فایل‌های ۱۰۰٪ شخصی دریافت شده: {len(real_extracted)}")
         print("💾 در حال ثبت پایدار در پایگاه داده SQLite با اعتبارسنجی لینک‌ها...")
 
         for item in real_extracted:
+            if not item.is_personal_owner:
+                continue
             # Check duplicate by source_id
             existing = Property.query.filter_by(source_id=item.source_id).first()
             if existing:
@@ -129,6 +143,9 @@ def purge_and_extract():
                 description=item.description,
                 status=item.status,
                 score=item.score,
+                is_personal_owner=item.is_personal_owner,
+                owner_type=item.owner_type,
+                filter_log=item.filter_log,
                 owner_id=owner.id if owner else None,
                 assigned_agent_id=agent.id if agent else None
             )

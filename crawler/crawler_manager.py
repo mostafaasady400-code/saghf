@@ -52,7 +52,7 @@ class CrawlerManager:
                 self.logs.pop(0)
         print(f"[{timestamp}] [{level.upper()}] {message}")
 
-    def start_crawl_task(self, sources: Optional[List[str]] = None, categories: Optional[List[str]] = None, limit_per_cat: int = 10):
+    def start_crawl_task(self, sources: Optional[List[str]] = None, categories: Optional[List[str]] = None, limit_per_cat: int = 10, city: str = 'tehran', district: Optional[str] = None):
         if self.is_running:
             return False, "فرآیند کراولینگ در حال حاضر در حال اجرا است."
 
@@ -63,17 +63,17 @@ class CrawlerManager:
 
         worker_thread = threading.Thread(
             target=self._run_hybrid_worker,
-            args=(sources, categories, limit_per_cat),
+            args=(sources, categories, limit_per_cat, city, district),
             daemon=True
         )
         worker_thread.start()
         return True, "عملیات کراولینگ هیبریدی (TLS Impersonation + Pydantic) آغاز شد."
 
-    def _run_hybrid_worker(self, sources: List[str], categories: List[str], limit_per_cat: int):
+    def _run_hybrid_worker(self, sources: List[str], categories: List[str], limit_per_cat: int, city: str = 'tehran', district: Optional[str] = None):
         self.is_running = True
         self.stats['status'] = 'running'
         self.stats['last_run'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.add_log("🚀 آغاز موتور کراولینگ هیبریدی (لایه اول: Fast-Path با امضای TLS کروم)...", 'info')
+        self.add_log(f"🚀 آغاز موتور کراولینگ هیبریدی برای شهر {city} و منطقه {district or 'کل شهر'}...", 'info')
 
         saved_count = 0
         skipped_count = 0
@@ -87,78 +87,99 @@ class CrawlerManager:
         with self.app.app_context():
             # اطمینان از کش بودن شناسه‌های دیتابیس
             dedup_engine.initialize_from_db(Property)
+            self.divar_crawler.city = city
+            self.sheypoor_crawler.city = city
+
+            def on_item_crawled(schema_item: NormalizedPropertySchema):
+                nonlocal saved_count, skipped_count
+                sid = schema_item.source_id
+                existing = Property.query.filter_by(source_id=sid).first()
+                if existing:
+                    skipped_count += 1
+                    dedup_engine.mark_seen(sid)
+                    return
+
+                # ثبت یا تطبیق مالک
+                owner = None
+                if schema_item.owner_info and schema_item.owner_info.phone:
+                    phone = schema_item.owner_info.phone
+                    owner = Owner.query.filter_by(phone_number=phone).first()
+                    if not owner:
+                        owner = Owner(
+                            full_name=schema_item.owner_info.name,
+                            phone_number=phone,
+                            urgency=schema_item.owner_info.urgency,
+                            flexibility=schema_item.owner_info.flexibility,
+                            notes=schema_item.owner_info.notes
+                        )
+                        db.session.add(owner)
+                        db.session.flush()
+
+                prop = Property(
+                    source=schema_item.source,
+                    source_id=sid,
+                    source_url=schema_item.source_url,
+                    title=schema_item.title,
+                    deal_type=schema_item.deal_type,
+                    property_type=schema_item.property_type,
+                    city=schema_item.city,
+                    district=schema_item.district,
+                    address=schema_item.address,
+                    total_price=schema_item.total_price,
+                    meter_price=schema_item.meter_price,
+                    deposit=schema_item.deposit,
+                    monthly_rent=schema_item.monthly_rent,
+                    area=schema_item.area,
+                    rooms=schema_item.rooms,
+                    floor=schema_item.floor,
+                    total_floors=schema_item.total_floors,
+                    build_year=schema_item.build_year or 1401,
+                    has_elevator=schema_item.has_elevator,
+                    has_parking=schema_item.has_parking,
+                    has_warehouse=schema_item.has_warehouse,
+                    has_balcony=schema_item.has_balcony,
+                    description=schema_item.description,
+                    status=schema_item.status,
+                    score=schema_item.score,
+                    is_personal_owner=schema_item.is_personal_owner,
+                    owner_type=schema_item.owner_type,
+                    filter_log=schema_item.filter_log,
+                    owner_id=owner.id if owner else None
+                )
+                prop.features = schema_item.features
+                prop.images = schema_item.images
+
+                db.session.add(prop)
+                db.session.commit()
+                dedup_engine.mark_seen(sid)
+                saved_count += 1
+
+                with self.lock:
+                    self.stats['new_saved'] += 1
+                    self.stats['total_crawled'] += 1
+
+                deal_lbl = 'فروش' if prop.deal_type == 'sale' else 'رهن/اجاره'
+                phone_lbl = f"📞 {owner.phone_number}" if (owner and owner.phone_number and owner.phone_number.startswith('09')) else "📱 شماره در دیوار محفوظ است"
+                self.add_log(f"⚡ [ثبت بلادرنگ] {deal_lbl}: {prop.title[:38]} ({prop.district}) | {phone_lbl}", 'success')
+
+            # اولویت‌دهی محوری به دیوار به عنوان مرجع اصلی آگهی‌ها
+            sources = sorted(sources, key=lambda s: 0 if s == 'divar' else 1)
 
             for source in sources:
-                self.add_log(f"🔍 اتصال امن به پلتفرم {source.upper()} با شبیه‌سازی فریم‌های HTTP/2...", 'info')
+                if source == 'divar':
+                    self.add_log("⭐ تمرکز ویژه بر پلتفرم مرجع DIVAR (دیوار) به عنوان بانک اصلی آگهی‌ها...", 'info')
+                else:
+                    self.add_log(f"🔍 اتصال به پلتفرم مکمل {source.upper()}...", 'info')
+
                 for cat in categories:
-                    self.add_log(f"در حال استخراج دسته‌بندی {cat} از {source} با سطل توکن شبه‌انسانی...", 'info')
+                    # تخصیص حجم بیشتر به دیوار به عنوان مرجع اصلی
+                    cat_limit = int(limit_per_cat * 1.5) if source == 'divar' else limit_per_cat
+                    self.add_log(f"در حال استخراج دسته‌بندی {cat} از {source} (سقف {cat_limit} فایل، پایش ۵ روز اخیر)...", 'info')
                     try:
                         if source == 'divar':
-                            validated_items: List[NormalizedPropertySchema] = self.divar_crawler.fetch_listings(category_key=cat, limit=limit_per_cat)
+                            self.divar_crawler.fetch_listings(category_key=cat, limit=cat_limit, query=district, on_item_found=on_item_crawled)
                         else:
-                            validated_items: List[NormalizedPropertySchema] = self.sheypoor_crawler.fetch_listings(category_key=cat, limit=limit_per_cat)
-
-                        self.add_log(f"تعداد {len(validated_items)} رکورد با اعتبارسنجی Pydantic دریافت شد. در حال اعتبارسنجی پایگاه داده...", 'info')
-
-                        for schema_item in validated_items:
-                            sid = schema_item.source_id
-                            existing = Property.query.filter_by(source_id=sid).first()
-                            if existing:
-                                skipped_count += 1
-                                dedup_engine.mark_seen(sid)
-                                continue
-
-                            # ثبت یا تطبیق مالک
-                            owner = None
-                            if schema_item.owner_info and schema_item.owner_info.phone:
-                                phone = schema_item.owner_info.phone
-                                owner = Owner.query.filter_by(phone_number=phone).first()
-                                if not owner:
-                                    owner = Owner(
-                                        full_name=schema_item.owner_info.name,
-                                        phone_number=phone,
-                                        urgency=schema_item.owner_info.urgency,
-                                        flexibility=schema_item.owner_info.flexibility,
-                                        notes=schema_item.owner_info.notes
-                                    )
-                                    db.session.add(owner)
-                                    db.session.flush()
-
-                            prop = Property(
-                                source=schema_item.source,
-                                source_id=sid,
-                                source_url=schema_item.source_url,
-                                title=schema_item.title,
-                                deal_type=schema_item.deal_type,
-                                property_type=schema_item.property_type,
-                                city=schema_item.city,
-                                district=schema_item.district,
-                                address=schema_item.address,
-                                total_price=schema_item.total_price,
-                                meter_price=schema_item.meter_price,
-                                deposit=schema_item.deposit,
-                                monthly_rent=schema_item.monthly_rent,
-                                area=schema_item.area,
-                                rooms=schema_item.rooms,
-                                floor=schema_item.floor,
-                                build_year=schema_item.build_year or 1401,
-                                has_elevator=schema_item.has_elevator,
-                                has_parking=schema_item.has_parking,
-                                has_warehouse=schema_item.has_warehouse,
-                                has_balcony=schema_item.has_balcony,
-                                description=schema_item.description,
-                                status=schema_item.status,
-                                score=schema_item.score,
-                                owner_id=owner.id if owner else None
-                            )
-                            prop.features = schema_item.features
-                            prop.images = schema_item.images
-
-                            db.session.add(prop)
-                            dedup_engine.mark_seen(sid)
-                            saved_count += 1
-
-                        db.session.commit()
+                            self.sheypoor_crawler.fetch_listings(category_key=cat, limit=cat_limit, query=district, on_item_found=on_item_crawled)
                         time.sleep(0.5)
                     except Exception as err:
                         db.session.rollback()
