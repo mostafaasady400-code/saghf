@@ -21,6 +21,11 @@ from routes.matching import matching_bp
 from routes.crm import crm_bp
 from routes.crawler_api import crawler_bp
 from routes.messenger_api import messenger_bp
+from routes.telegram_api import telegram_bp
+from routes.admin import admin_bp
+from flask_wtf.csrf import CSRFProtect, CSRFError
+
+csrf = CSRFProtect()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -28,7 +33,22 @@ def create_app(config_class=Config):
 
     # Initialize extensions
     db.init_app(app)
+    csrf.init_app(app)
     crawler_manager.init_app(app)
+
+    # Exempt Telegram webhook from CSRF protection (Telegram server POSTs directly)
+    csrf.exempt(telegram_bp)
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        from flask import jsonify, request
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.startswith(('/api/', '/crawler/', '/matching/', '/properties/')):
+            return jsonify({
+                'success': False,
+                'error': 'CSRF_FAILED',
+                'message': 'اعتبارسنجی توکن امنیتی (CSRF) ناموفق بود. لطفاً صفحه را تازه‌سازی کنید.'
+            }), 400
+        return '<div style="text-align: center; padding: 3rem; font-family: sans-serif; direction: rtl; color: #f43f5e;"><h3>خطای امنیتی CSRF: توکن نامعتبر یا منقضی شده است.</h3><p>لطفاً به صفحه قبل بازگشته و مجدداً صفحه را بارگذاری فرمایید.</p><a href="javascript:history.back()" style="color: #38bdf8;">بازگشت</a></div>', 400
 
     # Register blueprints
     app.register_blueprint(dashboard_bp)
@@ -38,6 +58,8 @@ def create_app(config_class=Config):
     app.register_blueprint(crm_bp)
     app.register_blueprint(crawler_bp)
     app.register_blueprint(messenger_bp)
+    app.register_blueprint(telegram_bp)
+    app.register_blueprint(admin_bp)
 
     @app.route('/assets/<path:filename>')
     def serve_assets(filename):
@@ -116,11 +138,23 @@ def create_app(config_class=Config):
         if not text:
             return ''
         import re
+        from markupsafe import Markup, escape
+
+        # 1. Escape all raw text securely so no HTML/script tags can be injected
+        escaped_text = str(escape(text))
+
+        # 2. Match URLs inside the already-escaped text
         pattern = r'https?://[^\s<>"]+'
         def repl(match):
-            url = match.group(0)
-            return f'<a href="{url}" target="_blank" rel="noopener noreferrer" style="color: #00f2fe; text-decoration: underline; font-weight: 700;">لینک آگهی</a>'
-        return re.sub(pattern, repl, str(text))
+            raw_url = match.group(0)
+            if raw_url.startswith(('http://', 'https://')):
+                safe_url = str(escape(raw_url))
+                return f'<a href="{safe_url}" target="_blank" rel="noopener noreferrer" style="color: var(--gold-light); text-decoration: underline; font-weight: 700;">لینک آگهی</a>'
+            return raw_url
+
+        linkified = re.sub(pattern, repl, escaped_text)
+        return Markup(linkified)
+
 
     @app.template_filter('time_ago')
     def persian_time_ago(dt):
@@ -165,7 +199,13 @@ app = create_app()
 if __name__ == '__main__':
     print("==================================================")
     print("✨ سامانه جامع مدیریت و فایلینگ املاک سقف (Saghf CRM)")
-    print("🌐 رابط کاربری Neon Dark Glassmorphism فعال است")
-    print("🚀 دسترسی از طریق: http://127.0.0.1:5000")
+    print("⚜️ رابط کاربری Black & Gold Luxury با موشن‌های سه‌بعدی فعال است")
+    print("🚀 دسترسی عمومی: http://127.0.0.1:5000")
+    print("--------------------------------------------------")
+    print("👑 مشخصات حساب Super Admin سامانه:")
+    print(f"👤 نام کاربری: {Config.ADMIN_USERNAME}")
+    print(f"🔑 گذرواژه:   {Config.ADMIN_PASSWORD}")
+    print("🌐 ورود به پنل مدیریت: http://127.0.0.1:5000/admin/login")
+    print(f"🤖 شناسه ادمین تلگرام: {Config.ADMIN_TELEGRAM_ID or 'تعریف نشده در .env'}")
     print("==================================================")
     app.run(host='127.0.0.1', port=5000, debug=True)

@@ -1,30 +1,45 @@
 /* ===================================================
    SAGHF REAL ESTATE INTELLIGENCE & CRM
-   NEON DARK COLOR TOKENS & ACCENTS
+   BLACK & GOLD LUXURY DESIGN SYSTEM (DARK & GOLD)
    =================================================== */
 
 :root {
-    /* Backgrounds */
-    --bg-base: #070b14;
-    --bg-gradient-mesh: radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.08) 0px, transparent 50%),
-                        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
-                        radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.04) 0px, transparent 60%);
-    --bg-surface: #0f172a;
-    --bg-card: rgba(15, 23, 42, 0.72);
+    /* Backgrounds: Deep Obsidian & Dark Charcoal */
+    --bg-base: #060709;
+    --bg-surface: #0e1015;
+    --bg-card: rgba(16, 17, 22, 0.82);
+    --bg-card-hover: rgba(22, 24, 30, 0.9);
     
-    /* Neon Palettes */
-    --neon-cyan: #00f2fe;
-    --neon-cyan-hover: #38bdf8;
-    --neon-cyan-glow: 0 0 20px rgba(0, 242, 254, 0.45);
-    
+    /* Warm Golden Radial Mesh */
+    --bg-gradient-mesh: radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.12) 0px, transparent 55%),
+                        radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.08) 0px, transparent 50%),
+                        radial-gradient(at 50% 50%, rgba(184, 134, 11, 0.05) 0px, transparent 65%);
+
+    /* Regal Gold Luxury Tokens */
+    --gold-primary: #d4af37;
+    --gold-light: #f5d77f;
+    --gold-pale: #fbf0d9;
+    --gold-dark: #997517;
+    --gold-bronze: #b38728;
+    --gold-glow: 0 0 24px rgba(212, 175, 55, 0.45);
+    --gold-border: rgba(212, 175, 55, 0.32);
+    --gold-border-bright: rgba(245, 215, 127, 0.7);
+    --gold-gradient: linear-gradient(135deg, #f7d070 0%, #d4af37 45%, #aa771c 100%);
+    --gold-gradient-hover: linear-gradient(135deg, #fff0a8 0%, #e6ca65 45%, #b8860b 100%);
+
+    /* Legacy Token Aliases mapped to Luxury Gold & Accents */
+    --neon-cyan: #d4af37;
+    --neon-cyan-hover: #f5d77f;
+    --neon-cyan-glow: 0 0 22px rgba(212, 175, 55, 0.5);
+
     --neon-emerald: #10b981;
     --neon-emerald-hover: #34d399;
     --neon-emerald-glow: 0 0 20px rgba(16, 185, 129, 0.45);
-    
-    --neon-purple: #8b5cf6;
-    --neon-purple-hover: #a78bfa;
-    --neon-purple-glow: 0 0 20px rgba(139, 92, 246, 0.45);
-    
+
+    --neon-purple: #c59b27;
+    --neon-purple-hover: #dfb76c;
+    --neon-purple-glow: 0 0 20px rgba(197, 155, 39, 0.45);
+
     --neon-amber: #f59e0b;
     --neon-amber-glow: 0 0 20px rgba(245, 158, 11, 0.45);
 
@@ -33,8 +48,9 @@
 
     /* Text Colors */
     --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
+    --text-secondary: #cbd5e1;
+    --text-muted: #8896ab;
+    --text-gold: #f5d77f;
 }
 
 body {
@@ -44,10 +60,17 @@ body {
     color: var(--text-primary);
 }
 
-/* Neon Text Glows */
-.text-neon-cyan {
-    color: var(--neon-cyan) !important;
-    text-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+/* Luxury Gold Text Glows & Highlights */
+.text-gold, .text-neon-cyan {
+    color: var(--gold-light) !important;
+    text-shadow: 0 0 14px rgba(212, 175, 55, 0.55);
+}
+
+.text-gold-gradient {
+    background: var(--gold-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
 }
 
 .text-neon-emerald {
@@ -56,8 +79,8 @@ body {
 }
 
 .text-neon-purple {
-    color: var(--neon-purple) !important;
-    text-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+    color: #dfb76c !important;
+    text-shadow: 0 0 12px rgba(223, 183, 108, 0.5);
 }
 
 .text-neon-amber {
@@ -70,29 +93,47 @@ body {
     text-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
 }
 
-/* Neon Action Buttons */
-.btn-neon-cyan {
-    background: linear-gradient(135deg, #00c6ff, #0072ff);
-    color: #ffffff;
-    border: 1px solid rgba(0, 242, 254, 0.6);
+/* Luxury Action Buttons (Black & Gold) */
+.btn-luxury-gold, .btn-neon-cyan {
+    background: var(--gold-gradient);
+    color: #0b0c10 !important;
+    border: 1px solid rgba(255, 235, 150, 0.75);
     border-radius: 12px;
-    padding: 0.65rem 1.3rem;
-    font-weight: 500;
+    padding: 0.65rem 1.35rem;
+    font-weight: 700;
     font-size: 0.92rem;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(0, 198, 255, 0.35);
-    transition: all 0.25s ease;
+    box-shadow: 0 4px 22px rgba(212, 175, 55, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     text-decoration: none;
+    position: relative;
+    overflow: hidden;
 }
 
-.btn-neon-cyan:hover {
-    background: linear-gradient(135deg, #00e0ff, #0084ff);
-    box-shadow: 0 6px 28px rgba(0, 242, 254, 0.6);
+.btn-luxury-gold::before, .btn-neon-cyan::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: skewX(-25deg);
+    transition: all 0.75s ease;
+}
+
+.btn-luxury-gold:hover::before, .btn-neon-cyan:hover::before {
+    left: 140%;
+}
+
+.btn-luxury-gold:hover, .btn-neon-cyan:hover {
+    background: var(--gold-gradient-hover);
+    box-shadow: 0 8px 30px rgba(212, 175, 55, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.6);
     transform: translateY(-2px);
-    color: #ffffff;
+    color: #000000 !important;
 }
 
 .btn-neon-emerald {
@@ -101,7 +142,7 @@ body {
     border: 1px solid rgba(16, 185, 129, 0.6);
     border-radius: 12px;
     padding: 0.65rem 1.3rem;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.92rem;
     cursor: pointer;
     box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
@@ -120,15 +161,15 @@ body {
 }
 
 .btn-neon-purple {
-    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-    color: #ffffff;
-    border: 1px solid rgba(139, 92, 246, 0.6);
+    background: linear-gradient(135deg, #d4af37, #997517);
+    color: #000000;
+    border: 1px solid rgba(245, 215, 127, 0.6);
     border-radius: 12px;
     padding: 0.65rem 1.3rem;
-    font-weight: 500;
+    font-weight: 700;
     font-size: 0.92rem;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.35);
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.35);
     transition: all 0.25s ease;
     display: inline-flex;
     align-items: center;
@@ -137,60 +178,66 @@ body {
 }
 
 .btn-neon-purple:hover {
-    box-shadow: 0 6px 28px rgba(139, 92, 246, 0.6);
+    box-shadow: 0 6px 28px rgba(212, 175, 55, 0.6);
     transform: translateY(-2px);
-    color: #ffffff;
+    color: #000000;
 }
 
-/* Neon Badges & Pills */
+/* Luxury Black & Gold Badges */
 .badge-neon {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    padding: 0.3rem 0.75rem;
+    padding: 0.32rem 0.8rem;
     border-radius: 9999px;
     font-size: 0.78rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.02em;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
 }
 
-.badge-neon-cyan {
-    background: rgba(0, 242, 254, 0.12);
-    border: 1px solid rgba(0, 242, 254, 0.35);
-    color: var(--neon-cyan);
-    box-shadow: 0 0 12px rgba(0, 242, 254, 0.18);
+.badge-neon-gold, .badge-neon-cyan {
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    color: var(--gold-light);
+    box-shadow: 0 0 14px rgba(212, 175, 55, 0.22);
 }
 
 .badge-neon-emerald {
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.35);
-    color: var(--neon-emerald);
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.18);
+    background: rgba(16, 185, 129, 0.14);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
 }
 
 .badge-neon-purple {
-    background: rgba(139, 92, 246, 0.12);
-    border: 1px solid rgba(139, 92, 246, 0.35);
-    color: var(--neon-purple);
-    box-shadow: 0 0 12px rgba(139, 92, 246, 0.18);
+    background: rgba(197, 155, 39, 0.18);
+    border: 1px solid rgba(223, 183, 108, 0.45);
+    color: #fce295;
+    box-shadow: 0 0 14px rgba(212, 175, 55, 0.2);
 }
 
 .badge-neon-amber {
-    background: rgba(245, 158, 11, 0.12);
-    border: 1px solid rgba(245, 158, 11, 0.35);
-    color: var(--neon-amber);
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.18);
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    color: #fcd34d;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.22);
 }
 
 .badge-neon-crimson {
-    background: rgba(244, 63, 94, 0.12);
-    border: 1px solid rgba(244, 63, 94, 0.35);
-    color: var(--neon-crimson);
-    box-shadow: 0 0 12px rgba(244, 63, 94, 0.18);
+    background: rgba(244, 63, 94, 0.15);
+    border: 1px solid rgba(244, 63, 94, 0.45);
+    color: #fda4af;
+    box-shadow: 0 0 12px rgba(244, 63, 94, 0.22);
 }
 
-/* Neon Pulsating Dot Indicator */
+.badge-neon-gray {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+}
+
+/* Pulsating Indicators */
 .neon-pulse-dot {
     width: 8px;
     height: 8px;
@@ -199,17 +246,17 @@ body {
     position: relative;
 }
 
-.neon-pulse-dot.cyan {
-    background-color: var(--neon-cyan);
-    box-shadow: 0 0 10px var(--neon-cyan);
+.neon-pulse-dot.gold, .neon-pulse-dot.cyan {
+    background-color: var(--gold-primary);
+    box-shadow: 0 0 12px var(--gold-primary);
 }
-.neon-pulse-dot.cyan::after {
+.neon-pulse-dot.gold::after, .neon-pulse-dot.cyan::after {
     content: '';
     position: absolute;
     inset: -3px;
     border-radius: 50%;
-    border: 2px solid var(--neon-cyan);
-    animation: neonPulse 1.8s infinite;
+    border: 2px solid var(--gold-primary);
+    animation: goldPulse 1.8s infinite;
 }
 
 .neon-pulse-dot.emerald {
@@ -225,39 +272,45 @@ body {
     animation: neonPulse 1.8s infinite;
 }
 
+@keyframes goldPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(2.2); opacity: 0; }
+    100% { transform: scale(1); opacity: 0; }
+}
+
 @keyframes neonPulse {
     0% { transform: scale(1); opacity: 1; }
     50% { transform: scale(2.2); opacity: 0; }
     100% { transform: scale(1); opacity: 0; }
 }
 
-/* Neon Matching Score Ring */
+/* Matching Score Pills (Luxury) */
 .match-score-pill {
-    padding: 0.4rem 0.9rem;
+    padding: 0.4rem 0.95rem;
     border-radius: 12px;
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
 }
 
 .match-high {
-    background: rgba(16, 185, 129, 0.16);
-    border: 1px solid rgba(16, 185, 129, 0.5);
-    color: #10b981;
-    box-shadow: 0 0 18px rgba(16, 185, 129, 0.25);
+    background: rgba(212, 175, 55, 0.18);
+    border: 1px solid rgba(212, 175, 55, 0.6);
+    color: var(--gold-light);
+    box-shadow: 0 0 18px rgba(212, 175, 55, 0.3);
 }
 
 .match-medium {
-    background: rgba(0, 242, 254, 0.16);
-    border: 1px solid rgba(0, 242, 254, 0.5);
-    color: #00f2fe;
-    box-shadow: 0 0 18px rgba(0, 242, 254, 0.25);
+    background: rgba(245, 158, 11, 0.16);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    color: #fcd34d;
+    box-shadow: 0 0 18px rgba(245, 158, 11, 0.25);
 }
 
 .match-low {
-    background: rgba(245, 158, 11, 0.16);
-    border: 1px solid rgba(245, 158, 11, 0.5);
-    color: #f59e0b;
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #94a3b8;
 }

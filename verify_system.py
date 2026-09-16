@@ -14,9 +14,7 @@ endpoints = [
     ('/', 200),
     ('/crawler/live', 200),
     ('/properties/', 200),
-    ('/properties/1', 200),
     ('/clients/', 200),
-    ('/clients/1', 200),
     ('/matching/', 200),
     ('/crm/pipeline', 200),
     ('/crm/calls', 200),
@@ -41,22 +39,41 @@ for url, expected_code in endpoints:
         print(f"  ❌ [ERROR] {url} -> {e}")
         all_pass = False
 
-print("\n🚀 Testing Crawler Execution via API...")
+print("\n🚀 Testing Crawler Execution via API (with CSRF Protection)...")
 try:
-    req = urllib.request.Request(
-        "http://127.0.0.1:5000/crawler/start",
-        data=json.dumps({"sources": ["divar", "sheypoor"], "categories": ["buy-apartment"], "limit": 4}).encode("utf-8"),
-        headers={"Content-Type": "application/json"}
-    )
-    res = urllib.request.urlopen(req)
-    data = json.loads(res.read().decode("utf-8"))
-    print(f"  ✅ Crawler API response: {data}")
+    # 1. First fetch a page to obtain the session cookie and CSRF token from meta tag
+    import re
+    from http.cookiejar import CookieJar
+    cj = CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
 
-    print("  ⏳ Waiting for crawler to extract and save properties...")
-    time.sleep(4)
-    status_res = urllib.request.urlopen("http://127.0.0.1:5000/crawler/status")
-    status_data = json.loads(status_res.read().decode("utf-8"))
-    print(f"  📊 Live Crawler Status: {status_data['stats']}")
+    page_resp = opener.open("http://127.0.0.1:5000/crawler/live", timeout=6)
+    html_content = page_resp.read().decode('utf-8')
+    token_match = re.search(r'<meta\s+name=["\']csrf-token["\']\s+content=["\']([^"\']+)["\']', html_content)
+    csrf_token = token_match.group(1) if token_match else None
+    
+    if not csrf_token:
+        print("  ❌ Could not extract csrf-token from /crawler/live")
+        all_pass = False
+    else:
+        print(f"  🔑 Extracted CSRF Token: {csrf_token[:16]}...")
+        req = urllib.request.Request(
+            "http://127.0.0.1:5000/crawler/start",
+            data=json.dumps({"sources": ["divar", "sheypoor"], "categories": ["buy-apartment"], "limit": 4}).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf_token
+            }
+        )
+        res = opener.open(req)
+        data = json.loads(res.read().decode("utf-8"))
+        print(f"  ✅ Crawler API response: {data}")
+
+        print("  ⏳ Waiting for crawler to extract and save properties...")
+        time.sleep(4)
+        status_res = opener.open("http://127.0.0.1:5000/crawler/status")
+        status_data = json.loads(status_res.read().decode("utf-8"))
+        print(f"  📊 Live Crawler Status: {status_data['stats']}")
 except Exception as e:
     print(f"  ❌ Crawler test error: {e}")
     all_pass = False

@@ -8,6 +8,7 @@ from .hybrid_sheypoor import HybridSheypoorCrawler
 from .dedup import dedup_engine
 from .fallback_solver import fallback_solver
 from .schemas import NormalizedPropertySchema
+from .owner_filter import OwnerFilter
 from database.db import db
 from database.models import Property, Owner
 
@@ -93,6 +94,32 @@ class CrawlerManager:
             def on_item_crawled(schema_item: NormalizedPropertySchema):
                 nonlocal saved_count, skipped_count
                 sid = schema_item.source_id
+
+                # ۱. بررسی اولیه پرچم مالک شخصی
+                if not schema_item.is_personal_owner:
+                    skipped_count += 1
+                    self.add_log(f"آگهی رد شد (غیرشخصی/املاکی): {schema_item.title[:45]}...", 'warning')
+                    return
+
+                # ۲. ارزیابی امنیتی مجدد با فیلتر دومرحله‌ای جهت تضمین عدم ورود کوچکترین نشانه املاک/آژانس/مشاوره
+                double_check = OwnerFilter.evaluate(
+                    platform=schema_item.source,
+                    title=schema_item.title,
+                    description=schema_item.description or ''
+                )
+                if not double_check.is_personal:
+                    skipped_count += 1
+                    self.add_log(f"آگهی در بازبینی فیلتر دومرحله‌ای رد شد: {schema_item.title[:45]}... ({double_check.reason})", 'warning')
+                    return
+
+                # گیت نهایی حذف قطعی هرگونه آگهی حاوی کلمات املاک و مشاور
+                combined_check = f"{schema_item.title} {schema_item.description or ''}"
+                for forbidden in ['املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس', 'سرمایه گذاری', 'هلدینگ']:
+                    if forbidden in combined_check:
+                        skipped_count += 1
+                        self.add_log(f"آگهی حاوی واژه املاکی '{forbidden}' در گیت نهایی رد شد: {schema_item.title[:45]}...", 'warning')
+                        return
+
                 existing = Property.query.filter_by(source_id=sid).first()
                 if existing:
                     skipped_count += 1
@@ -153,6 +180,13 @@ class CrawlerManager:
                 db.session.commit()
                 dedup_engine.mark_seen(sid)
                 saved_count += 1
+
+                # Broadcast newly extracted property to Telegram channel/group
+                try:
+                    from telegram_bot.notifier import send_property_alert
+                    send_property_alert(prop)
+                except Exception:
+                    pass
 
                 with self.lock:
                     self.stats['new_saved'] += 1

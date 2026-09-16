@@ -19,6 +19,86 @@ class DivarSessionManager:
     }
 
     @classmethod
+    def get_open_platform_key(cls) -> Optional[str]:
+        """خواندن کلید OpenAPI پلتفرم باز دیوار"""
+        env_key = os.environ.get('DIVAR_API_KEY') or os.environ.get('DIVAR_OPEN_PLATFORM_KEY')
+        if env_key:
+            return env_key.strip()
+        if os.path.exists(TOKEN_FILE_PATH):
+            try:
+                with open(TOKEN_FILE_PATH, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    key = data.get('api_key') or data.get('open_platform_key')
+                    if key:
+                        return key.strip()
+            except Exception as e:
+                print(f"[DivarSessionManager] خطا در خواندن کلید OpenAPI: {e}")
+        return None
+
+    @classmethod
+    def save_open_platform_key(cls, api_key: str) -> bool:
+        """ذخیره کلید پلتفرم باز دیوار"""
+        try:
+            data = {}
+            if os.path.exists(TOKEN_FILE_PATH):
+                try:
+                    with open(TOKEN_FILE_PATH, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                except Exception:
+                    data = {}
+            data['api_key'] = api_key.strip()
+            with open(TOKEN_FILE_PATH, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            print(f"[DivarSessionManager] کلید OpenAPI دیوار با موفقیت ذخیره شد.")
+            return True
+        except Exception as e:
+            print(f"[DivarSessionManager] خطا در ذخیره کلید OpenAPI: {e}")
+            return False
+
+    @classmethod
+    def fetch_finder_posts(cls, endpoint: str = "https://open-api.divar.ir/v2/open-platform/finder/post", 
+                           category: str = "buy-apartment", city: str = "tehran", limit: int = 20) -> Dict[str, Any]:
+        """
+        فراخوانی رسمی اندپوینت پلتفرم باز دیوار:
+        https://open-api.divar.ir/v2/open-platform/finder/post
+        جهت استخراج مستقیم آگهی‌های واقعی همراه با شماره تماس واقعی
+        """
+        api_key = cls.get_open_platform_key()
+        auth_token = cls.get_token()
+
+        headers = dict(cls.HEADERS)
+        if api_key:
+            headers['x-api-key'] = api_key
+            headers['x-access-token'] = api_key
+            headers['Authorization'] = f"Bearer {api_key}"
+        elif auth_token:
+            headers['Authorization'] = f"Bearer {auth_token}"
+
+        params = {
+            'city': city,
+            'category': category,
+            'limit': limit
+        }
+
+        # تست همزمان با GET و POST مطابق مستندات پلتفرم باز
+        try:
+            resp = requests.get(endpoint, headers=headers, params=params, timeout=10)
+            if resp.status_code == 200:
+                return {'success': True, 'data': resp.json(), 'endpoint': endpoint}
+            elif resp.status_code == 405: # Method Not Allowed -> تست POST
+                resp_post = requests.post(endpoint, headers=headers, json=params, timeout=10)
+                if resp_post.status_code == 200:
+                    return {'success': True, 'data': resp_post.json(), 'endpoint': endpoint}
+            return {
+                'success': False, 
+                'status_code': resp.status_code, 
+                'message': resp.text[:250],
+                'endpoint': endpoint
+            }
+        except Exception as e:
+            return {'success': False, 'status_code': 0, 'message': str(e), 'endpoint': endpoint}
+
+    @classmethod
     def get_token(cls) -> Optional[str]:
         """خواندن توکن ذخیره شده از فایل محلی یا متغیر محیطی"""
         env_token = os.environ.get('DIVAR_AUTH_TOKEN')
@@ -40,12 +120,18 @@ class DivarSessionManager:
     def save_token(cls, token: str, phone: str = '') -> bool:
         """ذخیره توکن احراز هویت در فایل محلی"""
         try:
+            existing_data = {}
+            if os.path.exists(TOKEN_FILE_PATH):
+                try:
+                    with open(TOKEN_FILE_PATH, 'r', encoding='utf-8') as f:
+                        existing_data = json.load(f)
+                except Exception:
+                    existing_data = {}
+            existing_data['token'] = token.strip()
+            existing_data['phone'] = phone.strip()
+            existing_data['saved_at'] = str(os.path.getmtime(TOKEN_FILE_PATH) if os.path.exists(TOKEN_FILE_PATH) else 0)
             with open(TOKEN_FILE_PATH, 'w', encoding='utf-8') as f:
-                json.dump({
-                    'token': token.strip(),
-                    'phone': phone.strip(),
-                    'saved_at': str(os.path.getmtime(TOKEN_FILE_PATH) if os.path.exists(TOKEN_FILE_PATH) else 0)
-                }, f, ensure_ascii=False, indent=2)
+                json.dump(existing_data, f, ensure_ascii=False, indent=2)
             print(f"[DivarSessionManager] توکن دیوار با موفقیت ذخیره شد.")
             return True
         except Exception as e:
@@ -54,8 +140,9 @@ class DivarSessionManager:
 
     @classmethod
     def is_authenticated(cls) -> bool:
-        """بررسی وجود توکن فعال"""
-        return bool(cls.get_token())
+        """بررسی وجود توکن یا کلید فعال"""
+        return bool(cls.get_token() or cls.get_open_platform_key())
+
 
     @classmethod
     def request_sms_code(cls, phone_number: str) -> Dict[str, Any]:

@@ -99,7 +99,15 @@
         const titleEl = document.getElementById('mansion-nav-title');
         const activeZone = zones.find(z => z.id === zoneId);
         if (titleEl && activeZone) {
-            titleEl.innerHTML = `<span>${activeZone.icon}</span> <span>${activeZone.name}</span>`;
+            titleEl.replaceChildren();
+            const iconSpan = document.createElement('span');
+            iconSpan.textContent = activeZone.icon;
+            const spaceText = document.createTextNode(' ');
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = activeZone.name;
+            titleEl.appendChild(iconSpan);
+            titleEl.appendChild(spaceText);
+            titleEl.appendChild(nameSpan);
         }
 
         if (isManual) {

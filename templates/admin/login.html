@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}ورود به پنل مدیریت سقف (Super Admin){% endblock %}
+
+{% block content %}
+<div style="min-height: 75vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem;">
+    <div class="glass-panel" style="max-width: 440px; width: 100%; padding: 2.5rem; border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 20px 45px rgba(0,0,0,0.6), 0 0 30px rgba(212, 175, 55, 0.15); border-radius: 20px; position: relative; overflow: hidden;">
+        
+        <!-- Header Glow -->
+        <div style="position: absolute; top: -60px; right: -60px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(212, 175, 55, 0.25) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(212, 175, 55, 0.05)); border: 1px solid var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 1.9rem; margin: 0 auto 1rem; box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);">
+                👑
+            </div>
+            <h1 style="font-size: 1.45rem; font-weight: 900; color: #f8fafc; margin-bottom: 0.4rem;">
+                ورود به پنل <span class="gold-gradient-text">Super Admin</span>
+            </h1>
+            <p style="font-size: 0.84rem; color: #94a3b8;">
+                سامانه هوشمند مدیریت فایلینگ و املاک سقف
+            </p>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin.login', next=request.args.get('next')) }}" style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+                <label for="adminUsername" style="display: block; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.45rem; font-weight: 700;">
+                    👤 نام کاربری مدیر ارشد
+                </label>
+                <input type="text" 
+                       id="adminUsername" 
+                       name="username" 
+                       required 
+                       autofocus 
+                       placeholder="نام کاربری ادمین" 
+                       class="glass-input" 
+                       style="width: 100%; padding: 0.75rem 1rem; font-size: 0.9rem; border-radius: 10px;">
+            </div>
+
+            <div>
+                <label for="adminPassword" style="display: block; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.45rem; font-weight: 700;">
+                    🔑 گذرواژه امنیتی
+                </label>
+                <input type="password" 
+                       id="adminPassword" 
+                       name="password" 
+                       required 
+                       placeholder="کلمه عبور" 
+                       class="glass-input" 
+                       style="width: 100%; padding: 0.75rem 1rem; font-size: 0.9rem; border-radius: 10px;">
+            </div>
+
+            <div style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(212,175,55,0.25); border-radius: 10px; padding: 0.75rem; font-size: 0.76rem; color: #94a3b8; line-height: 1.6;">
+                <span style="color: var(--gold-light); font-weight: 700;">🛡️ نکته امنیتی:</span>
+                مشخصات حساب مدیر ارشد در فایل <code>.env</code> و در لاگ کنسول سرور اعلام شده است.
+            </div>
+
+            <button type="submit" class="btn-luxury-gold" style="width: 100%; justify-content: center; padding: 0.85rem; font-size: 0.95rem; font-weight: 800; border-radius: 10px; margin-top: 0.5rem;">
+                <span>🔓</span> احراز هویت و ورود به داشبورد
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 1.5rem;">
+            <a href="{{ url_for('dashboard.index') }}" style="color: #64748b; font-size: 0.8rem; text-decoration: none; transition: color 0.2s;">
+                ← بازگشت به صفحه اصلی سامانه
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

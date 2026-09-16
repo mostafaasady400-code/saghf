@@ -92,6 +92,7 @@
     <div class="glass-modal-box">
         <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">ثبت سریع تماس / پیگیری</h3>
         <form action="{{ url_for('crm.create_call') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                 <div>
                     <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">نوع مخاطب</label>

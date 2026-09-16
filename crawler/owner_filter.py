@@ -48,39 +48,38 @@ class OwnerFilter:
 
     # --- مرحله اول: نشانه‌های پنل املاک، آژانس، دپارتمان یا حساب‌های تجاری ---
     NON_PERSONAL_ACCOUNT_TERMS = [
-        'آژانس', 'املاک', 'املاك', 'دپارتمان', 'مشاور', 'مشاورین', 'مشاوران',
-        'هلدینگ', 'مسکن', 'مسكن', 'کارگزاری', 'گروه ساختمانی', 'دفتر فروش',
-        'کاسپین', 'پازل', 'شایگان', 'مهرایران', 'بالون', 'افرا', 'کلید',
-        'مهندسین', 'گروه مشاورین', 'آژانس مسکن', 'آژانس املاک', 'بنگاه'
+        'آژانس', 'املاک', 'املاك', 'دپارتمان', 'مشاور', 'مشاورین', 'مشاوران', 'مشاوره',
+        'مشاوره املاک', 'مشاور املاک', 'املاک آرتا', 'آرتا',
+        'هلدینگ', 'مسکن', 'مسكن', 'کارگزاری', 'گروه ساختمانی', 'دفتر فروش', 'دفتر املاک', 'دفتر معاملات',
+        'کاسپین', 'پازل', 'شایگان', 'مهرایران', 'بالون', 'افرا', 'کلید', 'دیار', 'رامان', 'دلتا', 'باران',
+        'سرمایه', 'ایوان', 'کیا', 'بارمان', 'رویال', 'سینا', 'آراز', 'سفیر',
+        'مهندسین', 'گروه مهندسین', 'گروه مشاورین', 'آژانس مسکن', 'آژانس املاک', 'بنگاه'
     ]
 
     # --- مرحله دوم: کلمات ممنوعه در عنوان و توضیحات آگهی‌های شخصی ---
     # طبق دستور کاربر: (املاک، مسکن، خانه، مشاور، کارشناس، کمیسیون، همکار و...)
     FORBIDDEN_WORDS = [
         # واژگان صریح خواسته شده:
-        'املاک', 'املاکی', 'املاك',
+        'املاک', 'املاکی', 'املاك', 'املاک آرتا', 'آرتا',
         'مسکن', 'مسكن',
         'خانه',
-        'مشاور', 'مشاوران', 'مشاورین', 'مشاوره',
-        'کارشناس', 'کارشناسان', 'کارشناسی',
+        'مشاور', 'مشاوران', 'مشاورین', 'مشاوره', 'مشاوره املاک', 'مشاور املاک', 'مشاور شما',
+        'کارشناس', 'کارشناسان', 'کارشناسی', 'کارشناس فروش', 'کارشناس منطقه', 'کارشناس امور ملکی',
         'کمیسیون', 'کمسیون',
-        'همکار', 'همکاران',
+        'همکار', 'همکاران', 'همکاران محترم', 'همکار گرامی',
 
         # اصطلاحات تکمیلی دفاتر و بازاریابی املاک:
         'دپارتمان',
-        'آژانس',
+        'آژانس', 'آژانس‌ها',
         'بنگاه',
-        'مهندسین',
+        'مهندسین', 'گروه مهندسین', 'گروه ساختمانی',
         'حق الزحمه',
         'شیرینی مشاور',
-        'موارد مشابه',
-        'فایل های مشابه',
-        'فایلهای مشابه',
-        'فایلینگ',
+        'موارد مشابه', 'فایل های مشابه', 'فایلهای مشابه', 'واحدهای مشابه', 'فایلینگ', 'فایل شخصی مشاور', 'فایل انحصاری',
         'اتاق قرارداد',
-        'کلید نزد املاک',
-        'کلید در اختیار دفتر',
-        'کلید در اختیار املاک'
+        'کلید نزد املاک', 'کلید در اختیار دفتر', 'کلید در اختیار املاک', 'کلید در دفتر', 'کلید نزد دفتر',
+        'پاسخگویی ۲۴ ساعته', 'تماس تا ۱۲ شب', 'تماس تا ۲۴', 'پاسخگویی تا ۲۴',
+        'بازدید با هماهنگی دفتر', 'بازدید با هماهنگی املاک'
     ]
 
     # الگوهای ترکیبی مشاوران در متن
@@ -89,7 +88,9 @@ class OwnerFilter:
         (r'پاسخگویی\s+تا\s+(?:۲۴|۱۲\s+شب|۲\s+بامداد|ساعت\s+۱۲|۲۴\s*ساعته)', 'پاسخگویی ۲۴ ساعته مشاور'),
         (r'تماس\s+تا\s+(?:۱۲\s+شب|ساعت\s+۱۲|۲۴)', 'تماس تا ۱۲ شب مشاور'),
         (r'بازدید\s+(?:فقط\s+)?با\s+هماهنگی\s+(?:دفتر|املاک|مشاور)', 'بازدید با هماهنگی دفتر'),
-        (r'تیم\s+(?:فروش|تخصصی|معاملاتی)', 'تیم معاملات دپارتمان')
+        (r'تیم\s+(?:فروش|تخصصی|معاملاتی)', 'تیم معاملات دپارتمان'),
+        (r'املاک\s+[آ-ی]{3,}', 'عنوان یا برند املاک'),
+        (r'مشاور\s+[آ-ی]{3,}', 'مشاور املاک فردی')
     ]
 
     @classmethod
@@ -112,7 +113,8 @@ class OwnerFilter:
         account_is_personal, account_reason, detected_account_terms = cls._check_advertiser_account_type(
             platform=platform,
             widget_data=widget_data,
-            raw_text=raw_text
+            raw_text=raw_text,
+            title=title
         )
 
         if not account_is_personal:
@@ -155,7 +157,7 @@ class OwnerFilter:
         )
 
     @classmethod
-    def _check_advertiser_account_type(cls, platform: str, widget_data: Dict[str, Any], raw_text: str) -> Tuple[bool, str, List[str]]:
+    def _check_advertiser_account_type(cls, platform: str, widget_data: Dict[str, Any], raw_text: str, title: str = "") -> Tuple[bool, str, List[str]]:
         """
         مرحله اول: چک کردن نوع آگهی‌دهنده
         بررسی این که آیا حساب متعلق به پنل املاک، آژانس، حساب تجاری یا هر حسابی غیر از کاربر شخصی است یا خیر.
@@ -175,32 +177,37 @@ class OwnerFilter:
                 if b_type and b_type not in ['personal', 'none', '']:
                     detected.append(f"divar:business_type={b_type}")
 
+            # بررسی ویجت بیزینس اختصاصی
+            if widget_data.get('has_business_widget'):
+                detected.append("divar:has_business_widget")
+
             # ۲. بررسی تگ‌های پنل/آژانس (image_top_left_tag / red_text)
             tag_obj = widget_data.get('image_top_left_tag') or widget_data.get('red_text') or ''
             if isinstance(tag_obj, dict):
                 tag_text = clean_persian_text(tag_obj.get('text', ''))
-                if any(t in tag_text for t in ['آژانس', 'املاک', 'مشاور', 'تجاری']):
+                if any(t in tag_text for t in ['آژانس', 'املاک', 'مشاور', 'تجاری', 'مسکن']):
                     detected.append(f"tag:{tag_text}")
-            elif isinstance(tag_obj, str) and any(t in clean_persian_text(tag_obj) for t in ['آژانس', 'املاک', 'تجاری']):
+            elif isinstance(tag_obj, str) and any(t in clean_persian_text(tag_obj) for t in ['آژانس', 'املاک', 'تجاری', 'مسکن']):
                 detected.append(f"tag:{tag_obj}")
 
-            # ۳. در دیوار، نام آژانس و دفتر املاک در bottom_description_text یا top_description_text درج می‌شود
+            # ۳. در دیوار، نام آژانس و دفتر املاک در bottom_description_text، عنوان یا top_description_text درج می‌شود
             # برای کاربران شخصی، همواره زمان ثبت (مانند «دقایقی پیش در ...») درج می‌شود نه نام آژانس
             bottom_desc = clean_persian_text(widget_data.get('bottom_description_text', ''))
             top_desc = clean_persian_text(widget_data.get('top_description_text', ''))
-            meta_combined = f"{bottom_desc} {top_desc}"
+            mid_desc = clean_persian_text(widget_data.get('middle_description_text', ''))
+            meta_combined = f"{bottom_desc} {top_desc} {mid_desc} {raw_text}"
 
             for term in cls.NON_PERSONAL_ACCOUNT_TERMS:
                 if term in meta_combined:
                     detected.append(f"account_name_has:{term}")
 
         elif platform == 'sheypoor':
-            cleaned_raw = clean_persian_text(raw_text)
+            cleaned_raw = clean_persian_text(f"{raw_text} {title}")
             # شیپور: برچسب Ad یا تابلو شده یا نام آژانس نشان‌دهنده حساب تجاری/دفتر است
             if 'ad تابلو شده' in cleaned_raw or 'تابلو شده' in cleaned_raw or 'ad' in raw_text.split():
                 detected.append("sheypoor:sponsored_ad_account")
 
-            for term in ['آژانس', 'املاک', 'دپارتمان', 'مشاورین', 'مسکن', 'فروشگاه']:
+            for term in ['آژانس', 'املاک', 'دپارتمان', 'مشاورین', 'مسکن', 'فروشگاه', 'مشاور', 'مشاوره', 'آرتا']:
                 if term in cleaned_raw:
                     detected.append(f"sheypoor_meta:{term}")
 
@@ -220,12 +227,10 @@ class OwnerFilter:
         combined = clean_persian_text(f"{title} {description}")
         detected: List[str] = []
 
-        # عبارات طبیعی مالکین برای کلمه «خانه» (مانند صاحب‌خانه، آشپزخانه، این خانه، تخلیه خانه و ...)
-        # تا از رد شدن مالکین شخصی واقعی جلوگیری شود
+        # عبارات طبیعی که کلمه خانه در آنها به عنوان محل یا صنف املاکی نیست
         SAFE_KHANEH_PHRASES = [
             'صاحب خانه', 'صاحبخانه', 'آشپز خانه', 'آشپزخانه', 'هم خانه', 'همخانه',
-            'این خانه', 'خانه دربست', 'خانه ویلایی', 'خانه مسکونی', 'خانه تمیز',
-            'تحویل خانه', 'تخلیه خانه', 'کل این خانه', 'داخل خانه', 'فضای خانه', 'پشت قباله خانه'
+            'تحویل خانه', 'تخلیه خانه', 'پشت قباله خانه'
         ]
         text_to_check = combined
         for safe_p in SAFE_KHANEH_PHRASES:

@@ -33,6 +33,7 @@
 
             <!-- Stage Changer Form -->
             <form action="{{ url_for('clients.update_status', id=client.id) }}" method="POST" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <select name="status" class="glass-select" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;" onchange="this.form.submit()">
                     <option value="new" {% if client.lead_status == 'new' %}selected{% endif %}>سرنخ جدید</option>
                     <option value="contacted" {% if client.lead_status == 'contacted' %}selected{% endif %}>تماس اولیه</option>
@@ -212,6 +213,7 @@
     <div class="glass-modal-box">
         <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">ثبت تماس با {{ client.full_name }}</h3>
         <form action="{{ url_for('crm.create_call') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="target_type" value="client">
             <input type="hidden" name="target_id" value="{{ client.id }}">
 
@@ -252,6 +254,7 @@
     <div class="glass-modal-box">
         <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">هماهنگی و برنامه‌ریزی بازدید ملک برای متقاضی</h3>
         <form action="{{ url_for('crm.schedule_visit') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="client_id" value="{{ client.id }}">
 
             <div style="margin-bottom: 1rem;">

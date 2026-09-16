@@ -108,7 +108,7 @@ def reset_data():
             MatchRecord.query.filter(MatchRecord.property_id.in_(prop_ids)).delete(synchronize_session=False)
             Property.query.filter(Property.id.in_(prop_ids)).delete(synchronize_session=False)
 
-        dedup_engine.seen_ids.clear()
+        dedup_engine.clear()
         dedup_engine.initialize_from_db(Property)
         db.session.commit()
 
@@ -162,4 +162,15 @@ def divar_session_manual_token():
         return jsonify({'success': False, 'message': 'توکن نامعتبر است.'}), 400
     success = DivarSessionManager.save_token(token)
     return jsonify({'success': success, 'message': 'توکن دیوار با موفقیت ذخیره شد.' if success else 'خطا در ذخیره توکن.'})
+
+@crawler_bp.route('/divar-openapi/set-key', methods=['POST'])
+def divar_openapi_set_key():
+    from crawler.divar_session_manager import DivarSessionManager
+    data = request.get_json(silent=True) or request.form
+    api_key = data.get('api_key', '').strip()
+    if not api_key:
+        return jsonify({'success': False, 'message': 'کلید API پلتفرم باز نمی‌تواند خالی باشد.'}), 400
+    success = DivarSessionManager.save_open_platform_key(api_key)
+    return jsonify({'success': success, 'message': 'کلید OpenAPI دیوار با موفقیت ذخیره شد.' if success else 'خطا در ذخیره کلید.'})
+
 

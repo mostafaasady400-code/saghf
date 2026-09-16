@@ -94,12 +94,42 @@ class HybridSheypoorCrawler:
 
     def _fetch_detail_page(self, url: str) -> Dict[str, Any]:
         """
-        دریافت بلادرنگ متن کامل توضیحات و کلیه عکس‌های ملک از صفحه اختصاصی شیپور
+        دریافت بلادرنگ متن کامل، اعتبارسنجی هویت فروشنده و استخراج کلیه عکس‌های ملک از شیپور
         """
         try:
             resp = self.client.get(url, timeout=8)
             if resp and resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
+                html_raw = resp.text
+
+                is_agency = False
+                agency_reasons = []
+
+                # ۱. بررسی پیوندهای تجاری/مشاوران در کل صفحه
+                if soup.find('a', href=re.compile(r'/shops/|/consultant/|/real-estate-agencies/')):
+                    is_agency = True
+                    agency_reasons.append("لینک فروشگاه یا مشاور در صفحه")
+
+                # ۲. بررسی کلیدواژه‌های معرف مشاور یا آژانس در کل صفحه
+                page_text = soup.get_text(' ', strip=True)
+                for term in ['مشاور این آگهی', 'همه مشاوران', 'عضو شیپور از', 'آژانس املاک', 'دفتر املاک', 'دپارتمان املاک', 'بانک اطلاعات مسکن']:
+                    if term in page_text:
+                        is_agency = True
+                        agency_reasons.append(f"کلیدواژه صنفی '{term}'")
+
+                # ۳. بررسی نام املاک یا مسکن در سراسر صفحه
+                agency_match = re.search(r'(?:املاک|مسکن|دپارتمان|آژانس|بنگاه)\s+([آ-ی]{3,})', page_text)
+                if agency_match:
+                    name_found = agency_match.group(1)
+                    if name_found not in ['خرید', 'فروش', 'رهن', 'اجاره', 'مسکونی', 'تجاری', 'اداری', 'تهران', 'ایران']:
+                        is_agency = True
+                        agency_reasons.append(f"نام صنف املاک '{agency_match.group(0)}'")
+
+                # ۴. بررسی تگ‌های بخش فروشنده/مشاور در سورس HTML
+                if any(x in html_raw.lower() for x in ['shop-info', 'consultant-info', 'seller-profile', 'realestate-agency']):
+                    is_agency = True
+                    agency_reasons.append("ویجت اختصاصی پنل املاک شیپور")
+
                 desc_elem = soup.find('p', class_=re.compile(r'description|desc', re.I)) or soup.find('div', id='description') or soup.find('section', id='description')
                 desc_text = desc_elem.get_text(separator='\n', strip=True) if desc_elem else ""
 
@@ -116,10 +146,15 @@ class HybridSheypoorCrawler:
                         if src_large not in imgs and not any(ic in src_large for ic in ['logo', 'icon', 'banner', 'avatar']):
                             imgs.append(src_large)
 
-                return {'description': desc_text, 'images': imgs}
+                return {
+                    'description': desc_text, 
+                    'images': imgs,
+                    'is_agency': is_agency,
+                    'agency_reason': " / ".join(agency_reasons) if agency_reasons else ""
+                }
         except Exception:
             pass
-        return {'description': '', 'images': []}
+        return {'description': '', 'images': [], 'is_agency': False, 'agency_reason': ''}
 
     def _parse_html(self, html_text: str, category_meta: Dict[str, Any], limit: int, on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None) -> Tuple[List[NormalizedPropertySchema], bool]:
         soup = BeautifulSoup(html_text, 'html.parser')
@@ -162,11 +197,12 @@ class HybridSheypoorCrawler:
             if not filter_res.is_personal:
                 continue
 
-            img_elem = a.find('img')
-            img_url = (img_elem.get('src') or img_elem.get('data-src')) if img_elem else None
-
-            # استخراج بلادرنگ متن کامل توضیحات و کلیه عکس‌های ملک از شیپور
+            # استخراج بلادرنگ متن کامل، تصاویر و بررسی هویت آژانس/مشاور در شیپور
             detail_info = self._fetch_detail_page(full_url)
+            if detail_info.get('is_agency'):
+                # رد فوری هرگونه آگهی متعلق به مشاور یا دفتر املاک
+                continue
+
             real_desc = detail_info.get('description', '')
             all_images = detail_info.get('images', [])
 
@@ -181,6 +217,8 @@ class HybridSheypoorCrawler:
                 if not full_filter_res.is_personal:
                     continue
 
+            img_elem = a.find('img')
+            img_url = (img_elem.get('src') or img_elem.get('data-src')) if img_elem else None
             if not all_images and img_url:
                 all_images = [img_url]
 

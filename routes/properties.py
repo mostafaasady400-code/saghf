@@ -54,6 +54,13 @@ def list_properties():
         # همه به جز بایگانی شده‌ها
         query = query.filter(Property.status != 'archived')
 
+    # 0. فیلتر قطعی و بلادرنگ حذف هرگونه آگهی املاکی یا واسطه
+    for forbidden in ['املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس']:
+        query = query.filter(
+            Property.title.notilike(f'%{forbidden}%'),
+            Property.description.notilike(f'%{forbidden}%')
+        )
+
     # 2. Filters
     if deal_type and deal_type != 'all':
         query = query.filter(Property.deal_type == deal_type)
@@ -240,7 +247,17 @@ def detail(id):
         matches=matches
     )
 
+@properties_bp.route('/<int:id>/data')
+def property_data(id):
+    """خروجی بلادرنگ جهت نمایش درون‌برنامه‌ای فایل در مودال لوکس سقف"""
+    prop = Property.query.get_or_404(id)
+    return jsonify({
+        'success': True,
+        'property': prop.to_dict()
+    })
+
 @properties_bp.route('/new', methods=['GET', 'POST'])
+
 def create():
     if request.method == 'POST':
         # 1. Owner creation or selection
@@ -301,6 +318,13 @@ def create():
         
         db.session.add(prop)
         db.session.commit()
+
+        # Forward new property to Telegram channel/group
+        try:
+            from telegram_bot.notifier import send_property_alert
+            send_property_alert(prop)
+        except Exception:
+            pass
         
         flash('ملک جدید با موفقیت در پایگاه فایلینگ ثبت شد.', 'success')
         return redirect(url_for('properties.detail', id=prop.id))

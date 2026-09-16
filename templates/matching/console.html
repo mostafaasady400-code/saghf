@@ -13,6 +13,7 @@
         </p>
     </div>
     <form action="{{ url_for('matching.refresh_all') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn-neon-purple">
             <span>⚡</span> محاسبه مجدد و تحلیل تطابق‌های سراسری
         </button>
@@ -144,7 +145,7 @@
             const res = await fetch(`/matching/${recordId}/suggest`, { method: 'POST' });
             const data = await res.json();
             if (data.success) {
-                btn.innerHTML = '✓ معرفی‌شده به مشتری';
+                btn.textContent = '✓ معرفی‌شده به مشتری';
                 btn.style.borderColor = '#10b981';
                 btn.style.color = '#10b981';
                 showToast(data.message, 'success');

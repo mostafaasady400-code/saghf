@@ -88,6 +88,7 @@
     <div class="glass-modal-box">
         <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">هماهنگی بازدید ملک جدید</h3>
         <form action="{{ url_for('crm.schedule_visit') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div style="margin-bottom: 1rem;">
                 <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">انتخاب ملک</label>
                 <select name="property_id" class="glass-select" required>
@@ -133,6 +134,7 @@
     <div class="glass-modal-box">
         <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">ثبت بازخورد و نتیجه بازدید</h3>
         <form id="feedbackForm" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div style="margin-bottom: 1rem;">
                 <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">وضعیت بازدید</label>
                 <select name="status" class="glass-select">

@@ -12,6 +12,7 @@ from database.models import Property, Owner, Client, MatchRecord, Visit, Interac
 from crawler.dedup import dedup_engine
 from crawler.hybrid_divar import HybridDivarCrawler
 from crawler.hybrid_sheypoor import HybridSheypoorCrawler
+from crawler.owner_filter import OwnerFilter
 from services.matching_service import MatchingEngine
 
 def purge_and_extract():
@@ -94,6 +95,17 @@ def purge_and_extract():
         for item in real_extracted:
             if not item.is_personal_owner:
                 continue
+
+            # اعتبارسنجی نهایی با فیلتر دو مرحله‌ای سخت‌گیرانه
+            chk = OwnerFilter.evaluate(
+                platform=item.source,
+                title=item.title,
+                description=item.description or ''
+            )
+            if not chk.is_personal:
+                print(f"⚠️ رد آگهی در گیت نهایی دیتابیس: {item.title[:45]} ({chk.reason})")
+                continue
+
             # Check duplicate by source_id
             existing = Property.query.filter_by(source_id=item.source_id).first()
             if existing:

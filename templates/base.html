@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}سامانه هوشمند فایلینگ و املاک سقف{% endblock %}</title>
     
     <!-- Design System: Glassmorphism + Neon Dark -->
@@ -13,6 +14,7 @@
     
     <!-- Chart.js for Dark Neon Charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
     {% block extra_head %}{% endblock %}
 </head>
@@ -30,10 +32,10 @@
     <header class="floating-3d-navbar">
         <!-- Brand Logo -->
         <a href="{{ url_for('dashboard.index') }}" class="floating-nav-brand">
-            <div class="brand-icon" style="width: 38px; height: 38px; font-size: 1.15rem; border-radius: 10px; box-shadow: 0 0 15px rgba(0, 242, 254, 0.45);">🏛️</div>
+            <div class="brand-icon" style="width: 38px; height: 38px; font-size: 1.15rem; border-radius: 10px; background: linear-gradient(135deg, #f7d070, #aa771c); box-shadow: 0 0 18px rgba(212, 175, 55, 0.5);">🏛️</div>
             <div style="display: flex; flex-direction: column;">
                 <span style="font-weight: 900; font-size: 1.12rem; color: #ffffff; line-height: 1.1; letter-spacing: -0.5px;">سامانه سقف</span>
-                <span style="font-size: 0.65rem; color: #00f2fe; font-weight: 700; letter-spacing: 0.5px;">Real Estate Intelligence</span>
+                <span style="font-size: 0.65rem; color: #f5d77f; font-weight: 700; letter-spacing: 0.5px;">Real Estate Intelligence</span>
             </div>
         </a>
 
@@ -71,14 +73,23 @@
 
         <!-- Left Actions -->
         <div class="floating-nav-actions">
-            <button type="button" onclick="openModal('divarSessionModal')" class="glass-btn" style="border-color: rgba(0, 242, 254, 0.4); color: #00f2fe; padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 9999px;" title="اتصال حساب دیوار جهت استخراج ۱۰۰٪ خودکار شماره‌های واقعی">
-                <span>🔐</span> اتصال دیوار
+            <button type="button" onclick="openModal('divarSessionModal')" class="glass-btn" style="border-color: rgba(212, 175, 55, 0.4); color: #f5d77f; padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 9999px;" title="اتصال حساب دیوار و کلید OpenAPI">
+                <span>🔐</span> اتصال دیوار (OpenAPI)
             </button>
-            <a href="{{ url_for('properties.create') }}" class="btn-neon-cyan" style="padding: 0.42rem 0.95rem; font-size: 0.82rem; border-radius: 9999px;">
+            {% if session.get('is_admin') %}
+                <a href="{{ url_for('admin.dashboard') }}" class="glass-btn" style="border-color: rgba(212, 175, 55, 0.6); color: #fce79f; padding: 0.38rem 0.8rem; font-size: 0.78rem; border-radius: 9999px;" title="داشبورد مدیریت سقف">
+                    <span>👑</span> پنل ادمین
+                </a>
+            {% else %}
+                <a href="{{ url_for('admin.login') }}" class="glass-btn" style="border-color: rgba(255, 255, 255, 0.15); color: #94a3b8; padding: 0.38rem 0.7rem; font-size: 0.78rem; border-radius: 9999px;" title="ورود مدیریت">
+                    <span>👑</span> ورود ادمین
+                </a>
+            {% endif %}
+            <a href="{{ url_for('properties.create') }}" class="btn-luxury-gold" style="padding: 0.42rem 0.95rem; font-size: 0.82rem; border-radius: 9999px;">
                 <span>➕</span> ثبت فایل
             </a>
-            <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.06); padding: 0.3rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.1);">
-                <div style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #00f2fe, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.06); padding: 0.3rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(212, 175, 55, 0.25);">
+                <div style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #f7d070, #aa771c); color: #08090d; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">
                     س
                 </div>
                 <span class="neon-pulse-dot emerald" title="مشاور ارشد سیستم آنلاین"></span>
@@ -89,12 +100,15 @@
     <div class="app-shell">
         <div class="main-wrapper">
 
+            <!-- Full-width Top Hero Block (e.g. 3D Virtual Tour) -->
+            {% block hero %}{% endblock %}
+
             <!-- Flash Notifications -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     <div style="padding: 1.5rem 2rem 0;">
                         {% for category, message in messages %}
-                            <div class="glass-card" style="margin-bottom: 1rem; border-right: 4px solid {% if category == 'success' %}#10b981{% elif category == 'error' %}#f43f5e{% else %}#00f2fe{% endif %}; padding: 0.9rem 1.4rem; display: flex; align-items: center; justify-content: space-between;">
+                            <div class="glass-card" style="margin-bottom: 1rem; border-right: 4px solid {% if category == 'success' %}#10b981{% elif category == 'error' %}#f43f5e{% else %}#d4af37{% endif %}; padding: 0.9rem 1.4rem; display: flex; align-items: center; justify-content: space-between;">
                                 <div>{{ message }}</div>
                                 <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem;">✕</button>
                             </div>
@@ -110,14 +124,37 @@
         </div>
     </div>
 
-    <!-- Omni-Messenger & Divar Session Phone Modals (Global) -->
+    <!-- Omni-Messenger & Divar Session Phone Modals & In-App Ad Viewer Modal (Global) -->
     {% include "properties/phone_modal.html" %}
     {% include "properties/messenger_modal.html" %}
+    {% include "properties/in_app_modal.html" %}
+    {% include "properties/gallery_modal.html" %}
 
     <!-- Scripts -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/luxury_tour.js') }}"></script>
     <script src="{{ url_for('static', filename='js/mansion_tour.js') }}"></script>
+    
+    <!-- 3D Card Interactive Motion Engine -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const cards = document.querySelectorAll('.divar-style-card, .property-card');
+        cards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = ((y - centerY) / centerY) * -5;
+                const rotateY = ((x - centerX) / centerX) * 5;
+                card.style.transform = `perspective(1000px) translateY(-7px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) scale(1.015)`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = '';
+            });
+        });
+    });
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

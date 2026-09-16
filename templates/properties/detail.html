@@ -9,13 +9,12 @@
         <span>←</span> بازگشت به لیست فایل‌ها
     </a>
     <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-        {% if prop.source_url %}
-            <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" class="btn-neon-cyan" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(79, 172, 254, 0.3)); border: 1px solid #00f2fe; text-decoration: none; box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);">
-                <span>🔗</span> لینک آگهی
-            </a>
-        {% endif %}
+        <button type="button" onclick="openInAppAdModal({{ prop.id }}, event)" class="btn-luxury-gold">
+            <span>🏛️</span> نمایش در مودال سه‌بعدی
+        </button>
         {% if prop.status != 'verified' %}
             <form action="{{ url_for('properties.verify', id=prop.id) }}" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-neon-emerald">
                     <span>✓</span> تبدیل به فایل رسمی دفتر سقف
                 </button>
@@ -31,7 +30,10 @@
     <!-- Main Property Info -->
     <div class="glass-panel" style="padding: 1.75rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="property-code-badge" style="font-size: 0.85rem; padding: 0.2rem 0.65rem;">
+                    🔢 کد فایل: {{ prop.file_code | pnum }}
+                </span>
                 <span class="badge-neon {% if prop.deal_type == 'sale' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
                     {{ prop.deal_type | deal_name }}
                 </span>
@@ -43,6 +45,9 @@
                         لینک آگهی
                     </a>
                 {% endif %}
+                <button type="button" onclick="sendPropertyPhotosToTelegram({{ prop.id }}, '{{ prop.file_code }}', event)" class="btn-compact-telegram" style="padding: 0.25rem 0.65rem; font-size: 0.78rem;" title="ارسال آلبوم تصاویر به تلگرام">
+                    <span>📸</span> ارسال به تلگرام
+                </button>
             </div>
             <div class="match-score-pill match-high">
                 امتیاز کارشناسی: {{ prop.score | pnum }}
@@ -59,10 +64,12 @@
         <!-- All Images Showcase Gallery -->
         {% if prop.images and prop.images | length > 0 %}
             <div class="property-gallery-container" style="margin-bottom: 1.75rem;">
-                <div style="position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                    <img id="mainFeaturedImage" src="{{ prop.images[0] }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/assets/placeholder.png';" style="width: 100%; height: 380px; object-fit: cover; transition: opacity 0.25s ease;" alt="تصویر شاخص آگهی">
+                <div style="position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer;" 
+                     onclick="openPhotoGallery({{ prop.id }}, {{ prop.images | tojson | forceescape }}, '{{ prop.title | forceescape }}', '{{ prop.file_code }}')" 
+                     title="کلیک برای باز شدن گالری تمام‌صفحه">
+                    <img id="mainFeaturedImage" src="{{ prop.images[0] }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/static/placeholder.png';" style="width: 100%; height: 380px; object-fit: cover; transition: opacity 0.25s ease;" alt="تصویر شاخص آگهی">
                     <div style="position: absolute; bottom: 12px; right: 12px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.82rem; color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); font-weight: 700;">
-                        📷 {{ prop.images | length | pnum }} تصویر ثبت‌شده از آگهی
+                        📷 {{ prop.images | length | pnum }} تصویر ثبت‌شده (کلیک برای بزرگنمایی)
                     </div>
                 </div>
 
@@ -188,7 +195,7 @@
                 <span class="badge-neon badge-neon-cyan" style="font-size: 0.75rem;">متن استخراج‌شده اصلی</span>
             </div>
             <div style="color: #e2e8f0; line-height: 2; font-size: 0.94rem; white-space: pre-line;">
-                {{ (prop.description or 'توضیحاتی برای این فایل درج نشده است.') | linkify_ad | safe }}
+                {{ (prop.description or 'توضیحاتی برای این فایل درج نشده است.') | linkify_ad }}
             </div>
         </div>
 
@@ -231,13 +238,13 @@
                                 <a href="tel:{{ prop.owner.phone_number }}" class="btn-neon-emerald" style="padding: 0.3rem 0.65rem; font-size: 0.75rem; text-decoration: none;">
                                     تماس فوری
                                 </a>
-                                <button type="button" onclick="navigator.clipboard.writeText('{{ prop.owner.phone_number }}'); alert('شماره در حافظه کپی شد');" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #10b981;" title="کپی شماره">
+                                <button type="button" onclick="navigator.clipboard.writeText({{ (prop.owner.phone_number or '') | tojson }}); alert('شماره در حافظه کپی شد');" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #10b981;" title="کپی شماره">
                                     📋
                                 </button>
                                 <button type="button" onclick="openMessengerModal({{ prop.id }})" class="glass-btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; color: #38bdf8;" title="استعلام وضعیت در ۵ پیام‌رسان">
                                     💬
                                 </button>
-                                <button type="button" onclick="promptSavePhone({{ prop.id }}, '{{ prop.owner.phone_number }}', '{{ prop.owner.full_name }}')" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #94a3b8;" title="ویرایش شماره">
+                                <button type="button" onclick="promptSavePhone({{ prop.id }}, {{ (prop.owner.phone_number or '') | tojson }}, {{ (prop.owner.full_name or '') | tojson }})" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #94a3b8;" title="ویرایش شماره">
                                     ✏️
                                 </button>
                             </div>
@@ -246,7 +253,7 @@
                                 <button type="button" onclick="fetchDivarPhoneDirect({{ prop.id }})" class="btn-neon-cyan" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; font-weight: 700;">
                                     <span>⚡</span> استخراج خودکار شماره
                                 </button>
-                                <button type="button" onclick="promptSavePhone({{ prop.id }}, '', '{{ prop.owner.full_name }}')" class="glass-btn" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                                <button type="button" onclick="promptSavePhone({{ prop.id }}, '', {{ (prop.owner.full_name or '') | tojson }})" class="glass-btn" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
                                     <span>✏️</span> ثبت شماره
                                 </button>
                                 {% if prop.source_url %}
@@ -269,7 +276,7 @@
                     </div>
                     {% if prop.owner.notes %}
                         <div style="background: rgba(255,255,255,0.04); padding: 0.75rem; border-radius: 10px; font-size: 0.82rem; color: #cbd5e1;">
-                            {{ prop.owner.notes | linkify_ad | safe }}
+                            {{ prop.owner.notes | linkify_ad }}
                         </div>
                     {% endif %}
                     {% if prop.source_url %}
@@ -301,11 +308,13 @@
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
                             <form method="POST" action="{{ url_for('properties.reactivate', id=prop.id) }}" style="margin:0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; color: #10b981; border-color: rgba(16,185,129,0.3);">
                                     ✓ تایید موجودی
                                 </button>
                             </form>
                             <form method="POST" action="{{ url_for('properties.archive', id=prop.id) }}" style="margin:0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245,158,11,0.3);">
                                     📦 واگذار شد (بایگانی)
                                 </button>
@@ -393,6 +402,7 @@
     <div class="glass-modal-box">
         <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">ثبت تاریخچه تماس و پیگیری</h3>
         <form action="{{ url_for('crm.create_call') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="target_type" value="owner">
             <input type="hidden" name="target_id" value="{{ prop.owner_id or 1 }}">
             <input type="hidden" name="property_id" value="{{ prop.id }}">
@@ -435,6 +445,7 @@
     <div class="glass-modal-box">
         <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">هماهنگی و برنامه‌ریزی بازدید ملک</h3>
         <form action="{{ url_for('crm.schedule_visit') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="property_id" value="{{ prop.id }}">
 
             <div style="margin-bottom: 1rem;">

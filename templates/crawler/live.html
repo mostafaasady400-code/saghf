@@ -62,6 +62,7 @@
         </h3>
 
         <form id="crawler-start-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <!-- City & District Live Filters -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.75rem;">
                 <div>
@@ -289,9 +290,11 @@
                                     </div>
                                     <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.25rem;">
                                         {% for img in p.images[:4] %}
-                                            <a href="{{ img }}" target="_blank" rel="noopener noreferrer" style="flex-shrink: 0;">
-                                                <img src="{{ img }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/assets/placeholder.png';" alt="ملک" style="width: 60px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
-                                            </a>
+                                            <div onclick="openPhotoGallery({{ p.id }}, {{ p.images | tojson | forceescape }}, '{{ p.title | forceescape }}', '{{ p.file_code }}')" 
+                                                 style="cursor: pointer; flex-shrink: 0;" 
+                                                 title="مشاهده در گالری تمام‌صفحه">
+                                                <img src="{{ img }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/static/placeholder.png';" alt="ملک" style="width: 60px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                                            </div>
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -309,18 +312,22 @@
                         </div>
 
                         <!-- Card Action Footer -->
-                        <div style="display: flex; gap: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem; margin-top: 0.5rem;">
-                            <a href="{{ url_for('properties.detail', id=p.id) }}" class="btn-neon-cyan" style="flex: 1; justify-content: center; padding: 0.4rem 0.6rem; font-size: 0.82rem;">
-                                ⚡ پرونده ملک
+                        <div style="display: flex; gap: 0.5rem; border-top: 1px solid rgba(212,175,55,0.18); padding-top: 0.75rem; margin-top: 0.5rem;">
+                            <button type="button" onclick="openInAppAdModal({{ p.id }}, event)" class="btn-luxury-gold" style="flex: 1; justify-content: center; padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                                🏛️ نمایش آگهی
+                            </button>
+                            <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.45rem 0.6rem; font-size: 0.82rem; color: #f5d77f; text-decoration: none;" title="مشاهده پرونده کامل">
+                                ⚡ پرونده
                             </a>
                             {% if p.source_url %}
-                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.4rem 0.6rem; font-size: 0.82rem; color: #00f2fe; text-decoration: none;">
+                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.45rem 0.6rem; font-size: 0.82rem; color: #8896ab; text-decoration: none;">
                                     لینک آگهی
                                 </a>
                             {% endif %}
                             {% if p.status != 'verified' %}
                                 <form action="{{ url_for('properties.verify', id=p.id) }}" method="POST" style="display: inline;">
-                                    <button type="submit" class="btn-neon-emerald" style="padding: 0.4rem 0.6rem; font-size: 0.82rem;" title="تأیید فایل توسط کارشناس فروش">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-neon-emerald" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;" title="تأیید فایل توسط کارشناس فروش">
                                         ✓
                                     </button>
                                 </form>
@@ -465,9 +472,11 @@
                                     </div>
                                     <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.25rem;">
                                         {% for img in p.images[:4] %}
-                                            <a href="{{ img }}" target="_blank" rel="noopener noreferrer" style="flex-shrink: 0;">
-                                                <img src="{{ img }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/assets/placeholder.png';" alt="ملک" style="width: 60px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
-                                            </a>
+                                            <div onclick="openPhotoGallery({{ p.id }}, {{ p.images | tojson | forceescape }}, '{{ p.title | forceescape }}', '{{ p.file_code }}')" 
+                                                 style="cursor: pointer; flex-shrink: 0;" 
+                                                 title="مشاهده در گالری تمام‌صفحه">
+                                                <img src="{{ img }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/static/placeholder.png';" alt="ملک" style="width: 60px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                                            </div>
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -485,18 +494,22 @@
                         </div>
 
                         <!-- Card Action Footer -->
-                        <div style="display: flex; gap: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem; margin-top: 0.5rem;">
-                            <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="flex: 1; justify-content: center; padding: 0.4rem 0.6rem; font-size: 0.82rem; border-color: rgba(245, 158, 11, 0.4); color: #f59e0b;">
-                                ⚡ پرونده ملک
+                        <div style="display: flex; gap: 0.5rem; border-top: 1px solid rgba(212,175,55,0.18); padding-top: 0.75rem; margin-top: 0.5rem;">
+                            <button type="button" onclick="openInAppAdModal({{ p.id }}, event)" class="btn-luxury-gold" style="flex: 1; justify-content: center; padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                                🏛️ نمایش آگهی
+                            </button>
+                            <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.45rem 0.6rem; font-size: 0.82rem; color: #f5d77f; text-decoration: none;" title="مشاهده پرونده کامل">
+                                ⚡ پرونده
                             </a>
                             {% if p.source_url %}
-                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.4rem 0.6rem; font-size: 0.82rem; color: #f59e0b; text-decoration: none;">
+                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.45rem 0.6rem; font-size: 0.82rem; color: #8896ab; text-decoration: none;">
                                     لینک آگهی
                                 </a>
                             {% endif %}
                             {% if p.status != 'verified' %}
                                 <form action="{{ url_for('properties.verify', id=p.id) }}" method="POST" style="display: inline;">
-                                    <button type="submit" class="btn-neon-emerald" style="padding: 0.4rem 0.6rem; font-size: 0.82rem;" title="تأیید فایل توسط کارشناس رهن و اجاره">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-neon-emerald" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;" title="تأیید فایل توسط کارشناس رهن و اجاره">
                                         ✓
                                     </button>
                                 </form>

@@ -11,6 +11,7 @@
         </div>
 
         <form id="quickPhoneForm" onsubmit="submitQuickPhone(event)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" id="quickPhonePropId">
             <div style="margin-bottom: 1rem;">
                 <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">شماره موبایل مالک (مثلاً 09123456789):</label>
@@ -31,18 +32,18 @@
     </div>
 </div>
 
-<!-- 2. Divar Session Login Modal -->
-<div id="divarSessionModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(10px); z-index: 9999; align-items: center; justify-content: center; padding: 1.5rem;">
-    <div class="glass-card" style="width: 100%; max-width: 520px; padding: 1.75rem; border: 1px solid rgba(0, 242, 254, 0.4); box-shadow: 0 0 35px rgba(0, 242, 254, 0.15); border-radius: 16px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem;">
-            <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.5rem; color: #00f2fe;">
-                <span>🔐</span> اتصال نشست احراز هویت دیوار
+<!-- 2. Divar Session & OpenAPI Modal -->
+<div id="divarSessionModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(5, 6, 10, 0.88); backdrop-filter: blur(12px); z-index: 9999; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="glass-card" style="width: 100%; max-width: 540px; padding: 1.75rem; border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 0 40px rgba(212, 175, 55, 0.2); border-radius: 18px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid rgba(212, 175, 55, 0.15); padding-bottom: 0.75rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.5rem; color: #f5d77f;">
+                <span>🔐</span> اتصال نشست و کلید OpenAPI دیوار
             </h3>
             <button type="button" onclick="closeModal('divarSessionModal')" class="glass-btn" style="padding: 0.3rem 0.6rem; border-radius: 50%;">✕</button>
         </div>
 
-        <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6; margin-bottom: 1.25rem;">
-            با فعال‌سازی نشست یک‌باره دیوار، سامانه با سطح دسترسی حساب شما قادر است شماره تماس واقعی تمامی آگهی‌های دیوار را مستقیماً و به صورت ۱۰۰٪ خودکار استخراج نماید.
+        <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 1.25rem;">
+            اتصال به پلتفرم دیوار امکان استخراج مستقیم آگهی‌های واقعی همراه با شماره تماس مالک را فراهم می‌سازد:
         </p>
 
         <!-- Step 1: Send SMS -->
@@ -70,15 +71,29 @@
             </div>
         </div>
 
+        <!-- Option: OpenAPI Key Input for https://open-api.divar.ir/v2/open-platform/finder/post -->
+        <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed rgba(212, 175, 55, 0.25);">
+            <div style="font-size: 0.82rem; color: #f5d77f; font-weight: 700; margin-bottom: 0.3rem;">
+                🔑 کلید API پلتفرم باز دیوار (OpenAPI Finder Post):
+            </div>
+            <div style="font-size: 0.73rem; color: #8896ab; margin-bottom: 0.5rem; direction: ltr; text-align: left;">
+                Endpoint: https://open-api.divar.ir/v2/open-platform/finder/post
+            </div>
+            <input type="text" id="divarOpenApiKey" placeholder="کلید اختصاصی API (x-api-key)" class="glass-input" style="font-size: 0.82rem; direction: ltr; margin-bottom: 0.5rem;">
+            <button type="button" onclick="submitDivarOpenApiKey()" class="btn-luxury-gold" style="width: 100%; justify-content: center; font-size: 0.82rem;">
+                ذخیره کلید OpenAPI دیوار
+            </button>
+        </div>
+
         <!-- Option: Manual Token Input -->
-        <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08);">
+        <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06);">
             <details style="font-size: 0.82rem; color: #94a3b8; cursor: pointer;">
                 <summary style="font-weight: 600; color: #cbd5e1; outline: none; margin-bottom: 0.5rem;">
-                    ⚙️ یا وارد کردن مستقیم توکن دیوار (اختیاری / پیشرفته)
+                    ⚙️ یا وارد کردن دستی توکن سشن دیوار (اختیاری)
                 </summary>
                 <div style="margin-top: 0.5rem;">
                     <input type="text" id="divarManualToken" placeholder="توکن احراز هویت دیوار (یا کوکی)" class="glass-input" style="font-size: 0.82rem; direction: ltr; margin-bottom: 0.5rem;">
-                    <button type="button" onclick="submitManualDivarToken()" class="glass-btn" style="width: 100%; justify-content: center; font-size: 0.8rem; color: #00f2fe; border-color: rgba(0, 242, 254, 0.3);">
+                    <button type="button" onclick="submitManualDivarToken()" class="glass-btn" style="width: 100%; justify-content: center; font-size: 0.8rem; color: #f5d77f; border-color: rgba(212, 175, 55, 0.3);">
                         ذخیره مستقیم توکن
                     </button>
                 </div>
@@ -135,8 +150,8 @@ async function submitQuickPhone(e) {
 
 async function fetchDivarPhoneDirect(propertyId) {
     const btn = event.currentTarget;
-    const oldText = btn.innerHTML;
-    btn.innerHTML = '⏳ استخراج...';
+    const oldText = btn.textContent;
+    btn.textContent = '⏳ استخراج...';
     btn.disabled = true;
 
     try {
@@ -153,12 +168,12 @@ async function fetchDivarPhoneDirect(propertyId) {
             } else {
                 alert(res.message);
             }
-            btn.innerHTML = oldText;
+            btn.textContent = oldText;
             btn.disabled = false;
         }
     } catch (err) {
         alert('خطای ارتباط با سرور');
-        btn.innerHTML = oldText;
+        btn.textContent = oldText;
         btn.disabled = false;
     }
 }
@@ -248,6 +263,31 @@ async function submitManualDivarToken() {
         }
     } catch (e) {
         alert('خطای اتصال به سرور');
+    }
+}
+
+async function submitDivarOpenApiKey() {
+    const key = document.getElementById('divarOpenApiKey').value.trim();
+    if (!key) return alert('لطفاً کلید OpenAPI را وارد نمایید.');
+    try {
+        const resp = await fetch('/crawler/divar-openapi/set-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: key })
+        });
+        const res = await resp.json();
+        const alertBox = document.getElementById('divarSessionAlert');
+        alertBox.style.display = 'block';
+        alertBox.style.background = res.success ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+        alertBox.style.color = res.success ? '#10b981' : '#ef4444';
+        alertBox.textContent = res.message;
+        if (res.success) {
+            setTimeout(() => {
+                closeModal('divarSessionModal');
+            }, 1800);
+        }
+    } catch (e) {
+        alert('خطای ارتباط با سرور');
     }
 }
 </script>

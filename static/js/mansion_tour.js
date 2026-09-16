@@ -1,6 +1,6 @@
 // ===================================================
 // SAGHF 3D LUXURY MANSION SCROLL-PINNED TOUR ENGINE
-// High-performance 60fps spatial navigation
+// High-performance 60fps spatial navigation & HUD
 // ===================================================
 
 (function () {
@@ -47,10 +47,28 @@
     let tourContainer = null;
     let frames = [];
     let progressFill = null;
+    let progressPercent = null;
     let roomBadge = null;
     let tourTitle = null;
     let tourDesc = null;
     let tourSpecs = null;
+
+    function toPersianNum(num) {
+        const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        return String(num).replace(/[0-9]/g, function (w) {
+            return persianDigits[+w];
+        });
+    }
+
+    function scrollToZone(idx) {
+        if (!tourContainer) return;
+        idx = Math.max(0, Math.min(tourData.length - 1, idx));
+        const containerTop = tourContainer.getBoundingClientRect().top + window.scrollY;
+        const scrollDistance = tourContainer.offsetHeight - window.innerHeight;
+        const ratios = [0.02, 0.32, 0.62, 0.88];
+        const targetScroll = containerTop + (ratios[idx] * scrollDistance);
+        window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+    }
 
     function init3DTour() {
         tourContainer = document.getElementById('mansion-3d-tour-container');
@@ -58,6 +76,7 @@
 
         frames = document.querySelectorAll('.tour-scene-frame');
         progressFill = document.getElementById('tourProgressFill');
+        progressPercent = document.getElementById('tourProgressPercent');
         roomBadge = document.getElementById('tourRoomBadge');
         tourTitle = document.getElementById('tourRoomTitle');
         tourDesc = document.getElementById('tourRoomDesc');
@@ -73,21 +92,60 @@
                     listingsSection.scrollIntoView({ behavior: 'smooth' });
                 } else {
                     const rect = tourContainer.getBoundingClientRect();
-                    const targetY = window.scrollY + rect.bottom - 40;
+                    const targetY = window.scrollY + rect.bottom;
                     window.scrollTo({ top: targetY, behavior: 'smooth' });
                 }
             });
         }
 
-        // Zone navigation click triggers
-        document.querySelectorAll('.mansion-zone-btn').forEach((btn, idx) => {
-            btn.addEventListener('click', () => {
-                const targetRatio = (idx * 0.25) + 0.05;
-                const containerTop = tourContainer.offsetTop;
-                const scrollableDistance = tourContainer.offsetHeight - window.innerHeight;
-                const targetScroll = containerTop + (targetRatio * scrollableDistance);
-                window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+        // Zone selection pill buttons
+        document.querySelectorAll('.tour-zone-pill-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const idx = parseInt(this.getAttribute('data-zone-index'), 10);
+                if (!isNaN(idx)) {
+                    scrollToZone(idx);
+                }
             });
+        });
+
+        // Previous / Next Room Buttons
+        const prevBtn = document.getElementById('tourPrevBtn');
+        const nextBtn = document.getElementById('tourNextBtn');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                const targetIdx = currentZoneIndex > 0 ? currentZoneIndex - 1 : 0;
+                scrollToZone(targetIdx);
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (currentZoneIndex < tourData.length - 1) {
+                    scrollToZone(currentZoneIndex + 1);
+                } else {
+                    const catalog = document.getElementById('properties-catalog-section');
+                    if (catalog) catalog.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        }
+
+        // Keyboard arrow navigation when viewing tour
+        window.addEventListener('keydown', function (e) {
+            if (!tourContainer) return;
+            const rect = tourContainer.getBoundingClientRect();
+            const inTour = rect.top <= 50 && rect.bottom >= window.innerHeight - 50;
+            if (!inTour) return;
+
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                if (currentZoneIndex < tourData.length - 1) {
+                    scrollToZone(currentZoneIndex + 1);
+                }
+            } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                if (currentZoneIndex > 0) {
+                    scrollToZone(currentZoneIndex - 1);
+                }
+            }
         });
 
         // Optimized passive scroll listener
@@ -116,26 +174,29 @@
 
         if (scrollDistance <= 0) return;
 
-        // Calculate progress within the pinned container: 0.0 at top, 1.0 when bottom hits viewport
+        // Calculate progress within the pinned container: 0.0 at top, 1.0 when bottom reaches viewport
         const scrolled = -rect.top;
         const progress = Math.min(Math.max(scrolled / scrollDistance, 0), 1);
 
-        // Update progress bar fill
+        // Update progress bar fill & percentage
         if (progressFill) {
             progressFill.style.width = (progress * 100) + '%';
+        }
+        if (progressPercent) {
+            progressPercent.textContent = toPersianNum(Math.round(progress * 100)) + '٪';
         }
 
         // Identify current zone
         let activeZone = tourData[0];
         let activeIndex = 0;
         for (let i = 0; i < tourData.length; i++) {
-            if (progress >= tourData[i].range[0] && progress <= tourData[i].range[1]) {
+            if (progress >= tourData[i].range[0] && progress < tourData[i].range[1]) {
                 activeZone = tourData[i];
                 activeIndex = i;
                 break;
             }
         }
-        if (progress >= 0.98) {
+        if (progress >= 0.95) {
             activeZone = tourData[tourData.length - 1];
             activeIndex = tourData.length - 1;
         }
@@ -149,8 +210,8 @@
             if (idx === activeZone.frameIndex) {
                 frame.classList.add('active');
                 // 3D perspective camera dolly in and gentle pan
-                const scale = 1 + (clampedLocal * 0.07);
-                const translateY = (clampedLocal * -20);
+                const scale = 1 + (clampedLocal * 0.08);
+                const translateY = (clampedLocal * -22);
                 const rotateY = (clampedLocal * 2) - 1;
                 frame.style.transform = `scale(${scale}) translateY(${translateY}px) rotateY(${rotateY}deg) translateZ(0)`;
             } else {
@@ -164,18 +225,14 @@
             currentZoneIndex = activeIndex;
             updateHUD(activeZone);
 
-            // Update floating spatial navigator buttons if present
-            document.querySelectorAll('.mansion-zone-btn').forEach(btn => {
-                if (btn.getAttribute('data-zone') === activeZone.id) {
+            // Update zone pill buttons
+            document.querySelectorAll('.tour-zone-pill-btn').forEach((btn, idx) => {
+                if (idx === activeIndex) {
                     btn.classList.add('active');
                 } else {
                     btn.classList.remove('active');
                 }
             });
-            const spatialTitle = document.getElementById('mansion-nav-title');
-            if (spatialTitle) {
-                spatialTitle.innerHTML = `<span>${activeZone.badge.split(' ')[0]}</span> <span>${activeZone.title.split(' ')[0]} ${activeZone.title.split(' ')[1] || ''}</span>`;
-            }
         }
     }
 
@@ -187,11 +244,17 @@
         tourDesc.textContent = zone.desc;
 
         // Render specs chips
-        tourSpecs.innerHTML = zone.specs.map(s => `
-            <div class="tour-hud-spec-chip">
-                <span>${s}</span>
-            </div>
-        `).join('');
+        tourSpecs.replaceChildren();
+        if (Array.isArray(zone.specs)) {
+            zone.specs.forEach(s => {
+                const chip = document.createElement('div');
+                chip.className = 'tour-hud-spec-chip';
+                const span = document.createElement('span');
+                span.textContent = s;
+                chip.appendChild(span);
+                tourSpecs.appendChild(chip);
+            });
+        }
 
         const header = document.querySelector('.tour-hud-header');
         if (header) {

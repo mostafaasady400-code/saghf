@@ -146,6 +146,59 @@ class Property(db.Model):
             self.inquiry_status = 'archived'
 
     @property
+    def file_code(self):
+        """کد ۵ رقمی کوتاه و اختصاصی ملک جهت پرزنت، استعلام تلفنی و ربات تلگرام (مانند 10001)"""
+        if not self.id:
+            return ""
+        return str(10000 + self.id)
+
+    @property
+    def time_ago(self):
+        """نمایش متنی زمان ثبت آگهی به صورت نسبی (مثلاً: ۲ ساعت پیش)"""
+        if not self.created_at:
+            return "به تازگی"
+        diff = datetime.utcnow() - self.created_at
+        if diff.days == 0:
+            hours = diff.seconds // 3600
+            if hours == 0:
+                mins = max(1, diff.seconds // 60)
+                return f"{mins} دقیقه پیش"
+            return f"{hours} ساعت پیش"
+        elif diff.days == 1:
+            return "دیروز"
+        elif diff.days < 7:
+            return f"{diff.days} روز پیش"
+        elif diff.days < 30:
+            weeks = max(1, diff.days // 7)
+            return f"{weeks} هفته پیش"
+        else:
+            months = max(1, diff.days // 30)
+            return f"{months} ماه پیش"
+
+    @classmethod
+    def get_by_code(cls, code):
+        """
+        جستجوی سریع ملک با کد ۵ رقمی یا شناسه عددی.
+        پشتیبانی از ارقام فارسی و انگلیسی.
+        """
+        if not code:
+            return None
+        fa_to_en = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
+        clean_code = ''.join(filter(str.isdigit, str(code).translate(fa_to_en)))
+        if not clean_code:
+            return None
+        try:
+            num = int(clean_code)
+            if num >= 10000:
+                target_id = num - 10000
+                prop = db.session.get(cls, target_id)
+                if prop:
+                    return prop
+            return db.session.get(cls, num)
+        except Exception:
+            return None
+
+    @property
     def features(self):
         try:
             return json.loads(self.features_json or '[]')
@@ -230,6 +283,7 @@ class Property(db.Model):
 
         return {
             'property_id': self.id,
+            'file_code': self.file_code,
             'source': self.source,
             'source_url': self.source_url,
             'is_personal_owner': self.is_personal_owner if self.is_personal_owner is not None else True,
@@ -261,14 +315,27 @@ class Property(db.Model):
         }
 
     def to_dict(self):
+        deal_label = 'خرید و فروش' if self.deal_type == 'sale' else 'رهن و اجاره'
+        type_labels = {
+            'apartment': 'آپارتمان',
+            'villa': 'ویلا / باغ',
+            'commercial': 'تجاری / مغازه',
+            'office': 'اداری / دفتر کار',
+            'land': 'زمین / کلنگی'
+        }
+        type_label = type_labels.get(self.property_type, 'آپارتمان')
+
         return {
             'id': self.id,
+            'file_code': self.file_code,
             'source': self.source,
             'source_id': self.source_id,
             'source_url': self.source_url,
             'title': self.title,
             'deal_type': self.deal_type,
+            'deal_label': deal_label,
             'property_type': self.property_type,
+            'property_type_label': type_label,
             'city': self.city,
             'district': self.district,
             'address': self.address,
@@ -279,6 +346,8 @@ class Property(db.Model):
             'area': self.area,
             'rooms': self.rooms,
             'floor': self.floor,
+            'total_floors': self.total_floors,
+            'units_per_floor': self.units_per_floor,
             'build_year': self.build_year,
             'has_elevator': self.has_elevator,
             'has_parking': self.has_parking,
@@ -290,6 +359,7 @@ class Property(db.Model):
             'status': self.status,
             'score': self.score,
             'age_in_days': self.age_in_days,
+            'time_ago': self.time_ago,
             'is_expired': self.is_expired,
             'inquiry_status': self.inquiry_status or 'none',
             'last_inquiry_at': self.last_inquiry_at.strftime('%Y-%m-%d %H:%M') if self.last_inquiry_at else '',
@@ -299,7 +369,8 @@ class Property(db.Model):
             'owner': self.owner.to_dict() if self.owner else None,
             'agent_name': self.agent.name if self.agent else 'مشخص نشده',
             'messenger_payload': self.to_messenger_dict(),
-            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else '',
+            'created_at_formatted': f"{self.created_at.strftime('%Y/%m/%d')} ساعت {self.created_at.strftime('%H:%M')}" if self.created_at else ''
         }
 
 class Client(db.Model):

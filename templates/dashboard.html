@@ -14,6 +14,7 @@
     </div>
     <div style="display: flex; gap: 0.75rem;">
         <form action="{{ url_for('matching.refresh_all') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="glass-btn" style="border-color: rgba(139, 92, 246, 0.4); color: #c084fc;">
                 <span>⚡</span> بروزرسانی تطبیق هوشمند سراسری
             </button>
@@ -21,14 +22,14 @@
     </div>
 </div>
 
-<!-- 4 Neon KPI Cards -->
+<!-- 4 Luxury KPI Cards -->
 <div class="kpi-grid">
-    <div class="glass-panel kpi-card" style="--accent-color: #00f2fe;">
+    <div class="glass-panel kpi-card" style="--accent-color: #d4af37;">
         <div class="kpi-header">
             <span class="kpi-title">موجودی فایلینگ و کراولینگ</span>
-            <div class="kpi-icon text-neon-cyan">🏢</div>
+            <div class="kpi-icon text-gold">🏢</div>
         </div>
-        <div class="kpi-value text-neon-cyan">{{ kpis.total_properties | pnum }}</div>
+        <div class="kpi-value text-gold">{{ kpis.total_properties | pnum }}</div>
         <div class="kpi-sub">
             <span class="text-neon-emerald">▲ {{ kpis.crawled_today | pnum }}</span> فایل جدید کراول شده امروز
         </div>
@@ -45,12 +46,12 @@
         </div>
     </div>
 
-    <div class="glass-panel kpi-card" style="--accent-color: #8b5cf6;">
+    <div class="glass-panel kpi-card" style="--accent-color: #f5d77f;">
         <div class="kpi-header">
             <span class="kpi-title">تطابق‌های طلایی (بالای ۸۰٪)</span>
-            <div class="kpi-icon text-neon-purple">⚡</div>
+            <div class="kpi-icon text-gold">⚡</div>
         </div>
-        <div class="kpi-value text-neon-purple">{{ kpis.high_matches_count | pnum }}</div>
+        <div class="kpi-value text-gold">{{ kpis.high_matches_count | pnum }}</div>
         <div class="kpi-sub">
             فرصت‌های معامله با شانس موفقیت بالا
         </div>

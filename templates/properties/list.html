@@ -2,7 +2,7 @@
 
 {% block title %}فایلینگ املاک سقف | مدیریت املاک و فایل‌ها{% endblock %}
 
-{% block content %}
+{% block hero %}
 <!-- Pinned Scroll-Driven 3D Luxury Mansion Tour Hero -->
 <div id="mansion-3d-tour-container" aria-label="تور مجازی سه بعدی عمارت لوکس با اسکرول">
     <div class="tour-sticky-stage">
@@ -14,7 +14,23 @@
             <div class="tour-scene-overlay"></div>
         </div>
 
-        <!-- Tour Floating HUD -->
+        <!-- Tour Quick Zone Selection Pills (Top Center-Left) -->
+        <div class="tour-zone-pills-bar" aria-label="انتخاب مستقیم فضاهای عمارت">
+            <button type="button" class="tour-zone-pill-btn active" data-zone-index="0">
+                <span>🏰</span> <span>سالن پذیرایی</span>
+            </button>
+            <button type="button" class="tour-zone-pill-btn" data-zone-index="1">
+                <span>🍳</span> <span>آشپزخانه و لانژ</span>
+            </button>
+            <button type="button" class="tour-zone-pill-btn" data-zone-index="2">
+                <span>🛏️</span> <span>سوئیت مستر</span>
+            </button>
+            <button type="button" class="tour-zone-pill-btn" data-zone-index="3">
+                <span>🏊</span> <span>روف‌گاردن و استخر</span>
+            </button>
+        </div>
+
+        <!-- Tour Floating HUD (Top Right) -->
         <div class="tour-hud-header">
             <div class="tour-hud-room-badge" id="tourRoomBadge">
                 🏰 بخش ۱ از ۴: سالن پذیرایی پانوراما
@@ -33,23 +49,34 @@
             </div>
         </div>
 
-        <!-- Tour Progress & Skip Bar -->
+        <!-- Tour Navigation Arrows (Sides) -->
+        <button type="button" id="tourPrevBtn" class="tour-nav-arrow-btn right" title="اتاق قبلی (کلید ❮)" aria-label="اتاق قبلی">
+            <span>‹</span>
+        </button>
+        <button type="button" id="tourNextBtn" class="tour-nav-arrow-btn left" title="اتاق بعدی (کلید ❯)" aria-label="اتاق بعدی">
+            <span>›</span>
+        </button>
+
+        <!-- Tour Progress & Skip Bar (Bottom Center) -->
         <div class="tour-hud-footer">
-            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; display: flex; align-items: center; gap: 0.35rem;">
-                <span style="color: #00f2fe;">🖱️</span> با اسکرول تور را کنترل کنید
+            <span style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem;">
+                <span style="color: #00f2fe; animation: bounce 2s infinite;">🖱️</span> با اسکرول تور را ورق بزنید
             </span>
             <div class="tour-progress-track">
                 <div class="tour-progress-fill" id="tourProgressFill"></div>
             </div>
+            <span id="tourProgressPercent" style="font-size: 0.82rem; font-weight: 800; color: #00f2fe; min-width: 38px;">۰٪</span>
             <a href="#properties-catalog-section" id="tourSkipToListings" class="tour-skip-btn">
                 <span>مشاهده آگهی‌های املاک</span> <span>⬇</span>
             </a>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block content %}
 <!-- Catalog Section -->
-<div id="properties-catalog-section" style="padding-top: 1rem;">
+<div id="properties-catalog-section" style="padding-top: 0.5rem;">
     <div style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
         <div>
             <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
@@ -246,218 +273,200 @@
     </form>
 </div>
 
-<!-- Properties Grid -->
-<div class="grid-3">
+<!-- Compact Real Estate Cards Stack (Modern, Horizontal & Dense) -->
+<div class="compact-cards-stack">
     {% for p in properties %}
-        {% set match_info = client_match_scores.get(p.id) if client_match_scores else None %}
-        <div class="glass-card property-card" data-deal-type="{{ p.deal_type }}" {% if match_info and match_info.score >= 70 %}style="border-color: rgba(168, 85, 247, 0.4); box-shadow: 0 0 25px rgba(168, 85, 247, 0.15);"{% endif %}>
-            <!-- Thumbnail Image -->
-            <div style="position: relative;">
+        <div class="compact-property-card property-card" 
+             data-deal-type="{{ p.deal_type }}" 
+             id="prop-card-{{ p.id }}"
+             data-prop-id="{{ p.id }}"
+             data-file-code="{{ p.file_code }}"
+             data-title="{{ p.title | forceescape }}"
+             data-images='{{ p.images | tojson }}'>
+            <!-- 1. Right Column: Thumbnail & Gallery Click -->
+            <div class="compact-thumb-wrap" 
+                 onclick="openGalleryFromCard(this)"
+                 title="کلیک برای باز شدن گالری تمام‌صفحه و بررسی نقشه و نورگیر">
                 {% if p.images and p.images[0] %}
-                    <img src="{{ p.images[0] }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/assets/placeholder.png';" alt="{{ p.title }}" class="property-thumb">
+                    <img src="{{ p.images[0] }}" 
+                         referrerpolicy="no-referrer" 
+                         loading="lazy" 
+                         onerror="this.onerror=null; this.src='/static/placeholder.png';" 
+                         alt="{{ p.title }}" 
+                         class="compact-thumb-img">
                 {% else %}
-                    <div class="property-thumb" style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; background: rgba(15, 23, 42, 0.7);">
-                        <span style="font-size: 2.2rem;">🏢</span>
-                        <span style="font-size: 0.72rem; color: #94a3b8; margin-top: 0.25rem;">بدون عکس در دیوار</span>
+                    <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b;">
+                        <span style="font-size: 1.8rem;">🏢</span>
+                        <span style="font-size: 0.7rem; margin-top: 0.2rem;">بدون تصویر</span>
                     </div>
                 {% endif %}
                 
+                <!-- Hover Overlay -->
+                <div class="compact-thumb-overlay">
+                    <span>🔍 گالری تمام‌صفحه</span>
+                </div>
+
                 <!-- Source Badge -->
-                <div style="position: absolute; top: 12px; right: 12px;">
+                <div class="compact-thumb-badge-top">
                     {% if p.source == 'divar' %}
-                        <span class="badge-neon badge-neon-cyan">دیوار</span>
+                        <span class="badge-neon badge-neon-cyan" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">دیوار</span>
                     {% elif p.source == 'sheypoor' %}
-                        <span class="badge-neon badge-neon-emerald">شیپور</span>
+                        <span class="badge-neon badge-neon-emerald" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">شیپور</span>
                     {% else %}
-                        <span class="badge-neon badge-neon-purple">مالک دفتر</span>
+                        <span class="badge-neon badge-neon-purple" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">مالک مستقیم</span>
                     {% endif %}
                 </div>
 
-                <!-- Client Match Score Pill (if client selected) -->
-                {% if match_info %}
-                    <div style="position: absolute; top: 12px; left: 12px;">
-                        <span class="badge-neon" style="background: linear-gradient(135deg, #8b5cf6, #ec4899); color: #fff; font-weight: 800; font-size: 0.78rem;">
-                            ✨ {{ match_info.score | pnum }}٪ تطابق مشتری
-                        </span>
-                    </div>
-                {% else %}
-                    <!-- Quality Score Pill -->
-                    <div style="position: absolute; top: 12px; left: 12px;">
-                        <span class="badge-neon" style="background: rgba(15, 23, 42, 0.85); color: #f8fafc; border: 1px solid rgba(255,255,255,0.2);">
-                            امتیاز: {{ p.score | pnum }}
-                        </span>
-                    </div>
-                {% endif %}
-
                 <!-- Photo Count Pill -->
                 {% if p.images and p.images | length > 0 %}
-                    <div style="position: absolute; bottom: 10px; right: 12px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); padding: 0.2rem 0.5rem; border-radius: 8px; font-size: 0.72rem; color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); font-weight: 700;">
-                        📷 {{ p.images | length | pnum }} تصویر
-                    </div>
-                {% endif %}
-
-                <!-- Lifecycle Badge if nearing 7 days -->
-                {% if p.age_in_days >= 7 %}
-                    <div style="position: absolute; bottom: 10px; left: 12px;">
-                        <span class="badge-neon" style="background: rgba(239, 68, 68, 0.9); color: #fff; font-size: 0.7rem;">
-                            ⏰ {{ p.age_in_days | pnum }} روزه
-                        </span>
+                    <div class="compact-thumb-count">
+                        📷 {{ p.images | length | pnum }}
                     </div>
                 {% endif %}
             </div>
 
-            <!-- Body -->
-            <div class="property-card-body">
-                <div class="property-meta">
-                    <span class="badge-neon {% if p.deal_type == 'sale' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
-                        {{ p.deal_type | deal_name }}
+            <!-- 2. Center Column: Specs, Code & Overview -->
+            <div class="compact-card-center">
+                <!-- Meta Row: Code Badge, Deal Badge, Location & Time -->
+                <div class="compact-header-row">
+                    <!-- Prominent 5-digit Property Code Badge -->
+                    <span class="property-code-badge" title="کد منحصربه‌فرد ۵ رقمی جهت استعلام و بات تلگرام">
+                        🔢 کد: {{ p.file_code | pnum }}
                     </span>
-                    <span style="font-size: 0.82rem; color: #94a3b8;">📍 {{ p.district }}</span>
-                </div>
 
-                <a href="{{ url_for('properties.detail', id=p.id) }}" class="property-title">
-                    {{ p.title }}
-                </a>
-
-                <!-- Match Reasons (if client selected) -->
-                {% if match_info and match_info.reasons %}
-                    <div style="background: rgba(139, 92, 246, 0.1); border-right: 3px solid #8b5cf6; padding: 0.35rem 0.6rem; border-radius: 4px; font-size: 0.72rem; color: #d8b4fe; margin: 0.4rem 0;">
-                        💡 {{ match_info.reasons[0] }}
-                    </div>
-                {% endif %}
-
-                <div class="property-specs">
-                    <div class="property-spec-item">
-                        <span>📐</span>
-                        <span>{{ p.area | pnum }} متر</span>
-                    </div>
-                    <div class="property-spec-item">
-                        <span>🛏️</span>
-                        <span>{{ p.rooms | pnum }} خواب</span>
-                    </div>
-                    <div class="property-spec-item">
-                        <span>🏢</span>
-                        <span>طبقه {{ p.floor | pnum }}{% if p.total_floors %} از {{ p.total_floors | pnum }}{% endif %}</span>
-                    </div>
-                </div>
-
-                <!-- Amenities Mini-Badges -->
-                <div style="display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.4rem; font-size: 0.7rem;">
-                    <span class="badge-neon {% if p.has_elevator %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}" style="padding: 0.1rem 0.35rem;">
-                        آسانسور {% if p.has_elevator %}✓{% else %}✕{% endif %}
-                    </span>
-                    <span class="badge-neon {% if p.has_parking %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}" style="padding: 0.1rem 0.35rem;">
-                        پارکینگ {% if p.has_parking %}✓{% else %}✕{% endif %}
-                    </span>
-                    <span class="badge-neon {% if p.has_warehouse %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}" style="padding: 0.1rem 0.35rem;">
-                        انباری {% if p.has_warehouse %}✓{% else %}✕{% endif %}
-                    </span>
-                </div>
-
-                <!-- Dedicated Direct Contact Option Bar -->
-                <div class="contact-option-box" style="margin-top: 0.65rem; margin-bottom: 0.65rem; background: {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.1){% else %}rgba(0, 242, 254, 0.07){% endif %}; border: 1px solid {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.35){% else %}rgba(0, 242, 254, 0.25){% endif %}; border-radius: 10px; padding: 0.55rem 0.75rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; padding-bottom: 0.35rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                        <span style="font-size: 0.76rem; font-weight: 700; color: #cbd5e1; display: flex; align-items: center; gap: 0.35rem;">
-                            <span>📞</span> گزینه تماس مستقیم با آگهی‌دهنده:
-                        </span>
-                        {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
-                            <span class="badge-neon badge-neon-emerald" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">
-                                ✓ استخراج شده
-                            </span>
-                        {% else %}
-                            <span class="badge-neon badge-neon-amber" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">
-                                🔒 نیاز به استخراج
-                            </span>
-                        {% endif %}
-                    </div>
-
-                    {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
-                        <!-- Real Extracted Phone Display & 1-Click Calling -->
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
-                            <a href="tel:{{ p.owner.phone_number }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); padding: 0.3rem 0.65rem; border-radius: 8px; color: #10b981; font-weight: 800; font-size: 0.95rem; letter-spacing: 1.5px; direction: ltr;">
-                                <span>📲</span>
-                                <span>{{ p.owner.phone_number }}</span>
-                            </a>
-                            
-                            <div style="display: flex; gap: 0.35rem; align-items: center;">
-                                <a href="tel:{{ p.owner.phone_number }}" class="btn-neon-emerald" style="padding: 0.28rem 0.65rem; font-size: 0.74rem; text-decoration: none; font-weight: 700;" title="تماس تلفنی مستقیم">
-                                    تماس فوری
-                                </a>
-                                <button type="button" onclick="navigator.clipboard.writeText('{{ p.owner.phone_number }}'); alert('شماره در حافظه کپی شد: {{ p.owner.phone_number }}');" class="glass-btn" style="padding: 0.28rem 0.5rem; font-size: 0.74rem; color: #10b981;" title="کپی شماره">
-                                    📋
-                                </button>
-                                <button type="button" onclick="openMessengerModal({{ p.id }})" class="glass-btn" style="padding: 0.28rem 0.55rem; font-size: 0.74rem; color: #38bdf8;" title="ارسال پیام استعلام به واتساپ/تلگرام/بله/ایتا/روبیکا">
-                                    💬
-                                </button>
-                                <button type="button" onclick="promptSavePhone({{ p.id }}, '{{ p.owner.phone_number }}', '{{ p.owner.full_name }}')" class="glass-btn" style="padding: 0.28rem 0.5rem; font-size: 0.74rem; color: #94a3b8;" title="ویرایش شماره">
-                                    ✏️
-                                </button>
-                            </div>
-                        </div>
+                    {% if p.deal_type == 'sale' %}
+                        <span class="badge-neon badge-neon-cyan" style="font-size: 0.72rem; padding: 0.12rem 0.5rem;">فروش</span>
                     {% else %}
-                        <!-- Extraction & Manual Input Actions -->
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; flex-wrap: wrap;">
-                            <button type="button" onclick="fetchDivarPhoneDirect({{ p.id }})" class="btn-neon-cyan" style="flex: 1; min-width: 140px; justify-content: center; padding: 0.35rem 0.55rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;" title="استخراج خودکار شماره واقعی با توکن نشست دیوار">
-                                <span>⚡</span> استخراج خودکار شماره
-                            </button>
-                            <button type="button" onclick="promptSavePhone({{ p.id }}, '', '{{ p.owner.full_name if p.owner else '' }}')" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #10b981; border-color: rgba(16, 185, 129, 0.3);" title="ثبت دستی شماره تلفن">
-                                <span>✏️</span> ثبت شماره
-                            </button>
-                            {% if p.source_url %}
-                                <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #00f2fe; text-decoration: none; border-color: rgba(0, 242, 254, 0.3);" title="مشاهده اطلاعات تماس در دیوار">
-                                    🌐 دیوار
-                                </a>
-                            {% endif %}
-                        </div>
+                        <span class="badge-neon badge-neon-amber" style="font-size: 0.72rem; padding: 0.12rem 0.5rem;">رهن و اجاره</span>
+                    {% endif %}
+
+                    <span style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 0.25rem;">
+                        <span>📍</span> {{ p.district or 'تهران' }}
+                    </span>
+
+                    <span style="font-size: 0.75rem; color: #64748b;">
+                        🕒 {{ p.created_at | time_ago }}
+                    </span>
+
+                    {% if p.source_url %}
+                        <!-- AGENTS.md Rule 2: Authentic ad link with anchor text 'لینک آگهی' -->
+                        <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" style="color: var(--gold-light); font-size: 0.72rem; text-decoration: underline; font-weight: 700; margin-right: auto;" title="مشاهده آگهی اصلی در منبع">
+                            لینک آگهی ↗
+                        </a>
                     {% endif %}
                 </div>
 
-                <!-- Brief Description -->
-                {% if p.description %}
-                    <p style="font-size: 0.78rem; color: #94a3b8; line-height: 1.4; margin: 0.3rem 0 0.6rem 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                        {{ p.description }}
-                    </p>
-                {% endif %}
+                <!-- Title (Linked) -->
+                <a href="{{ url_for('properties.detail', id=p.id) }}" class="compact-card-title" title="{{ p.title }}">
+                    {{ p.title }}
+                </a>
 
-                <!-- Price & Matching Action -->
-                <div class="property-price" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.3rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);">
-                    <div>
-                        <div style="font-size: 0.72rem; color: #94a3b8;">
-                            {% if p.deal_type == 'sale' %}قیمت کل{% else %}ودیعه / رهن{% endif %}
-                        </div>
-                        <div class="price-val" style="font-size: 0.98rem;">
-                            {% if p.deal_type == 'sale' %}
-                                {{ p.total_price | toman }}
-                            {% else %}
-                                {{ p.deposit | toman }}
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 0.4rem; align-items: center;">
-                        {% if p.source_url %}
-                            <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; text-decoration: none;" title="مشاهده مستقیم آگهی اصلی">
-                                لینک آگهی
-                            </a>
-                        {% endif %}
-                        <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;">
-                            جزئیات
-                        </a>
-                    </div>
+                <!-- Specs Pill Strip: Area · Rooms · Floor · Year -->
+                <div class="compact-specs-strip">
+                    <span class="compact-spec-pill">📐 {{ p.area | pnum }} متر</span>
+                    <span class="compact-spec-pill">🛏️ {{ p.rooms | pnum }} خواب</span>
+                    {% if p.floor is not none %}
+                        <span class="compact-spec-pill">🏢 طبقه {{ p.floor | pnum }}</span>
+                    {% endif %}
+                    {% if p.build_year and p.build_year > 1300 %}
+                        <span class="compact-spec-pill">🏗️ ساخت {{ p.build_year | pnum }}</span>
+                    {% endif %}
                 </div>
 
-                <!-- Relative Publication Timestamp -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.55rem; padding-top: 0.45rem; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.74rem; color: #94a3b8;">
-                    <span style="display: flex; align-items: center; gap: 0.35rem;">
-                        <span style="color: #00f2fe;">🕒</span> زمان انتشار: <strong style="color: #e2e8f0; font-weight: 700;">{{ p.created_at | time_ago }}</strong>
-                    </span>
-                    <span style="font-size: 0.7rem; color: #64748b;">
-                        کد فایل: #{{ p.id | pnum }}
-                    </span>
+                <!-- Amenities Compact Strip -->
+                <div class="compact-amenities-strip">
+                    <span style="color: #64748b; font-size: 0.72rem;">امکانات:</span>
+                    {% if p.has_parking %}<span style="color: #cbd5e1;">🚗 پارکینگ</span>{% endif %}
+                    {% if p.has_elevator %}<span style="color: #cbd5e1;">🛗 آسانسور</span>{% endif %}
+                    {% if p.has_warehouse %}<span style="color: #cbd5e1;">📦 انباری</span>{% endif %}
+                    {% if p.has_balcony %}<span style="color: #cbd5e1;">🌿 بالکن</span>{% endif %}
+                    {% if not p.has_parking and not p.has_elevator and not p.has_warehouse and not p.has_balcony %}
+                        <span style="color: #64748b;">معمولی</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 3. Left Column: Pricing & Fast Interactive Actions -->
+            <div class="compact-card-side">
+                <div class="compact-price-wrap">
+                    {% if p.deal_type == 'sale' %}
+                        <div class="compact-price-main">{{ p.total_price | toman }}</div>
+                        {% if p.meter_price and p.meter_price > 0 %}
+                            <div class="compact-price-sub">متری {{ p.meter_price | toman }}</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="compact-price-main">ودیعه: {{ p.deposit | toman }}</div>
+                        <div class="compact-price-sub">اجاره: {{ p.monthly_rent | toman }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Action Buttons: Fast Presentation & Calling -->
+                <div class="compact-actions-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <!-- Button 1: In-App Detail Modal -->
+                    <button type="button" 
+                            onclick="openInAppAdModal({{ p.id }}, event)" 
+                            class="btn-compact-view" 
+                            title="مشاهده پرونده درون‌برنامه‌ای">
+                        <span>🏛️</span> نمایش
+                    </button>
+
+                    <!-- Button 2: Fullscreen Gallery Modal -->
+                    <button type="button" 
+                            onclick="openGalleryFromCard(this)" 
+                            class="btn-compact-gallery" 
+                            title="بررسی پلان، نقشه و نورگیر در گالری تمام‌صفحه">
+                        <span>🖼️</span> عکس‌ها ({{ p.images | length | pnum }})
+                    </button>
+
+                    <!-- Button 3: Send to Telegram Action (Interactive) -->
+                    <button type="button" 
+                            id="btn-tg-{{ p.id }}" 
+                            onclick="sendPropertyPhotosToTelegram({{ p.id }}, '{{ p.file_code }}', event)" 
+                            class="btn-compact-telegram" 
+                            title="ارسال فوری آلبوم تصاویر به تلگرام">
+                        <span>📸</span> تلگرام
+                    </button>
+                </div>
+
+                <!-- Interactive Contact Reveal Section on Card -->
+                <div class="card-contact-strip" id="card-contact-wrap-{{ p.id }}">
+                    {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                        <button type="button" 
+                                onclick="revealCardPhone({{ p.id }}, '{{ p.owner.phone_number }}', event)" 
+                                class="btn-reveal-contact" 
+                                id="btn-reveal-{{ p.id }}" 
+                                title="نمایش شماره تماس آگهی‌دهنده">
+                            <span>📞</span> <span>تماس با آگهی‌دهنده</span>
+                        </button>
+                        <div class="revealed-phone-box" id="revealed-phone-{{ p.id }}" style="display: none;">
+                            <a href="tel:{{ p.owner.phone_number }}" class="phone-call-anchor" title="تماس مستقیم با آگهی‌دهنده">
+                                <span class="phone-icon">📞</span>
+                                <span class="phone-num-text" dir="ltr">{{ p.owner.phone_number }}</span>
+                            </a>
+                            <button type="button" 
+                                    onclick="copyCardPhone('{{ p.owner.phone_number }}', this, event)" 
+                                    class="btn-copy-revealed-phone" 
+                                    title="کپی شماره تماس">
+                                📋 کپی
+                            </button>
+                        </div>
+                    {% else %}
+                        <button type="button" 
+                                onclick="fetchAndRevealCardPhone({{ p.id }}, event)" 
+                                class="btn-reveal-contact btn-reveal-fetch" 
+                                id="btn-reveal-{{ p.id }}" 
+                                title="استعلام هوشمند شماره آگهی‌دهنده">
+                            <span>⚡</span> <span>استعلام شماره تماس</span>
+                        </button>
+                        <div class="revealed-phone-box" id="revealed-phone-{{ p.id }}" style="display: none;">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     {% else %}
-        <div style="grid-column: 1 / -1; text-align: center; color: #64748b; padding: 4rem;">
+        <div style="text-align: center; color: #64748b; padding: 4rem; background: rgba(15,23,42,0.4); border-radius: 16px;">
             هیچ فایلی با معیارهای انتخاب شده یافت نشد.
         </div>
     {% endfor %}
@@ -472,11 +481,10 @@ function switchDealTab(dealType) {
     document.querySelectorAll('.deal-tab-item').forEach(btn => {
         btn.classList.remove('active-sale', 'active-rent', 'active-all');
     });
-    const clickedBtn = document.getElementById('deal-tab-' + dealType);
-    if (clickedBtn) {
-        if (dealType === 'sale') clickedBtn.classList.add('active-sale');
-        else if (dealType === 'rent') clickedBtn.classList.add('active-rent');
-        else clickedBtn.classList.add('active-all');
+
+    const targetBtn = document.getElementById(`deal-tab-${dealType}`);
+    if (targetBtn) {
+        targetBtn.classList.add(`active-${dealType}`);
     }
 
     const cards = document.querySelectorAll('.property-card');

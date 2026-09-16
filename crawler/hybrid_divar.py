@@ -30,6 +30,7 @@ class HybridDivarCrawler:
     پوشش زمانی تا ۵ روز گذشته با مرتب‌سازی زمانی
     """
     BASE_WEB_URL = "https://divar.ir/s"
+    OPEN_PLATFORM_POST_URL = "https://open-api.divar.ir/v2/open-platform/finder/post"
 
     CATEGORIES = {
         'buy-apartment': {'slug': 'buy-apartment', 'deal_type': 'sale', 'property_type': 'apartment', 'name': 'فروش آپارتمان'},
@@ -55,7 +56,31 @@ class HybridDivarCrawler:
         slug = category_meta['slug']
         results: List[NormalizedPropertySchema] = []
 
-        # پیمایش صفحات جهت استخراج عمیق تا سقف ۵ روز گذشته
+        # ۱. تلاش در وهله نخست از اندپوینت رسمی OpenAPI پلتفرم باز دیوار:
+        # https://open-api.divar.ir/v2/open-platform/finder/post
+        try:
+            from .divar_session_manager import DivarSessionManager
+            op_res = DivarSessionManager.fetch_finder_posts(
+                endpoint=self.OPEN_PLATFORM_POST_URL,
+                category=slug,
+                city=self.city,
+                limit=limit
+            )
+            if op_res.get('success') and op_res.get('data'):
+                print(f"[HybridDivar] ✅ دریافت موفقیت‌آمیز آگهی‌ها از اندپوینت پلتفرم باز: {self.OPEN_PLATFORM_POST_URL}")
+                parsed_op = self._parse_open_platform_response(op_res['data'], category_meta, limit, on_item_found=on_item_found)
+                if parsed_op:
+                    results.extend(parsed_op)
+                    if len(results) >= limit:
+                        results.sort(key=lambda x: x.score, reverse=True)
+                        return results
+            else:
+                status_code = op_res.get('status_code', 'unknown')
+                print(f"[HybridDivar] ℹ️ استعلام از اندپوینت OpenAPI Finder ({self.OPEN_PLATFORM_POST_URL}) وضعیت {status_code}: سوئیچ خودکار به موتور هیبریدی زنده...")
+        except Exception as e:
+            print(f"[HybridDivar] هشدار فراخوانی OpenAPI Finder: {e}")
+
+        # ۲. پیمایش صفحات جهت استخراج عمیق تا سقف ۵ روز گذشته از موتور هیبریدی زنده
         for page in range(1, 4):
             if len(results) >= limit:
                 break
@@ -92,6 +117,79 @@ class HybridDivarCrawler:
         # مرتب‌سازی نهایی بر اساس تاریخ/امتیاز (از جدیدترین به قدیمی‌ترین)
         results.sort(key=lambda x: x.score, reverse=True)
         return results
+
+    def _parse_open_platform_response(self, data: Dict[str, Any], category_meta: Dict[str, Any], limit: int, on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None) -> List[NormalizedPropertySchema]:
+        """پارس ساختار داده بازگشتی از اندپوینت OpenAPI Finder دیوار"""
+        items: List[NormalizedPropertySchema] = []
+        posts = data.get('posts') or data.get('items') or data.get('data') or []
+        if isinstance(posts, dict):
+            posts = posts.get('items') or posts.get('posts') or []
+
+        for p in posts:
+            if len(items) >= limit:
+                break
+            try:
+                token = p.get('token') or p.get('id')
+                title = p.get('title') or ''
+                if not token or not title:
+                    continue
+
+                source_id = f"divar_{token}"
+                if dedup_engine.is_duplicate(source_id):
+                    continue
+
+                # واکشی جزئیات عمیق و شماره تماس
+                post_details = self._fetch_post_details(token)
+                contact_phone = p.get('contact', {}).get('phone') or p.get('phone_number') or post_details.get('phone')
+                real_desc = post_details.get('description') or p.get('description') or title
+
+                all_images = post_details.get('images') or p.get('images') or []
+                item_dict = {
+                    'source': 'divar',
+                    'source_id': source_id,
+                    'source_url': f"https://divar.ir/v/{token}",
+                    'title': title,
+                    'deal_type': category_meta['deal_type'],
+                    'property_type': category_meta['property_type'],
+                    'city': self.city,
+                    'district': p.get('district') or 'تهران',
+                    'address': f"تهران، {p.get('district') or 'تهران'}",
+                    'total_price': post_details.get('total_price') or p.get('total_price') or 0,
+                    'meter_price': post_details.get('meter_price') or p.get('meter_price') or 0,
+                    'deposit': post_details.get('deposit') or p.get('deposit') or 0,
+                    'monthly_rent': post_details.get('monthly_rent') or p.get('monthly_rent') or 0,
+                    'area': post_details.get('area') or p.get('area') or 85,
+                    'rooms': post_details.get('rooms') or p.get('rooms') or 2,
+                    'floor': post_details.get('floor') or 1,
+                    'total_floors': post_details.get('total_floors'),
+                    'build_year': post_details.get('build_year') or 1400,
+                    'has_elevator': post_details.get('has_elevator', False),
+                    'has_parking': post_details.get('has_parking', False),
+                    'has_warehouse': post_details.get('has_warehouse', False),
+                    'has_balcony': post_details.get('has_balcony', False),
+                    'features': post_details.get('features', []),
+                    'description': real_desc,
+                    'images': all_images,
+                    'status': 'raw_crawled',
+                    'score': 85,
+                    'is_personal_owner': True,
+                    'owner_type': 'personal',
+                    'filter_log': 'OpenAPI Finder Post (شخصی)',
+                    'owner_info': {
+                        'name': f"مالک آگهی دیوار ({p.get('district') or 'تهران'})",
+                        'phone': contact_phone or '',
+                        'urgency': 'high',
+                        'flexibility': 'معمولی',
+                        'notes': 'استخراج از اندپوینت رسمی OpenAPI پلتفرم باز دیوار'
+                    }
+                }
+                schema = NormalizedPropertySchema(**item_dict)
+                items.append(schema)
+                if on_item_found:
+                    on_item_found(schema)
+            except Exception as ex:
+                print(f"[HybridDivar] خطا در پردازش پست OpenAPI: {ex}")
+        return items
 
     def _fetch_post_details(self, token: str) -> Dict[str, Any]:
         """
@@ -130,11 +228,20 @@ class HybridDivarCrawler:
 
                 for sec in sections:
                     for w in sec.get('widgets', []):
-                        wt = w.get('widget_type')
+                        wt = w.get('widget_type', '')
                         wd = w.get('data', {})
 
+                        # ۰. بررسی و رد ویجت‌های اختصاصی پنل‌های املاک و اکانت‌های تجاری دیوار
+                        if wt == 'LAZY_SECTION':
+                            req_data = wd.get('request_data', {})
+                            biz_type = str(req_data.get('post_business_type', '')).lower()
+                            if biz_type in ['premium-panel', 'business', 'agency', 'consultant', 'real_estate_agency']:
+                                details['is_agency_post'] = True
+                        elif any(x in wt.lower() for x in ['agency_info', 'business_section', 'seller_profile']):
+                            details['is_agency_post'] = True
+
                         # ۱. متن کامل توضیحات
-                        if wt == 'DESCRIPTION_ROW':
+                        elif wt == 'DESCRIPTION_ROW':
                             text = wd.get('text', '')
                             if text:
                                 details['description'] = text.strip()
@@ -328,6 +435,9 @@ class HybridDivarCrawler:
 
                     # استخراج عمیق و بلادرنگ کلیه جزئیات واقعی فایل از API دیوار
                     post_details = self._fetch_post_details(token)
+                    if post_details.get('is_agency_post'):
+                        # رد قطعی آگهی‌های دارای ویجت‌های تجاری و پنل املاک
+                        continue
                     real_desc = post_details.get('description', '')
                     all_images = post_details.get('images', [])
                     raw_img = d.get('image_url')

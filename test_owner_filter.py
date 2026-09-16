@@ -122,6 +122,48 @@ test_cases = [
         'description': 'بررسی عدم تداخل رگکس: کلمه کارخانه نباید باعث رد آگهی شود'
     },
 
+    {
+        'platform': 'divar',
+        'title': 'آپارتمان ۸۵ متری خوش نقشه',
+        'desc': 'جهت مشاوره و اطلاعات بیشتر تماس بگیرید',
+        'widget_data': {'bottom_description_text': 'دقایقی پیش در ونک'},
+        'raw_text': '',
+        'expected_personal': False,
+        'expected_status': 'rejected_forbidden_words',
+        'description': 'مرحله ۲: وجود کلمه (مشاوره)'
+    },
+    {
+        'platform': 'divar',
+        'title': '۹۰ متر ۲ خواب نوساز',
+        'desc': 'فایل اختصاصی با بهترین متریال',
+        'widget_data': {'bottom_description_text': 'املاک آرتا در تهرانپارس'},
+        'raw_text': '',
+        'expected_personal': False,
+        'expected_status': 'rejected_account_type',
+        'description': 'مرحله ۱: دیوار - پنل املاک آرتا در مشخصات حساب'
+    },
+    {
+        'platform': 'sheypoor',
+        'title': 'آپارتمان ۷۰ متری مشاوره املاک مهر',
+        'desc': 'نورگیر عالی',
+        'widget_data': {},
+        'raw_text': 'مشاوره املاک مهر ۷۰ متر آپارتمان',
+        'expected_personal': False,
+        'expected_status': 'rejected_account_type',
+        'description': 'مرحله ۱: شیپور - مشاوره املاک در کارت آگهی'
+    },
+    # --- آزمون‌های تأیید هویت شخصی (بدون کلمات فیلتر) ---
+    {
+        'platform': 'divar',
+        'title': 'واحد ۸۵ متری تمیز شخصی ساز',
+        'desc': 'فروشنده واقعی هستم به خریدار واقعی تخفیف پای معامله داده می‌شود',
+        'widget_data': {'bottom_description_text': 'دقایقی پیش در سعادت آباد'},
+        'raw_text': '',
+        'expected_personal': True,
+        'expected_status': 'approved_personal',
+        'description': 'شخصی تأیید شده: حساب شخصی دیوار + بدون کلمات فیلتر در متن'
+    },
+
     # --- آزمون‌های آگهی تأییدشده شخصی (عبور از هر دو مرحله) ---
     {
         'platform': 'divar',

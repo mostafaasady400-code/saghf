@@ -18,6 +18,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('clients.create') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="grid-2">
         <!-- Client Identity & Budget -->
         <div class="glass-panel" style="padding: 1.75rem;">

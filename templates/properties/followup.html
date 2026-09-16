@@ -102,9 +102,14 @@
 
                 <!-- Body -->
                 <div class="property-card-body">
-                    <div class="property-meta">
-                        <span style="font-size: 0.82rem; color: #38bdf8; font-weight: 600;">📍 {{ p.district }}</span>
-                        <span style="font-size: 0.75rem; color: #94a3b8;">ثبت: {{ p.created_at.strftime('%Y/%m/%d') }}</span>
+                    <div class="property-meta" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                        <span class="property-code-badge" style="font-size: 0.76rem; padding: 0.12rem 0.5rem;">🔢 کد: {{ p.file_code | pnum }}</span>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <span style="font-size: 0.82rem; color: #38bdf8; font-weight: 600;">📍 {{ p.district }}</span>
+                            <button type="button" onclick="sendPropertyPhotosToTelegram({{ p.id }}, '{{ p.file_code }}', event)" class="btn-compact-telegram" style="padding: 0.2rem 0.5rem; font-size: 0.72rem;" title="ارسال آلبوم عکس‌ها به تلگرام">
+                                <span>📸</span> تلگرام
+                            </button>
+                        </div>
                     </div>
 
                     <a href="{{ url_for('properties.detail', id=p.id) }}" class="property-title">
@@ -167,13 +172,13 @@
                                     <a href="tel:{{ p.owner.phone_number }}" class="btn-neon-emerald" style="padding: 0.28rem 0.65rem; font-size: 0.74rem; text-decoration: none; font-weight: 700;" title="تماس تلفنی مستقیم">
                                         تماس فوری
                                     </a>
-                                    <button type="button" onclick="navigator.clipboard.writeText('{{ p.owner.phone_number }}'); alert('شماره در حافظه کپی شد: {{ p.owner.phone_number }}');" class="glass-btn" style="padding: 0.28rem 0.5rem; font-size: 0.74rem; color: #10b981;" title="کپی شماره">
+                                    <button type="button" onclick="navigator.clipboard.writeText({{ (p.owner.phone_number or '') | tojson }}); alert('شماره در حافظه کپی شد: ' + {{ (p.owner.phone_number or '') | tojson }});" class="glass-btn" style="padding: 0.28rem 0.5rem; font-size: 0.74rem; color: #10b981;" title="کپی شماره">
                                         📋
                                     </button>
                                     <button type="button" onclick="openMessengerModal({{ p.id }})" class="glass-btn" style="padding: 0.28rem 0.55rem; font-size: 0.74rem; color: #38bdf8;" title="استعلام وضعیت در ۵ پیام‌رسان">
                                         💬
                                     </button>
-                                    <button type="button" onclick="promptSavePhone({{ p.id }}, '{{ p.owner.phone_number }}', '{{ p.owner.full_name }}')" class="glass-btn" style="padding: 0.28rem 0.5rem; font-size: 0.74rem; color: #94a3b8;" title="ویرایش شماره">
+                                    <button type="button" onclick="promptSavePhone({{ p.id }}, {{ (p.owner.phone_number or '') | tojson }}, {{ (p.owner.full_name or '') | tojson }})" class="glass-btn" style="padding: 0.28rem 0.5rem; font-size: 0.74rem; color: #94a3b8;" title="ویرایش شماره">
                                         ✏️
                                     </button>
                                 </div>
@@ -184,7 +189,7 @@
                                 <button type="button" onclick="fetchDivarPhoneDirect({{ p.id }})" class="btn-neon-cyan" style="flex: 1; min-width: 130px; justify-content: center; padding: 0.35rem 0.55rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;" title="استخراج خودکار شماره واقعی با توکن نشست دیوار">
                                     <span>⚡</span> استخراج خودکار شماره
                                 </button>
-                                <button type="button" onclick="promptSavePhone({{ p.id }}, '', '{{ p.owner.full_name if p.owner else '' }}')" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #10b981; border-color: rgba(16, 185, 129, 0.3);" title="ثبت دستی شماره تلفن">
+                                <button type="button" onclick="promptSavePhone({{ p.id }}, '', {{ (p.owner.full_name if p.owner else '') | tojson }})" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #10b981; border-color: rgba(16, 185, 129, 0.3);" title="ثبت دستی شماره تلفن">
                                     <span>✏️</span> ثبت شماره
                                 </button>
                                 {% if p.source_url %}
@@ -200,6 +205,7 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
                         <!-- 1. Reactivate (Confirm Available) -->
                         <form method="POST" action="{{ url_for('properties.reactivate', id=p.id) }}" style="margin: 0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #10b981; font-weight: 700; font-size: 0.78rem; padding: 0.45rem;">
                                 <span>✓</span> تایید موجودی (تمدید ۷ روز)
                             </button>
@@ -207,6 +213,7 @@
 
                         <!-- 2. Archive (Owner Confirmed Sold/Unavailable) -->
                         <form method="POST" action="{{ url_for('properties.archive', id=p.id) }}" style="margin: 0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.35); color: #f59e0b; font-weight: 700; font-size: 0.78rem; padding: 0.45rem;">
                                 <span>📦</span> واگذار شد (بایگانی)
                             </button>
@@ -214,6 +221,7 @@
 
                         <!-- 3. Permanent Delete -->
                         <form method="POST" action="{{ url_for('properties.delete', id=p.id) }}" style="margin: 0; grid-column: 1 / -1;" onsubmit="return confirm('آیا از حذف قطعی این فایل از پایگاه داده اطمینان دارید؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 0.75rem; padding: 0.35rem;">
                                 <span>🗑️</span> حذف قطعی از دیتابیس
                             </button>

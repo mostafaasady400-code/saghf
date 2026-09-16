@@ -117,20 +117,45 @@ window.openMessengerModal = async function(propertyId) {
 
         // Phone Banner
         const banner = document.getElementById('modalPhoneBanner');
+        banner.replaceChildren();
         if (pkg.has_direct_phone) {
             banner.style.background = 'rgba(16, 185, 129, 0.12)';
             banner.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-            banner.innerHTML = `
-                <span style="color: #10b981; font-weight: 700;">📞 شماره مالک مستقیم: ${pkg.phone}</span>
-                <span class="badge-neon badge-neon-emerald" style="font-size: 0.72rem;">آماده ارسال</span>
-            `;
+            
+            const spanPhone = document.createElement('span');
+            spanPhone.style.color = '#10b981';
+            spanPhone.style.fontWeight = '700';
+            spanPhone.textContent = `📞 شماره مالک مستقیم: ${pkg.phone || 'نامشخص'}`;
+
+            const badge = document.createElement('span');
+            badge.className = 'badge-neon badge-neon-emerald';
+            badge.style.fontSize = '0.72rem';
+            badge.textContent = 'آماده ارسال';
+
+            banner.appendChild(spanPhone);
+            banner.appendChild(badge);
         } else {
             banner.style.background = 'rgba(0, 242, 254, 0.1)';
             banner.style.border = '1px solid rgba(0, 242, 254, 0.25)';
-            banner.innerHTML = `
-                <span style="color: #38bdf8;">📞 شماره در دیوار محفوظ است؛ جهت دریافت دکمه آگهی را باز کنید:</span>
-                <a href="${pkg.source_url}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none;">لینک آگهی دیوار</a>
-            `;
+
+            const spanNotice = document.createElement('span');
+            spanNotice.style.color = '#38bdf8';
+            spanNotice.textContent = '📞 شماره در دیوار محفوظ است؛ جهت دریافت دکمه آگهی را باز کنید:';
+
+            const link = document.createElement('a');
+            if (pkg.source_url && (pkg.source_url.startsWith('http://') || pkg.source_url.startsWith('https://'))) {
+                link.href = pkg.source_url;
+            } else {
+                link.href = '#';
+            }
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.className = 'badge-neon badge-neon-cyan';
+            link.style.textDecoration = 'none';
+            link.textContent = 'لینک آگهی دیوار';
+
+            banner.appendChild(spanNotice);
+            banner.appendChild(link);
         }
 
         // Setup links
