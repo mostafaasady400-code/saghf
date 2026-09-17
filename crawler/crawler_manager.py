@@ -53,7 +53,24 @@ class CrawlerManager:
                 self.logs.pop(0)
         print(f"[{timestamp}] [{level.upper()}] {message}")
 
-    def start_crawl_task(self, sources: Optional[List[str]] = None, categories: Optional[List[str]] = None, limit_per_cat: int = 10, city: str = 'tehran', district: Optional[str] = None):
+    def start_crawl_task(
+        self,
+        sources: Optional[List[str]] = None,
+        categories: Optional[List[str]] = None,
+        limit_per_cat: int = 10,
+        city: str = 'tehran',
+        district: Optional[str] = None,
+        districts: Optional[List[str]] = None,
+        min_price: Optional[int] = None,
+        max_price: Optional[int] = None,
+        min_deposit: Optional[int] = None,
+        max_deposit: Optional[int] = None,
+        min_rent: Optional[int] = None,
+        max_rent: Optional[int] = None,
+        min_area: Optional[int] = None,
+        max_area: Optional[int] = None,
+        min_year: Optional[int] = None
+    ):
         if self.is_running:
             return False, "فرآیند کراولینگ در حال حاضر در حال اجرا است."
 
@@ -62,19 +79,35 @@ class CrawlerManager:
         if not categories:
             categories = ['buy-apartment', 'rent-apartment']
 
+        filters_dict = {
+            'districts': districts or ([district] if district else []),
+            'min_price': min_price,
+            'max_price': max_price,
+            'min_deposit': min_deposit,
+            'max_deposit': max_deposit,
+            'min_rent': min_rent,
+            'max_rent': max_rent,
+            'min_area': min_area,
+            'max_area': max_area,
+            'min_year': min_year
+        }
+
         worker_thread = threading.Thread(
             target=self._run_hybrid_worker,
-            args=(sources, categories, limit_per_cat, city, district),
+            args=(sources, categories, limit_per_cat, city, district, filters_dict),
             daemon=True
         )
         worker_thread.start()
         return True, "عملیات کراولینگ هیبریدی (TLS Impersonation + Pydantic) آغاز شد."
 
-    def _run_hybrid_worker(self, sources: List[str], categories: List[str], limit_per_cat: int, city: str = 'tehran', district: Optional[str] = None):
+    def _run_hybrid_worker(self, sources: List[str], categories: List[str], limit_per_cat: int, city: str = 'tehran', district: Optional[str] = None, filters_dict: Optional[Dict[str, Any]] = None):
         self.is_running = True
         self.stats['status'] = 'running'
         self.stats['last_run'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.add_log(f"🚀 آغاز موتور کراولینگ هیبریدی برای شهر {city} و منطقه {district or 'کل شهر'}...", 'info')
+        filters_dict = filters_dict or {}
+        req_districts = filters_dict.get('districts', [])
+        dist_str = ', '.join(req_districts) if req_districts else (district or 'کل شهر')
+        self.add_log(f"🚀 آغاز موتور کراولینگ هدفمند برای شهر {city} و محله‌های {dist_str}...", 'info')
 
         saved_count = 0
         skipped_count = 0
@@ -177,6 +210,42 @@ class CrawlerManager:
                 prop.images = schema_item.images
 
                 db.session.add(prop)
+
+                # ثبت همزمان در جدول PropertyListing جهت موتور تطبیق هوشمند
+                try:
+                    from database.models import PropertyListing
+                    existing_pl = PropertyListing.query.filter_by(ad_code=str(sid)).first()
+                    if not existing_pl:
+                        pl = PropertyListing(
+                            ad_code=str(sid),
+                            source=schema_item.source,
+                            source_url=schema_item.source_url,
+                            title=schema_item.title,
+                            description=schema_item.description,
+                            city=schema_item.city,
+                            region='5',
+                            district=schema_item.district or 'منطقه ۵',
+                            deal_type=schema_item.deal_type,
+                            property_type=schema_item.property_type,
+                            deposit=schema_item.deposit or 0,
+                            monthly_rent=schema_item.monthly_rent or 0,
+                            total_price=schema_item.total_price or 0,
+                            area=schema_item.area or 0,
+                            rooms=schema_item.rooms or 1,
+                            floor=schema_item.floor or 1,
+                            build_year=schema_item.build_year or 1400,
+                            has_elevator=schema_item.has_elevator,
+                            has_parking=schema_item.has_parking,
+                            has_warehouse=schema_item.has_warehouse,
+                            has_balcony=schema_item.has_balcony,
+                            phone_number=owner.phone_number if owner else None,
+                            is_personal_owner=True
+                        )
+                        pl.images = schema_item.images or []
+                        db.session.add(pl)
+                except Exception:
+                    pass
+
                 db.session.commit()
                 dedup_engine.mark_seen(sid)
                 saved_count += 1
@@ -211,7 +280,22 @@ class CrawlerManager:
                     self.add_log(f"در حال استخراج دسته‌بندی {cat} از {source} (سقف {cat_limit} فایل، پایش ۵ روز اخیر)...", 'info')
                     try:
                         if source == 'divar':
-                            self.divar_crawler.fetch_listings(category_key=cat, limit=cat_limit, query=district, on_item_found=on_item_crawled)
+                            self.divar_crawler.fetch_listings(
+                                category_key=cat,
+                                limit=cat_limit,
+                                query=district,
+                                districts=filters_dict.get('districts'),
+                                min_price=filters_dict.get('min_price'),
+                                max_price=filters_dict.get('max_price'),
+                                min_deposit=filters_dict.get('min_deposit'),
+                                max_deposit=filters_dict.get('max_deposit'),
+                                min_rent=filters_dict.get('min_rent'),
+                                max_rent=filters_dict.get('max_rent'),
+                                min_area=filters_dict.get('min_area'),
+                                max_area=filters_dict.get('max_area'),
+                                min_year=filters_dict.get('min_year'),
+                                on_item_found=on_item_crawled
+                            )
                         else:
                             self.sheypoor_crawler.fetch_listings(category_key=cat, limit=cat_limit, query=district, on_item_found=on_item_crawled)
                         time.sleep(0.5)

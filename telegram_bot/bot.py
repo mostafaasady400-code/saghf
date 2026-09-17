@@ -47,11 +47,14 @@ def get_bot():
         _register_handlers(_bot_instance)
     return _bot_instance
 
+wizard_sessions = {}
+
 def _build_start_keyboard():
     """
     Creates luxury gold/black style inline keyboard for /start command.
     """
     markup = InlineKeyboardMarkup(row_width=2)
+    btn_wizard = InlineKeyboardButton("🎯 فیلتر و استخراج جدید", callback_data="wiz_start")
     btn_sale = InlineKeyboardButton("🏷️ آخرین فایل‌های فروش", callback_data="btn_latest_sale")
     btn_rent = InlineKeyboardButton("🔑 آخرین فایل‌های اجاره", callback_data="btn_latest_rent")
     btn_code_search = InlineKeyboardButton("🔢 دریافت آلبوم با کد فایل", callback_data="btn_code_info")
@@ -63,9 +66,82 @@ def _build_start_keyboard():
         web_url = f"http://{web_url}"
     btn_web = InlineKeyboardButton("🌐 مشاهده سامانه تحت وب سقف", url=web_url)
 
+    markup.add(btn_wizard)
     markup.add(btn_sale, btn_rent)
     markup.add(btn_code_search, btn_search)
     markup.add(btn_web)
+    return markup
+
+def _build_wizard_step1_markup():
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton("🏷️ خرید و فروش", callback_data="wiz_deal_sale"),
+        InlineKeyboardButton("🔑 رهن و اجاره", callback_data="wiz_deal_rent")
+    )
+    markup.add(InlineKeyboardButton("❌ انصراف", callback_data="wiz_cancel"))
+    return markup
+
+def _build_wizard_step2_markup():
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton("🏢 آپارتمان", callback_data="wiz_type_apartment"),
+        InlineKeyboardButton("🏡 ویلایی / کلنگی", callback_data="wiz_type_villa")
+    )
+    markup.add(InlineKeyboardButton("🏬 اداری / تجاری", callback_data="wiz_type_commercial"))
+    markup.add(
+        InlineKeyboardButton("🔙 مرحله قبل", callback_data="wiz_back_1"),
+        InlineKeyboardButton("❌ انصراف", callback_data="wiz_cancel")
+    )
+    return markup
+
+def _build_wizard_step3_markup():
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton("📍 پونک", callback_data="wiz_dist_پونک"),
+        InlineKeyboardButton("📍 جنت‌آباد", callback_data="wiz_dist_جنت‌آباد")
+    )
+    markup.add(
+        InlineKeyboardButton("📍 صادقیه / ستارخان", callback_data="wiz_dist_صادقیه"),
+        InlineKeyboardButton("📍 شهران", callback_data="wiz_dist_شهران")
+    )
+    markup.add(
+        InlineKeyboardButton("📍 سعادت‌آباد", callback_data="wiz_dist_سعادت‌آباد"),
+        InlineKeyboardButton("📍 کل منطقه ۵", callback_data="wiz_dist_منطقه ۵")
+    )
+    markup.add(InlineKeyboardButton("✍️ تایپ نام محله دلخواه", callback_data="wiz_dist_custom"))
+    markup.add(
+        InlineKeyboardButton("🔙 مرحله قبل", callback_data="wiz_back_2"),
+        InlineKeyboardButton("❌ انصراف", callback_data="wiz_cancel")
+    )
+    return markup
+
+def _build_wizard_step4_markup(deal_type: str):
+    markup = InlineKeyboardMarkup(row_width=1)
+    if deal_type == 'sale':
+        markup.add(InlineKeyboardButton("📐 متراژ تا ۸۰ م | تا ۶ میلیارد", callback_data="wiz_bud_s1"))
+        markup.add(InlineKeyboardButton("📐 متراژ ۸۰ تا ۱۱۰ م | ۶ تا ۱۰ میلیارد", callback_data="wiz_bud_s2"))
+        markup.add(InlineKeyboardButton("📐 متراژ ۱۱۰ تا ۱۵۰ م | ۱۰ تا ۱۶ میلیارد", callback_data="wiz_bud_s3"))
+        markup.add(InlineKeyboardButton("📐 متراژ ۱۵۰+ م | ۱۶+ میلیارد", callback_data="wiz_bud_s4"))
+        markup.add(InlineKeyboardButton("🌐 بدون محدودیت بودجه و متراژ", callback_data="wiz_bud_any"))
+    else:
+        markup.add(InlineKeyboardButton("💳 ودیعه تا ۵۰۰ م | اجاره تا ۱۵ م", callback_data="wiz_bud_r1"))
+        markup.add(InlineKeyboardButton("💳 ودیعه ۵۰۰ تا ۱ م | اجاره ۱۵ تا ۳۰ م", callback_data="wiz_bud_r2"))
+        markup.add(InlineKeyboardButton("💳 ودیعه ۱ تا ۲ م | اجاره ۳۰ تا ۵۰ م", callback_data="wiz_bud_r3"))
+        markup.add(InlineKeyboardButton("💳 رهن کامل (۱.۵ تا ۳ میلیارد)", callback_data="wiz_bud_r4"))
+        markup.add(InlineKeyboardButton("🌐 بدون محدودیت بودجه و متراژ", callback_data="wiz_bud_any"))
+    markup.add(
+        InlineKeyboardButton("🔙 مرحله قبل", callback_data="wiz_back_3"),
+        InlineKeyboardButton("❌ انصراف", callback_data="wiz_cancel")
+    )
+    return markup
+
+def _build_wizard_step5_markup():
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(InlineKeyboardButton("🚀 شروع استخراج و جستجو", callback_data="wiz_exec"))
+    markup.add(
+        InlineKeyboardButton("🔄 تنظیم مجدد", callback_data="wiz_start"),
+        InlineKeyboardButton("❌ انصراف", callback_data="wiz_cancel")
+    )
     return markup
 
 def _is_property_code_query(text: str) -> bool:
@@ -405,11 +481,336 @@ def _register_handlers(bot: telebot.TeleBot):
         except Exception as e:
             logger.error(f"Error handling search callback: {e}")
 
+    # =========================================================================
+    # In-Bot Filter & Scrape Wizard (Conversation State Machine)
+    # =========================================================================
+
+    @bot.message_handler(commands=['filter', 'wizard'])
+    def handle_filter_command(message):
+        chat_id = message.chat.id
+        wizard_sessions[chat_id] = {'step': 1}
+        text = (
+            "🎯 <b>ویزارد فیلترینگ و استخراج هدفمند املاک سقف (گام ۱ از ۵):</b>\n\n"
+            "به دستیار استخراج مستقیم سقف خوش آمدید. بدون نیاز به مراجعه به وب‌اپ، فیلترهای مد نظر خود را تعیین فرمایید تا کراولر در لحظه از دیوار استخراج نماید.\n\n"
+            "لطفاً <b>نوع معامله</b> را مشخص فرمایید:"
+        )
+        bot.send_message(chat_id, text, reply_markup=_build_wizard_step1_markup(), parse_mode='HTML')
+
+    @bot.callback_query_handler(func=lambda call: call.data == 'wiz_start')
+    def handle_wizard_start(call):
+        chat_id = call.message.chat.id
+        wizard_sessions[chat_id] = {'step': 1}
+        try:
+            bot.answer_callback_query(call.id)
+        except Exception:
+            pass
+        text = (
+            "🎯 <b>ویزارد فیلترینگ و استخراج هدفمند املاک سقف (گام ۱ از ۵):</b>\n\n"
+            "لطفاً <b>نوع معامله</b> را انتخاب فرمایید:"
+        )
+        try:
+            bot.edit_message_text(text, chat_id, call.message.message_id, reply_markup=_build_wizard_step1_markup(), parse_mode='HTML')
+        except Exception:
+            bot.send_message(chat_id, text, reply_markup=_build_wizard_step1_markup(), parse_mode='HTML')
+
+    @bot.callback_query_handler(func=lambda call: call.data in ['wiz_deal_sale', 'wiz_deal_rent'])
+    def handle_wizard_step1(call):
+        chat_id = call.message.chat.id
+        deal_type = 'sale' if call.data == 'wiz_deal_sale' else 'rent'
+        session = wizard_sessions.setdefault(chat_id, {})
+        session['deal_type'] = deal_type
+        session['step'] = 2
+        try:
+            bot.answer_callback_query(call.id)
+        except Exception:
+            pass
+        deal_title = '🏷️ خرید و فروش' if deal_type == 'sale' else '🔑 رهن و اجاره'
+        text = (
+            f"🎯 <b>ویزارد فیلترینگ و استخراج (گام ۲ از ۵):</b>\n\n"
+            f"نوع معامله: <b>{deal_title}</b>\n\n"
+            f"لطفاً <b>نوع کاربری ملک</b> را تعیین فرمایید:"
+        )
+        try:
+            bot.edit_message_text(text, chat_id, call.message.message_id, reply_markup=_build_wizard_step2_markup(), parse_mode='HTML')
+        except Exception:
+            bot.send_message(chat_id, text, reply_markup=_build_wizard_step2_markup(), parse_mode='HTML')
+
+    @bot.callback_query_handler(func=lambda call: call.data in ['wiz_type_apartment', 'wiz_type_villa', 'wiz_type_commercial'])
+    def handle_wizard_step2(call):
+        chat_id = call.message.chat.id
+        prop_map = {
+            'wiz_type_apartment': ('apartment', '🏢 آپارتمان مسکونی'),
+            'wiz_type_villa': ('villa', '🏡 ویلایی / کلنگی'),
+            'wiz_type_commercial': ('commercial', '🏬 اداری / تجاری')
+        }
+        ptype, ptitle = prop_map.get(call.data, ('apartment', '🏢 آپارتمان'))
+        session = wizard_sessions.setdefault(chat_id, {})
+        session['prop_type'] = ptype
+        session['prop_title'] = ptitle
+        session['step'] = 3
+        try:
+            bot.answer_callback_query(call.id)
+        except Exception:
+            pass
+
+        deal_title = '🏷️ خرید و فروش' if session.get('deal_type') == 'sale' else '🔑 رهن و اجاره'
+        text = (
+            f"🎯 <b>ویزارد فیلترینگ و استخراج (گام ۳ از ۵):</b>\n\n"
+            f"معامله: <b>{deal_title}</b> | کاربری: <b>{ptitle}</b>\n\n"
+            f"لطفاً <b>منطقه یا محله</b> مورد نظر را از گزینه‌های زیر انتخاب کنید، یا دکمه «✍️ تایپ نام محله» را لمس نمایید:"
+        )
+        try:
+            bot.edit_message_text(text, chat_id, call.message.message_id, reply_markup=_build_wizard_step3_markup(), parse_mode='HTML')
+        except Exception:
+            bot.send_message(chat_id, text, reply_markup=_build_wizard_step3_markup(), parse_mode='HTML')
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('wiz_dist_'))
+    def handle_wizard_step3(call):
+        chat_id = call.message.chat.id
+        session = wizard_sessions.setdefault(chat_id, {})
+        
+        if call.data == 'wiz_dist_custom':
+            session['awaiting_custom_district'] = True
+            try:
+                bot.answer_callback_query(call.id)
+            except Exception:
+                pass
+            text = (
+                "✍️ <b>ورود دستی نام محله / منطقه:</b>\n\n"
+                "لطفاً نام محله مورد نظر خود را در همین چت تایپ و ارسال کنید.\n"
+                "مثال‌ها: <code>فردوس</code>، <code>کاشانی</code>، <code>شاهین جنوبی</code>، <code>سازمان برنامه</code>، <code>سعادت آباد</code> و..."
+            )
+            bot.send_message(chat_id, text, parse_mode='HTML')
+            return
+
+        district = call.data.replace('wiz_dist_', '').strip()
+        session['district'] = district
+        session['awaiting_custom_district'] = False
+        session['step'] = 4
+        try:
+            bot.answer_callback_query(call.id)
+        except Exception:
+            pass
+
+        deal_type = session.get('deal_type', 'sale')
+        text = (
+            f"🎯 <b>ویزارد فیلترینگ و استخراج (گام ۴ از ۵):</b>\n\n"
+            f"📍 منطقه انتخابی: <b>{district}</b>\n\n"
+            f"لطفاً <b>بازه متراژ و بودجه</b> مد نظر خود را انتخاب نمایید:"
+        )
+        try:
+            bot.edit_message_text(text, chat_id, call.message.message_id, reply_markup=_build_wizard_step4_markup(deal_type), parse_mode='HTML')
+        except Exception:
+            bot.send_message(chat_id, text, reply_markup=_build_wizard_step4_markup(deal_type), parse_mode='HTML')
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('wiz_bud_'))
+    def handle_wizard_step4(call):
+        chat_id = call.message.chat.id
+        session = wizard_sessions.setdefault(chat_id, {})
+        key = call.data
+
+        budgets_config = {
+            'wiz_bud_s1': {'min_area': 0, 'max_area': 80, 'min_price': 0, 'max_price': 6_000_000_000, 'desc': 'متراژ تا ۸۰ م | بودجه تا ۶ میلیارد'},
+            'wiz_bud_s2': {'min_area': 80, 'max_area': 110, 'min_price': 6_000_000_000, 'max_price': 10_000_000_000, 'desc': 'متراژ ۸۰ تا ۱۱۰ م | ۶ تا ۱۰ میلیارد'},
+            'wiz_bud_s3': {'min_area': 110, 'max_area': 150, 'min_price': 10_000_000_000, 'max_price': 16_000_000_000, 'desc': 'متراژ ۱۱۰ تا ۱۵۰ م | ۱۰ تا ۱۶ میلیارد'},
+            'wiz_bud_s4': {'min_area': 150, 'max_area': None, 'min_price': 16_000_000_000, 'max_price': None, 'desc': 'متراژ ۱۵۰+ م | ۱۶+ میلیارد'},
+            'wiz_bud_r1': {'min_area': 0, 'max_area': None, 'max_deposit': 500_000_000, 'max_rent': 15_000_000, 'desc': 'ودیعه تا ۵۰۰ م | اجاره تا ۱۵ م'},
+            'wiz_bud_r2': {'min_area': 0, 'max_area': None, 'min_deposit': 500_000_000, 'max_deposit': 1_000_000_000, 'max_rent': 30_000_000, 'desc': 'ودیعه ۵۰۰ تا ۱ م | اجاره ۱۵ تا ۳۰ م'},
+            'wiz_bud_r3': {'min_area': 0, 'max_area': None, 'min_deposit': 1_000_000_000, 'max_deposit': 2_000_000_000, 'max_rent': 50_000_000, 'desc': 'ودیعه ۱ تا ۲ م | اجاره ۳۰ تا ۵۰ م'},
+            'wiz_bud_r4': {'min_area': 0, 'max_area': None, 'min_deposit': 1_500_000_000, 'max_deposit': 3_000_000_000, 'max_rent': 1, 'desc': 'رهن کامل (۱.۵ تا ۳ میلیارد)'},
+            'wiz_bud_any': {'desc': 'بدون محدودیت بودجه و متراژ'}
+        }
+        b_info = budgets_config.get(key, {'desc': 'نامحدود'})
+        session.update(b_info)
+        session['budget_desc'] = b_info.get('desc', 'نامحدود')
+        session['step'] = 5
+
+        try:
+            bot.answer_callback_query(call.id)
+        except Exception:
+            pass
+
+        deal_title = '🏷️ خرید و فروش' if session.get('deal_type') == 'sale' else '🔑 رهن و اجاره'
+        prop_title = session.get('prop_title', '🏢 آپارتمان')
+        district = session.get('district', 'تهران')
+        budget_desc = session.get('budget_desc', 'نامحدود')
+
+        text = (
+            "🎯 <b>ویزارد فیلترینگ و استخراج (گام ۵ از ۵ - تایید نهایی):</b>\n\n"
+            "📋 <b>خلاصه شرایط استخراج اختصاصی شما:</b>\n"
+            f"• 🏷️ نوع معامله: <b>{deal_title}</b>\n"
+            f"• 🏢 نوع کاربری: <b>{prop_title}</b>\n"
+            f"• 📍 منطقه/محله: <b>{district}</b>\n"
+            f"• 💰 بازه بودجه و متراژ: <b>{budget_desc}</b>\n\n"
+            "آیا مایلید کراولر بلادرنگ سقف، این فایل‌ها را مستقیماً از دیوار استخراج کرده و برای شما ارسال کند؟"
+        )
+        try:
+            bot.edit_message_text(text, chat_id, call.message.message_id, reply_markup=_build_wizard_step5_markup(), parse_mode='HTML')
+        except Exception:
+            bot.send_message(chat_id, text, reply_markup=_build_wizard_step5_markup(), parse_mode='HTML')
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('wiz_back_'))
+    def handle_wizard_back(call):
+        chat_id = call.message.chat.id
+        step = call.data.replace('wiz_back_', '')
+        session = wizard_sessions.setdefault(chat_id, {})
+        try:
+            bot.answer_callback_query(call.id)
+        except Exception:
+            pass
+        if step == '1':
+            handle_wizard_start(call)
+        elif step == '2':
+            deal_type = session.get('deal_type', 'sale')
+            call.data = f"wiz_deal_{deal_type}"
+            handle_wizard_step1(call)
+        elif step == '3':
+            prop_type = session.get('prop_type', 'apartment')
+            call.data = f"wiz_type_{prop_type}"
+            handle_wizard_step2(call)
+
+    @bot.callback_query_handler(func=lambda call: call.data == 'wiz_cancel')
+    def handle_wizard_cancel(call):
+        chat_id = call.message.chat.id
+        wizard_sessions.pop(chat_id, None)
+        try:
+            bot.answer_callback_query(call.id, text="ویزارد لغو شد.")
+        except Exception:
+            pass
+        try:
+            bot.edit_message_text("❌ <b>فرآیند استخراج هدفمند لغو گردید.</b>\n\nجهت شروع مجدد، دستور /start را ارسال فرمایید.", chat_id, call.message.message_id, reply_markup=_build_start_keyboard(), parse_mode='HTML')
+        except Exception:
+            bot.send_message(chat_id, "❌ <b>فرآیند استخراج هدفمند لغو گردید.</b>", reply_markup=_build_start_keyboard(), parse_mode='HTML')
+
+    @bot.callback_query_handler(func=lambda call: call.data == 'wiz_exec')
+    def handle_wizard_execute(call):
+        chat_id = call.message.chat.id
+        session = wizard_sessions.get(chat_id)
+        if not session:
+            try:
+                bot.answer_callback_query(call.id, text="⚠️ نشست منقضی شده است.")
+            except Exception:
+                pass
+            bot.send_message(chat_id, "⚠️ نشست فیلترینگ منقضی شده است. لطفاً مجدداً از منو دکمه «🎯 فیلتر و استخراج جدید» را بزنید.", reply_markup=_build_start_keyboard())
+            return
+
+        try:
+            bot.answer_callback_query(call.id, text="🚀 در حال استخراج و تحلیل...")
+        except Exception:
+            pass
+
+        deal_type = session.get('deal_type', 'sale')
+        district = session.get('district', '')
+        district_clean = district if district and district != 'منطقه ۵' else None
+
+        searching_msg = bot.send_message(
+            chat_id,
+            f"⏳ <b>در حال استخراج و تحلیل فایل‌های متناظر از دیوار و شیپور...</b>\n\n"
+            f"📍 منطقه: <b>{district or 'تهران'}</b> | معامله: <b>{'خرید و فروش' if deal_type == 'sale' else 'رهن و اجاره'}</b>\n"
+            f"ربات در حال اتصال به سرورهای مبدأ با فینگرپرینت امن است. لطفاً چند لحظه شکیبا باشید...",
+            parse_mode='HTML'
+        )
+
+        app = get_flask_app()
+        with app.app_context():
+            from database.models import Property
+            from crawler.crawler_manager import crawler_manager
+            from .notifier import send_property_alert
+
+            # ۱. جستجو در دیتابیس
+            query = Property.query.filter(Property.status.notin_(['archived', 'sold']))
+            if deal_type and deal_type != 'all':
+                query = query.filter(Property.deal_type == deal_type)
+            if district_clean:
+                query = query.filter(Property.district.contains(district_clean))
+
+            if session.get('min_price'): query = query.filter(Property.total_price >= session['min_price'])
+            if session.get('max_price'): query = query.filter(Property.total_price <= session['max_price'])
+            if session.get('min_deposit'): query = query.filter(Property.deposit >= session['min_deposit'])
+            if session.get('max_deposit'): query = query.filter(Property.deposit <= session['max_deposit'])
+            if session.get('min_rent'): query = query.filter(Property.monthly_rent >= session['min_rent'])
+            if session.get('max_rent'): query = query.filter(Property.monthly_rent <= session['max_rent'])
+            if session.get('min_area'): query = query.filter(Property.area >= session['min_area'])
+            if session.get('max_area'): query = query.filter(Property.area <= session['max_area'])
+
+            matches = query.order_by(Property.created_at.desc()).limit(5).all()
+
+            # ۲. اگر تعداد فایل‌های موجود در دیتابیس کمتر از ۳ تا بود، فوراً یک کراول زنده اجرا کن
+            if len(matches) < 3:
+                cat_key = 'buy-apartment' if deal_type == 'sale' else 'rent-apartment'
+                try:
+                    crawler_manager.divar_crawler.fetch_listings(
+                        category_key=cat_key,
+                        limit=4,
+                        query=district_clean,
+                        districts=[district_clean] if district_clean else None,
+                        min_price=session.get('min_price'),
+                        max_price=session.get('max_price'),
+                        min_deposit=session.get('min_deposit'),
+                        max_deposit=session.get('max_deposit'),
+                        min_rent=session.get('min_rent'),
+                        max_rent=session.get('max_rent'),
+                        min_area=session.get('min_area'),
+                        max_area=session.get('max_area')
+                    )
+                    matches = query.order_by(Property.created_at.desc()).limit(5).all()
+                except Exception as err:
+                    logger.warning(f"Wizard live crawl error: {err}")
+
+            # ۳. ارسال نتایج به صورت تک‌به‌تک همراه با عکس، کد، قیمت و لینک مستقیم
+            if not matches:
+                bot.send_message(
+                    chat_id,
+                    f"⚠️ <b>هیچ آگهی متناظری یافت نشد</b>\n\n"
+                    f"در حال حاضر در منطقه <b>{district or 'تهران'}</b> فایلی منطبق با شروط انتخابی شما در دیوار موجود نیست.\n"
+                    f"می‌توانید با دکمه زیر شروط منعطف‌تری تعیین نمایید:",
+                    reply_markup=_build_start_keyboard(),
+                    parse_mode='HTML'
+                )
+            else:
+                bot.send_message(
+                    chat_id,
+                    f"🎯 <b>تعداد {len(matches)} فایل منطبق با شرایط انتخابی شما در منطقه {district or 'تهران'}:</b>\n" + ("—" * 28),
+                    parse_mode='HTML'
+                )
+                for p in matches:
+                    try:
+                        send_property_alert(p, target_chat_id=chat_id)
+                    except Exception as pe:
+                        logger.error(f"Error sending property to user: {pe}")
+
+                bot.send_message(
+                    chat_id,
+                    "✨ <b>استخراج و جستجوی فایل‌ها تکمیل شد.</b>\n\n"
+                    "💡 جهت دریافت آلبوم کامل هر ملک در چت، کافیست <b>کد ۵ رقمی</b> آن (مانند <code>10001</code>) را در همین چت بفرستید.",
+                    reply_markup=_build_start_keyboard(),
+                    parse_mode='HTML'
+                )
+
+        wizard_sessions.pop(chat_id, None)
+
     @bot.message_handler(content_types=['text'])
     def handle_fallback_text(message):
+        chat_id = message.chat.id
+        session = wizard_sessions.get(chat_id)
+        if session and session.get('awaiting_custom_district'):
+            custom_district = message.text.strip()
+            session['district'] = custom_district
+            session['awaiting_custom_district'] = False
+            session['step'] = 4
+            deal_type = session.get('deal_type', 'sale')
+            text = (
+                f"🎯 <b>ویزارد فیلترینگ و استخراج (گام ۴ از ۵):</b>\n\n"
+                f"📍 منطقه ثبت‌شده: <b>{custom_district}</b>\n\n"
+                f"لطفاً <b>بازه متراژ و بودجه</b> مد نظر خود را انتخاب فرمایید:"
+            )
+            bot.send_message(chat_id, text, reply_markup=_build_wizard_step4_markup(deal_type), parse_mode='HTML')
+            return
+
         text = (
             "⚜️ <b>راهنمای ربات هوشمند املاک سقف</b> ⚜️\n\n"
             "• جهت مشاهده آخرین فایل‌ها دستور /start را ارسال فرمایید.\n"
+            "• جهت فیلترینگ و استخراج زنده دستور /filter یا دکمه «🎯 فیلتر و استخراج جدید» را انتخاب کنید.\n"
             "• برای دریافت سریع آلبوم تصاویر و مشخصات فنی، <b>کد فایل</b> (مانند <code>10001</code>) را ارسال کنید.\n"
             "• جهت استعلام مستقیم، دستور <code>/code 10001</code> را وارد کنید."
         )

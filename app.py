@@ -23,6 +23,7 @@ from routes.crawler_api import crawler_bp
 from routes.messenger_api import messenger_bp
 from routes.telegram_api import telegram_bp
 from routes.admin import admin_bp
+from routes.telephony_api import telephony_bp
 from flask_wtf.csrf import CSRFProtect, CSRFError
 
 csrf = CSRFProtect()
@@ -36,8 +37,9 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     crawler_manager.init_app(app)
 
-    # Exempt Telegram webhook from CSRF protection (Telegram server POSTs directly)
+    # Exempt Telegram and Telephony webhooks from CSRF protection (External servers POST directly)
     csrf.exempt(telegram_bp)
+    csrf.exempt(telephony_bp)
 
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
@@ -60,6 +62,7 @@ def create_app(config_class=Config):
     app.register_blueprint(messenger_bp)
     app.register_blueprint(telegram_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(telephony_bp)
 
     @app.route('/assets/<path:filename>')
     def serve_assets(filename):

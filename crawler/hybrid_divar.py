@@ -51,10 +51,39 @@ class HybridDivarCrawler:
             proxy=self.proxy_manager.get_proxy()
         )
 
-    def fetch_listings(self, category_key: str = 'buy-apartment', limit: int = 30, query: Optional[str] = None, on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None) -> List[NormalizedPropertySchema]:
+    def fetch_listings(
+        self,
+        category_key: str = 'buy-apartment',
+        limit: int = 30,
+        query: Optional[str] = None,
+        districts: Optional[List[str]] = None,
+        min_price: Optional[int] = None,
+        max_price: Optional[int] = None,
+        min_deposit: Optional[int] = None,
+        max_deposit: Optional[int] = None,
+        min_rent: Optional[int] = None,
+        max_rent: Optional[int] = None,
+        min_area: Optional[int] = None,
+        max_area: Optional[int] = None,
+        min_year: Optional[int] = None,
+        on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None
+    ) -> List[NormalizedPropertySchema]:
         category_meta = self.CATEGORIES.get(category_key, self.CATEGORIES['buy-apartment'])
         slug = category_meta['slug']
         results: List[NormalizedPropertySchema] = []
+
+        filters_dict = {
+            'districts': districts or [],
+            'min_price': min_price,
+            'max_price': max_price,
+            'min_deposit': min_deposit,
+            'max_deposit': max_deposit,
+            'min_rent': min_rent,
+            'max_rent': max_rent,
+            'min_area': min_area,
+            'max_area': max_area,
+            'min_year': min_year
+        }
 
         # ۱. تلاش در وهله نخست از اندپوینت رسمی OpenAPI پلتفرم باز دیوار:
         # https://open-api.divar.ir/v2/open-platform/finder/post
@@ -80,6 +109,41 @@ class HybridDivarCrawler:
         except Exception as e:
             print(f"[HybridDivar] هشدار فراخوانی OpenAPI Finder: {e}")
 
+        # آماده‌سازی کوئری پارامترهای فیلترینگ URL دیوار
+        url_query_parts = []
+        if query:
+            from urllib.parse import quote
+            url_query_parts.append(f"q={quote(query)}")
+
+        # استخراج slug محله‌های انتخابی
+        if districts:
+            from data.tehran_districts import TEHRAN_REGIONS
+            d_slugs = []
+            for d_name in districts:
+                dn = d_name.strip()
+                for reg in TEHRAN_REGIONS.values():
+                    for d in reg['districts']:
+                        if d['name'] == dn or dn in d.get('keywords', []):
+                            d_slugs.append(d['divar_slug'])
+                            break
+            if d_slugs:
+                url_query_parts.append(f"districts={','.join(d_slugs)}")
+
+        if category_meta['deal_type'] == 'rent':
+            if min_deposit or max_deposit:
+                url_query_parts.append(f"credit={min_deposit or 0}-{max_deposit or ''}")
+            if min_rent or max_rent:
+                url_query_parts.append(f"rent={min_rent or 0}-{max_rent or ''}")
+        else:
+            if min_price or max_price:
+                url_query_parts.append(f"price={min_price or 0}-{max_price or ''}")
+
+        if min_area or max_area:
+            url_query_parts.append(f"size={min_area or 0}-{max_area or ''}")
+
+        if min_year:
+            url_query_parts.append(f"production-year={min_year}-")
+
         # ۲. پیمایش صفحات جهت استخراج عمیق تا سقف ۵ روز گذشته از موتور هیبریدی زنده
         for page in range(1, 4):
             if len(results) >= limit:
@@ -87,13 +151,11 @@ class HybridDivarCrawler:
 
             self.rate_limiter.acquire(1)
             url = f"{self.BASE_WEB_URL}/{self.city}/{slug}"
-            if query:
-                from urllib.parse import quote
-                url = f"{url}?q={quote(query)}"
-                if page > 1:
-                    url += f"&page={page}"
-            elif page > 1:
-                url += f"?page={page}"
+            page_query = list(url_query_parts)
+            if page > 1:
+                page_query.append(f"page={page}")
+            if page_query:
+                url += f"?{'&'.join(page_query)}"
 
             def _do_request():
                 headers = {
@@ -106,7 +168,13 @@ class HybridDivarCrawler:
 
             response = fallback_solver.execute_with_resilience(f"DivarSearchLive_P{page}", _do_request)
             if response and response.status_code == 200:
-                page_items, reached_limit = self._parse_html_state(response.text, category_meta, limit - len(results), on_item_found=on_item_found)
+                page_items, reached_limit = self._parse_html_state(
+                    response.text,
+                    category_meta,
+                    limit - len(results),
+                    filters=filters_dict,
+                    on_item_found=on_item_found
+                )
                 results.extend(page_items)
                 print(f"[HybridDivar] صفحه {page}: تعداد {len(page_items)} آگهی واجد شرایط دریافت شد.")
                 if reached_limit or len(page_items) == 0:
@@ -379,7 +447,7 @@ class HybridDivarCrawler:
             print(f"[HybridDivar] خطا در خواندن جزئیات پست {token}: {e}")
         return details
 
-    def _parse_html_state(self, html_text: str, category_meta: Dict[str, Any], limit: int, on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None) -> Tuple[List[NormalizedPropertySchema], bool]:
+    def _parse_html_state(self, html_text: str, category_meta: Dict[str, Any], limit: int, filters: Optional[Dict[str, Any]] = None, on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None) -> Tuple[List[NormalizedPropertySchema], bool]:
         results: List[NormalizedPropertySchema] = []
         deal_type = category_meta['deal_type']
         prop_type = category_meta['property_type']
@@ -498,6 +566,50 @@ class HybridDivarCrawler:
                     has_balcony = post_details.get('has_balcony', False)
 
                     features = post_details.get('features', [])
+
+                    # بررسی انطباق دقیق با فیلترهای درخواستی کاربر
+                    if filters:
+                        req_districts = filters.get('districts', [])
+                        if req_districts:
+                            matched_d = False
+                            for rd in req_districts:
+                                if rd in district or rd in title or rd in final_desc:
+                                    matched_d = True
+                                    break
+                            if not matched_d:
+                                continue
+
+                        if deal_type == 'rent':
+                            min_dep = filters.get('min_deposit')
+                            max_dep = filters.get('max_deposit')
+                            min_r = filters.get('min_rent')
+                            max_r = filters.get('max_rent')
+                            if min_dep and deposit < min_dep:
+                                continue
+                            if max_dep and deposit > max_dep:
+                                continue
+                            if min_r and monthly_rent < min_r:
+                                continue
+                            if max_r and monthly_rent > max_r:
+                                continue
+                        else:
+                            min_p = filters.get('min_price')
+                            max_p = filters.get('max_price')
+                            if min_p and total_price < min_p:
+                                continue
+                            if max_p and total_price > max_p:
+                                continue
+
+                        min_a = filters.get('min_area')
+                        max_a = filters.get('max_area')
+                        if min_a and area < min_a:
+                            continue
+                        if max_a and area > max_a:
+                            continue
+
+                        min_y = filters.get('min_year')
+                        if min_y and build_year < min_y:
+                            continue
 
                     # استخراج شماره تماس واقعی
                     extracted_phone = post_details.get('phone') or extract_phone_number(f"{final_desc} {title}")

@@ -430,3 +430,216 @@ def fetch_divar_phone(id):
         'is_auth_needed': not DivarSessionManager.is_authenticated(),
         'message': 'جهت استخراج خودکار، لطفاً ابتدا نشست احراز هویت دیوار را با وارد کردن شماره همراه خود فعال نمایید یا از دکمه «دریافت شماره از دیوار» استفاده کنید.'
     })
+
+def _property_to_json(prop):
+    """
+    سریالایز کردن مشخصات ملک به همراه عکس‌ها، شماره تلفن و فیلدهای لازم جهت رندر کارت در وب‌اپ.
+    """
+    owner_phone = prop.owner.phone_number if prop.owner else None
+    return {
+        'id': prop.id,
+        'file_code': prop.file_code or f"{prop.id:05d}",
+        'title': prop.title or 'ملک بدون عنوان',
+        'deal_type': prop.deal_type,
+        'district': prop.district or 'تهران',
+        'city': prop.city or 'تهران',
+        'address': prop.address or '',
+        'source': prop.source or 'divar',
+        'source_url': prop.source_url or f"/properties/{prop.id}",
+        'images': prop.images or [],
+        'area': prop.area or 0,
+        'rooms': prop.rooms or 0,
+        'floor': prop.floor,
+        'build_year': prop.build_year or 1400,
+        'total_price': prop.total_price,
+        'meter_price': prop.meter_price,
+        'deposit': prop.deposit,
+        'monthly_rent': prop.monthly_rent,
+        'has_parking': bool(prop.has_parking),
+        'has_elevator': bool(prop.has_elevator),
+        'has_warehouse': bool(prop.has_warehouse),
+        'has_balcony': bool(prop.has_balcony),
+        'created_at': prop.created_at.strftime('%Y-%m-%d %H:%M') if prop.created_at else '',
+        'phone_number': owner_phone
+    }
+
+def _apply_property_filters(query, params):
+    """
+    اعمال یکنواخت فیلترهای ملکی روی کوئری SQLAlchemy
+    """
+    now = datetime.utcnow()
+    cutoff_7days = now - timedelta(days=7)
+
+    deal_type = params.get('deal_type')
+    district = params.get('district')
+    status = params.get('status')
+    source = params.get('source')
+    search = params.get('q')
+    lifecycle = params.get('lifecycle', 'active')
+
+    def _parse_int(val):
+        try:
+            return int(val) if val not in [None, '', 'null', 'None'] else None
+        except (ValueError, TypeError):
+            return None
+
+    min_price = _parse_int(params.get('min_price'))
+    max_price = _parse_int(params.get('max_price'))
+    min_deposit = _parse_int(params.get('min_deposit'))
+    max_deposit = _parse_int(params.get('max_deposit'))
+    min_rent = _parse_int(params.get('min_rent'))
+    max_rent = _parse_int(params.get('max_rent'))
+    min_area = _parse_int(params.get('min_area'))
+    rooms = _parse_int(params.get('rooms'))
+    has_parking = params.get('has_parking')
+    has_elevator = params.get('has_elevator')
+    has_warehouse = params.get('has_warehouse')
+    has_balcony = params.get('has_balcony')
+
+    # Lifecycle filter
+    if lifecycle == 'active':
+        query = query.filter(
+            Property.created_at >= cutoff_7days,
+            Property.status.notin_(['archived', 'sold', 'needs_followup'])
+        )
+    elif lifecycle == 'expired':
+        query = query.filter(
+            (Property.created_at < cutoff_7days) | (Property.status == 'needs_followup'),
+            Property.status.notin_(['archived', 'sold'])
+        )
+    elif lifecycle == 'all':
+        query = query.filter(Property.status != 'archived')
+
+    # فیلتر قطعی حذف آگهی‌های املاک/مشاور
+    for forbidden in ['املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس']:
+        query = query.filter(
+            Property.title.notilike(f'%{forbidden}%'),
+            Property.description.notilike(f'%{forbidden}%')
+        )
+
+    if deal_type and deal_type != 'all':
+        query = query.filter(Property.deal_type == deal_type)
+    if district and district != 'all':
+        query = query.filter(Property.district.contains(district))
+    if status and status != 'all':
+        query = query.filter(Property.status == status)
+    if source and source != 'all':
+        query = query.filter(Property.source == source)
+    if search:
+        query = query.filter(Property.title.contains(search) | Property.district.contains(search) | Property.description.contains(search))
+
+    if min_price:
+        query = query.filter(Property.total_price >= min_price)
+    if max_price:
+        query = query.filter(Property.total_price <= max_price)
+    if min_deposit:
+        query = query.filter(Property.deposit >= min_deposit)
+    if max_deposit:
+        query = query.filter(Property.deposit <= max_deposit)
+    if min_rent:
+        query = query.filter(Property.monthly_rent >= min_rent)
+    if max_rent:
+        query = query.filter(Property.monthly_rent <= max_rent)
+    if min_area:
+        query = query.filter(Property.area >= min_area)
+    if rooms:
+        query = query.filter(Property.rooms >= rooms)
+    if str(has_parking) == '1':
+        query = query.filter(Property.has_parking == True)
+    if str(has_elevator) == '1':
+        query = query.filter(Property.has_elevator == True)
+    if str(has_warehouse) == '1':
+        query = query.filter(Property.has_warehouse == True)
+    if str(has_balcony) == '1':
+        query = query.filter(Property.has_balcony == True)
+
+    return query
+
+@properties_bp.route('/api/on-demand-search', methods=['GET', 'POST'])
+def api_on_demand_search():
+    """
+    استخراج درجا (On-Demand Scrape):
+    ابتدا در دیتابیس لوکال سرچ می‌کند؛ اگر موردی نبود (یا force_crawl باشد)، بلافاصله
+    کراولر هدفمند را با پارامترهای همان فیلتر فعال می‌کند.
+    """
+    from crawler.crawler_manager import crawler_manager
+
+    data = request.get_json(silent=True) if request.is_json else request.args.to_dict()
+    if not data:
+        data = request.form.to_dict()
+
+    query = Property.query
+    query = _apply_property_filters(query, data)
+    properties = query.order_by(Property.created_at.desc()).limit(30).all()
+
+    force_crawl = str(data.get('force_crawl', '0')).lower() in ['1', 'true', 'yes']
+    deal_type = data.get('deal_type', 'all')
+    district = data.get('district')
+    district_clean = district if (district and district != 'all') else None
+
+    crawler_status = crawler_manager.get_status()
+    crawler_running = crawler_status.get('is_running', False)
+
+    # اگر فایلی مطابق فیلتر یافت نشد (یا کاربر درخواست استخراج زنده داده باشد)، فوراً کراولر را استارت بزن
+    if (len(properties) == 0 or force_crawl) and not crawler_running:
+        categories = []
+        if deal_type == 'sale':
+            categories = ['buy-apartment']
+        elif deal_type == 'rent':
+            categories = ['rent-apartment']
+        else:
+            categories = ['buy-apartment', 'rent-apartment']
+
+        def _p_int(k):
+            try:
+                return int(data.get(k)) if data.get(k) not in [None, '', 'null'] else None
+            except Exception:
+                return None
+
+        crawler_manager.start_crawl_task(
+            sources=['divar', 'sheypoor'],
+            categories=categories,
+            limit_per_cat=6,
+            city='tehran',
+            district=district_clean,
+            districts=[district_clean] if district_clean else None,
+            min_price=_p_int('min_price'),
+            max_price=_p_int('max_price'),
+            min_deposit=_p_int('min_deposit'),
+            max_deposit=_p_int('max_deposit'),
+            min_rent=_p_int('min_rent'),
+            max_rent=_p_int('max_rent'),
+            min_area=_p_int('min_area')
+        )
+        crawler_running = True
+
+    return jsonify({
+        'status': 'crawling' if (len(properties) == 0 or crawler_running) else 'found',
+        'crawler_running': crawler_running,
+        'count': len(properties),
+        'items': [_property_to_json(p) for p in properties],
+        'message': 'در حال استخراج جدیدترین آگهی‌ها از دیوار و شیپور با فیلترهای انتخابی...' if (len(properties) == 0 or crawler_running) else 'فایل‌های منطبق یافت شد.'
+    })
+
+@properties_bp.route('/api/poll-live', methods=['GET'])
+def api_poll_live():
+    """
+    پولینگ بلادرنگ جهت دریافت مرحله‌به‌مرحله آگهی‌های جدید ثبت‌شده مطابق فیلتر
+    """
+    from crawler.crawler_manager import crawler_manager
+
+    data = request.args.to_dict()
+    query = Property.query
+    query = _apply_property_filters(query, data)
+    properties = query.order_by(Property.created_at.desc()).limit(30).all()
+
+    crawler_status = crawler_manager.get_status()
+    crawler_running = crawler_status.get('is_running', False)
+
+    return jsonify({
+        'status': 'ok',
+        'crawler_running': crawler_running,
+        'count': len(properties),
+        'items': [_property_to_json(p) for p in properties]
+    })
+

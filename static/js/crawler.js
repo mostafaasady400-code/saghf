@@ -78,11 +78,35 @@ function initCrawler() {
             const city = document.getElementById('crawler-city')?.value?.trim() || 'tehran';
             const district = document.getElementById('crawler-district')?.value?.trim() || '';
 
+            // فیلترهای پیشرفته منطقه‌ای و مالی
+            const districts = Array.from(startForm.querySelectorAll('input[name="districts"]:checked')).map(el => el.value);
+            const minDepositM = parseInt(document.getElementById('crawler-min-deposit')?.value) || 0;
+            const maxDepositM = parseInt(document.getElementById('crawler-max-deposit')?.value) || 0;
+            const minRentM = parseInt(document.getElementById('crawler-min-rent')?.value) || 0;
+            const maxRentM = parseInt(document.getElementById('crawler-max-rent')?.value) || 0;
+            const minArea = parseInt(document.getElementById('crawler-min-area')?.value) || 0;
+            const minYear = parseInt(document.getElementById('crawler-min-year')?.value) || 0;
+
+            const payload = {
+                sources,
+                categories,
+                limit,
+                city,
+                district,
+                districts,
+                min_deposit: minDepositM ? minDepositM * 1_000_000 : null,
+                max_deposit: maxDepositM ? maxDepositM * 1_000_000 : null,
+                min_rent: minRentM ? minRentM * 1_000_000 : null,
+                max_rent: maxRentM ? maxRentM * 1_000_000 : null,
+                min_area: minArea || null,
+                min_year: minYear || null
+            };
+
             try {
                 const res = await fetch('/crawler/start', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sources, categories, limit, city, district })
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -96,6 +120,126 @@ function initCrawler() {
             } catch (err) {
                 showToast('خطا در برقراری ارتباط با سرویس کراولر', 'error');
                 setBtnReady(btn);
+            }
+        });
+    }
+
+    // بارگذاری و مدیریت پروفایل‌های فیلتر ذخیره‌شده
+    const profilesSelect = document.getElementById('saved-profiles-select');
+    const loadProfiles = async () => {
+        if (!profilesSelect) return;
+        try {
+            const res = await fetch('/crawler/profiles');
+            const data = await res.json();
+            if (data.profiles) {
+                profilesSelect.innerHTML = '<option value="">-- بارگذاری پروفایل فیلتر ذخیره‌شده --</option>';
+                data.profiles.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `${p.name} (${p.deal_type === 'rent' ? 'رهن و اجاره' : 'فروش'})`;
+                    opt.dataset.profile = JSON.stringify(p);
+                    profilesSelect.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error('Error loading profiles:', e);
+        }
+    };
+    loadProfiles();
+
+    if (profilesSelect) {
+        profilesSelect.addEventListener('change', () => {
+            const opt = profilesSelect.options[profilesSelect.selectedIndex];
+            if (!opt || !opt.dataset.profile) return;
+            const p = JSON.parse(opt.dataset.profile);
+            
+            // پر کردن فرم
+            if (p.min_deposit) document.getElementById('crawler-min-deposit').value = p.min_deposit / 1_000_000;
+            if (p.max_deposit) document.getElementById('crawler-max-deposit').value = p.max_deposit / 1_000_000;
+            if (p.min_rent) document.getElementById('crawler-min-rent').value = p.min_rent / 1_000_000;
+            if (p.max_rent) document.getElementById('crawler-max-rent').value = p.max_rent / 1_000_000;
+            if (p.min_area) document.getElementById('crawler-min-area').value = p.min_area;
+            if (p.min_year) document.getElementById('crawler-min-year').value = p.min_year;
+
+            // انتخاب تیک محله‌ها
+            const activeDistricts = p.active_districts || [];
+            document.querySelectorAll('input[name="districts"]').forEach(cb => {
+                cb.checked = activeDistricts.includes(cb.value);
+            });
+            showToast(`پروفایل «${p.name}» روی فرم اعمال شد.`, 'info');
+        });
+    }
+
+    // دکمه ذخیره پروفایل
+    const btnSaveProfile = document.getElementById('btn-save-profile');
+    if (btnSaveProfile) {
+        btnSaveProfile.addEventListener('click', async () => {
+            const name = prompt('نام پروفایل فیلتر را وارد نمایید (مثلاً: رهن و اجاره منطقه ۵):', 'رهن و اجاره منطقه ۵');
+            if (!name) return;
+
+            const districts = Array.from(document.querySelectorAll('input[name="districts"]:checked')).map(el => el.value);
+            const minDep = (parseInt(document.getElementById('crawler-min-deposit')?.value) || 0) * 1_000_000;
+            const maxDep = (parseInt(document.getElementById('crawler-max-deposit')?.value) || 0) * 1_000_000;
+            const minRent = (parseInt(document.getElementById('crawler-min-rent')?.value) || 0) * 1_000_000;
+            const maxRent = (parseInt(document.getElementById('crawler-max-rent')?.value) || 0) * 1_000_000;
+            const minArea = parseInt(document.getElementById('crawler-min-area')?.value) || 0;
+            const minYear = parseInt(document.getElementById('crawler-min-year')?.value) || 0;
+
+            const pPayload = {
+                name,
+                city: 'تهران',
+                region: '5',
+                deal_type: 'rent',
+                active_districts: districts,
+                min_deposit: minDep,
+                max_deposit: maxDep,
+                min_rent: minRent,
+                max_rent: maxRent,
+                min_area: minArea,
+                min_year: minYear,
+                is_auto_crawl_active: true
+            };
+
+            try {
+                const res = await fetch('/crawler/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pPayload)
+                });
+                const d = await res.json();
+                if (d.success) {
+                    showToast(`پروفایل «${name}» با موفقیت ذخیره شد.`, 'success');
+                    loadProfiles();
+                } else {
+                    showToast(d.message || 'خطا در ذخیره پروفایل', 'error');
+                }
+            } catch (err) {
+                showToast('خطا در ذخیره پروفایل', 'error');
+            }
+        });
+    }
+
+    // دکمه اجرای پروفایل انتخابی
+    const btnRunProfile = document.getElementById('btn-run-profile');
+    if (btnRunProfile) {
+        btnRunProfile.addEventListener('click', async () => {
+            const pId = profilesSelect?.value;
+            if (!pId) {
+                showToast('لطفاً ابتدا یک پروفایل فیلتر را از لیست انتخاب کنید.', 'warning');
+                return;
+            }
+            try {
+                const res = await fetch(`/crawler/profiles/${pId}/run`, { method: 'POST' });
+                const d = await res.json();
+                if (d.success) {
+                    showToast(d.message, 'success');
+                    wasRunning = true;
+                    startPolling();
+                } else {
+                    showToast(d.message || 'خطا در اجرای پروفایل', 'error');
+                }
+            } catch (err) {
+                showToast('خطا در اجرای پروفایل', 'error');
             }
         });
     }

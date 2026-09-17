@@ -127,8 +127,73 @@
                         <input type="checkbox" name="categories" value="commercial-rent" style="accent-color: #f59e0b;">
                         <span>🏬 اجاره اداری و تجاری</span>
                     </label>
+            <!-- Advanced Targeted Filters (Accordion) -->
+            <details class="glass-panel" style="margin-bottom: 0.85rem; padding: 0.75rem; border-radius: 10px; border: 1px solid rgba(255, 215, 0, 0.25); background: rgba(0, 0, 0, 0.25);">
+                <summary style="cursor: pointer; font-size: 0.85rem; font-weight: 700; color: #fbbf24; display: flex; align-items: center; justify-content: space-between;">
+                    <span>🎯 فیلترهای پیشرفته و چندانتخابی محله‌ها (منطقه ۵)</span>
+                    <span style="font-size: 0.75rem; color: #94a3b8;">▼ تنظیمات عمیق</span>
+                </summary>
+
+                <!-- Multi-select Districts Pills -->
+                <div style="margin-top: 0.75rem;">
+                    <label style="display: block; font-size: 0.75rem; color: #fbbf24; margin-bottom: 0.35rem;">
+                        انتخاب چندگانه محله‌ها (منطقه ۵):
+                    </label>
+                    <div id="district-pills-container" style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+                        {% for d in ['پونک', 'جنت‌آباد', 'جنت‌آباد مرکزی', 'جنت‌آباد جنوبی', 'جنت‌آباد شمالی', 'صادقیه', 'شهران', 'باغ‌فیض', 'بلوار فردوس', 'اباذر', 'اکباتان', 'شاهین', 'سازمان برنامه', 'شهرزیبا'] %}
+                        <label class="district-pill" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="districts" value="{{ d }}" style="accent-color: #fbbf24;">
+                            <span>{{ d }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
                 </div>
-            </div>
+
+                <!-- Financial Filters -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداقل ودیعه (م.ت):</label>
+                        <input type="number" id="crawler-min-deposit" name="min_deposit" placeholder="مثلاً ۲۰۰" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداکثر ودیعه (م.ت):</label>
+                        <input type="number" id="crawler-max-deposit" name="max_deposit" placeholder="مثلاً ۸۰۰" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداقل اجاره (م.ت):</label>
+                        <input type="number" id="crawler-min-rent" name="min_rent" placeholder="مثلاً ۱۰" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداکثر اجاره (م.ت):</label>
+                        <input type="number" id="crawler-max-rent" name="max_rent" placeholder="مثلاً ۳۵" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                </div>
+
+                <!-- Specs: Area & Year -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداقل متراژ (متر):</label>
+                        <input type="number" id="crawler-min-area" name="min_area" placeholder="مثلاً ۷۵" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداقل سال ساخت:</label>
+                        <input type="number" id="crawler-min-year" name="min_year" placeholder="مثلاً ۱۳۹۸" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                </div>
+
+                <!-- Profile Save / Load Bar -->
+                <div style="margin-top: 0.75rem; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                    <select id="saved-profiles-select" class="glass-select" style="flex: 2; padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                        <option value="">-- بارگذاری پروفایل فیلتر ذخیره‌شده --</option>
+                    </select>
+                    <button type="button" id="btn-save-profile" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" title="ذخیره شروط فعلی در پروفایل">
+                        💾 ذخیره پروفایل
+                    </button>
+                    <button type="button" id="btn-run-profile" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #10b981; border-color: rgba(16, 185, 129, 0.4);" title="اجرای سریع فیلتر این پروفایل">
+                        ▶️ اجرای پروفایل
+                    </button>
+                </div>
+            </details>
 
             <!-- Limit, Submit and Reset Buttons -->
             <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 0.6rem; align-items: flex-end; margin-top: 0.85rem;">
