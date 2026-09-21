@@ -63,6 +63,9 @@ def dashboard():
     tg_token_set = bool(Config.TELEGRAM_BOT_TOKEN)
     tg_admin_id = Config.ADMIN_TELEGRAM_ID or 'تنظیم نشده در .env'
 
+    bale_token_set = bool(Config.BALE_BOT_TOKEN)
+    bale_admin_id = getattr(Config, 'ADMIN_BALE_ID', '') or Config.ADMIN_TELEGRAM_ID or 'تنظیم نشده در .env'
+
     divar_auth = DivarSessionManager.is_authenticated()
 
     recent_properties = Property.query.order_by(Property.created_at.desc()).limit(8).all()
@@ -80,6 +83,8 @@ def dashboard():
         crawler_status=crawler_status,
         tg_token_set=tg_token_set,
         tg_admin_id=tg_admin_id,
+        bale_token_set=bale_token_set,
+        bale_admin_id=bale_admin_id,
         divar_auth=divar_auth,
         recent_properties=recent_properties
     )

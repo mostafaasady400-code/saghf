@@ -161,3 +161,35 @@ def update_visit_status(id):
     db.session.commit()
     flash('بازخورد و نتیجه بازدید با موفقیت بروزرسانی شد.', 'success')
     return redirect(request.referrer or url_for('crm.visits'))
+
+
+# =========================================================================
+# اندپوینت‌های دستیار هوشمند فروش و CRM تلگرام (Sales Assistant APIs)
+# =========================================================================
+
+@crm_bp.route('/api/sales-assistant/onboard', methods=['POST'])
+def api_sales_assistant_onboard():
+    from services.crm_sales_assistant import CRMSalesAssistantEngine
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    phone = data.get('phone') or data.get('phone_number') or '09120000000'
+    name = data.get('name') or data.get('client_name')
+    res = CRMSalesAssistantEngine.start_onboarding(phone, name)
+    return jsonify(res)
+
+@crm_bp.route('/api/sales-assistant/turn', methods=['POST'])
+def api_sales_assistant_turn():
+    from services.crm_sales_assistant import CRMSalesAssistantEngine
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    phone = data.get('phone') or data.get('phone_number') or '09120000000'
+    message = data.get('message') or data.get('text') or ''
+    res = CRMSalesAssistantEngine.process_client_turn(phone, message)
+    return jsonify(res)
+
+@crm_bp.route('/api/sales-assistant/feedback', methods=['POST'])
+def api_sales_assistant_feedback():
+    from services.crm_sales_assistant import CRMSalesAssistantEngine
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    phone = data.get('phone') or data.get('phone_number') or '09120000000'
+    feedback = data.get('feedback') or data.get('text') or data.get('message') or ''
+    res = CRMSalesAssistantEngine.handle_feedback_and_qualification(phone, feedback)
+    return jsonify(res)

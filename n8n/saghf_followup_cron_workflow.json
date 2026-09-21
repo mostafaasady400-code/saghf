@@ -1,0 +1,155 @@
+{
+  "name": "Saghf Real Estate - Smart Follow-up & 24h Nurturing Cron Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "node-cron-trigger",
+      "name": "Cron: Hourly Follow-up Checker",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [100, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/n8n/cron/follow-up-24h",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"dry_run\": false\n}",
+        "options": {}
+      },
+      "id": "node-fetch-due-leads",
+      "name": "Trigger 24h Follow-up Batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [350, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log batch results\nconst res = $input.item.json;\nreturn {\n  json: {\n    processed_count: res.processed_count || 0,\n    dispatched_messages: res.dispatched || [],\n    execution_time: new Date().toISOString()\n  }\n};"
+      },
+      "id": "node-log-cron-summary",
+      "name": "Log Cron Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [600, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-feedback",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-feedback-webhook",
+      "name": "Webhook: Customer Reply & Feedback",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 500],
+      "webhookId": "saghf-feedback-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/n8n/feedback/process",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lead_id\": {{ $json.lead_id || 1 }},\n  \"phone\": \"{{ $json.phone || '' }}\",\n  \"feedback_text\": \"{{ $json.text || $json.body || $json.message || '' }}\"\n}",
+        "options": {}
+      },
+      "id": "node-process-feedback",
+      "name": "Analyze Feedback & Route Next Step",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [380, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.action }}",
+              "operation": "equal",
+              "value2": "schedule_visit"
+            }
+          ]
+        }
+      },
+      "id": "node-if-visit",
+      "name": "Visit Requested?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare urgent visit alert for consultant\nconst item = $input.item.json;\nreturn {\n  json: {\n    alert: `🟢 درخواست بازدید فوری ثبت شد!\\nمشتری: ${item.lead_id}\\nپیام مشتری: ${item.feedback_text}\\nوضعیت لید: visiting (هماهنگی بازدید)`,\n    status: 'urgent_visit_scheduled'\n  }\n};"
+      },
+      "id": "node-alert-visit",
+      "name": "Notify Consultant for Visit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [900, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare alternative property recommendation message\nconst item = $input.item.json;\nconst alts = item.alternative_properties || [];\nlet text = `ممنون از بازخورد شما! معیارهای شما به‌روزرسانی شد.\\n${alts.length} گزینه جایگزین مطابق سلیقه جدید شما:\\n`;\nalts.forEach((a, i) => {\n  text += `${i+1}. ${a.title} - ${a.district} (${a.price_formatted})\\n`;\n});\nreturn {\n  json: {\n    reply_message: text,\n    alternatives_count: alts.length,\n    status: 'refined_criteria'\n  }\n};"
+      },
+      "id": "node-send-alternatives",
+      "name": "Send Refined Alternatives",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [900, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"feedback_handled\": true,\n  \"response_sent\": true\n}",
+        "options": {}
+      },
+      "id": "node-respond-feedback",
+      "name": "Respond Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1150, 500]
+    }
+  ],
+  "connections": {
+    "Cron: Hourly Follow-up Checker": {
+      "main": [[{"node": "Trigger 24h Follow-up Batch", "type": "main", "index": 0}]]
+    },
+    "Trigger 24h Follow-up Batch": {
+      "main": [[{"node": "Log Cron Results", "type": "main", "index": 0}]]
+    },
+    "Webhook: Customer Reply & Feedback": {
+      "main": [[{"node": "Analyze Feedback & Route Next Step", "type": "main", "index": 0}]]
+    },
+    "Analyze Feedback & Route Next Step": {
+      "main": [[{"node": "Visit Requested?", "type": "main", "index": 0}]]
+    },
+    "Visit Requested?": {
+      "main": [
+        [{"node": "Notify Consultant for Visit", "type": "main", "index": 0}],
+        [{"node": "Send Refined Alternatives", "type": "main", "index": 0}]
+      ]
+    },
+    "Notify Consultant for Visit": {
+      "main": [[{"node": "Respond Webhook", "type": "main", "index": 0}]]
+    },
+    "Send Refined Alternatives": {
+      "main": [[{"node": "Respond Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

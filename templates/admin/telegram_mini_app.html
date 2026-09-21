@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>پنل مدیریت تلگرام سقف | Telegram Mini App</title>
+
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Design System Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/glassmorphism.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/neon-dark.css') }}">
+
+    <style>
+        :root {
+            --tg-bg: #09090d;
+            --tg-surface: #101016;
+            --tg-card: #15151f;
+            --tg-gold: #d4af37;
+            --tg-gold-light: #f5d77f;
+            --tg-emerald: #10b981;
+            --tg-cyan: #00d2ff;
+            --tg-border: rgba(212, 175, 55, 0.2);
+        }
+
+        body {
+            background-color: var(--tg-bg);
+            color: #f1f5f9;
+            font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0.75rem;
+            padding-bottom: 5rem;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mini-app-header {
+            background: radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.12), transparent 70%),
+                        linear-gradient(135deg, rgba(16, 16, 22, 0.95), rgba(9, 9, 13, 0.98));
+            border: 1px solid var(--tg-border);
+            border-radius: 16px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .mini-app-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f5d77f, #aa771c);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+        }
+
+        /* Navigation Tab Pills */
+        .tab-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+            background: rgba(16, 16, 22, 0.8);
+            padding: 0.35rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.6rem 0.2rem;
+            border-radius: 10px;
+            color: #94a3b8;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(170, 119, 28, 0.3) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            color: var(--tg-gold-light);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .tab-btn.active.tab-lead {
+            background: rgba(16, 185, 129, 0.18);
+            border-color: rgba(16, 185, 129, 0.45);
+            color: #34d399;
+        }
+
+        .tab-content-panel {
+            display: none;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .tab-content-panel.active {
+            display: flex;
+        }
+
+        /* CRM Card Styling */
+        .crm-card {
+            background: rgba(16, 16, 22, 0.85);
+            border: 1px solid var(--tg-border);
+            border-radius: 14px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease;
+        }
+
+        .crm-card:active {
+            transform: scale(0.985);
+        }
+
+        .crm-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .crm-badge-gold {
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            color: var(--tg-gold-light);
+            padding: 0.2rem 0.55rem;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .crm-badge-green {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #34d399;
+            padding: 0.2rem 0.55rem;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .crm-card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+            background: rgba(8, 8, 12, 0.5);
+            padding: 0.65rem;
+            border-radius: 10px;
+            font-size: 0.78rem;
+        }
+
+        .crm-card-grid span {
+            color: #94a3b8;
+        }
+
+        .crm-card-grid strong {
+            color: #f1f5f9;
+        }
+
+        .crm-card-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .btn-action {
+            padding: 0.5rem 0.4rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-action-gold {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(170, 119, 28, 0.3));
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            color: var(--tg-gold-light);
+        }
+
+        .btn-action-chat {
+            background: rgba(0, 210, 255, 0.12);
+            border: 1px solid rgba(0, 210, 255, 0.35);
+            color: #38bdf8;
+        }
+
+        .btn-action-call {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #34d399;
+        }
+
+        /* Fixed Bottom Telegram App Bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 14, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--tg-border);
+            padding: 0.65rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            z-index: 100;
+        }
+
+        .bottom-nav-item {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            font-weight: 700;
+        }
+
+        .bottom-nav-item.active {
+            color: var(--tg-gold-light);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="mini-app-header">
+        <div class="mini-app-brand">
+            <div class="brand-logo">🏛️</div>
+            <div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">سقف | پنل تلگرام ادمین</div>
+                <div style="font-size: 0.68rem; color: var(--tg-gold-light);">یکپارچگی چندکاناله n8n + CRM دوگانه</div>
+            </div>
+        </div>
+        <span class="badge-neon badge-neon-emerald" style="font-size: 0.65rem;">
+            ● آنلاین
+        </span>
+    </header>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('properties', this)">
+            <span>🏢</span>
+            <span>مالکین و املاک</span>
+        </button>
+        <button class="tab-btn tab-lead" onclick="switchTab('leads', this)">
+            <span>👥</span>
+            <span>مشتریان و لیدها</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('channels', this)">
+            <span>📡</span>
+            <span>درگاه‌ها و لاگ‌ها</span>
+        </button>
+    </div>
+
+    <!-- ==================== TAB 1: PROPERTIES & OWNERS CRM ==================== -->
+    <div id="tab-properties" class="tab-content-panel active">
+        <div style="font-size: 0.85rem; font-weight: 800; color: #cbd5e1; margin-bottom: 0.2rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>🟡 پرونده‌های اخیر مالکین (CRM املاک):</span>
+            <span style="font-size: 0.75rem; color: var(--tg-gold-light);">{{ properties|length }} فایل</span>
+        </div>
+
+        {% for prop in properties %}
+        <div class="crm-card">
+            <div class="crm-card-header">
+                <span class="crm-badge-gold">کد: {{ prop.file_code }}</span>
+                <span style="font-size: 0.7rem; color: #94a3b8;">{{ prop.created_at.strftime('%m/%d %H:%M') if prop.created_at else '' }}</span>
+            </div>
+            
+            <div style="font-size: 0.92rem; font-weight: 800; color: #ffffff;">
+                {{ prop.title }}
+            </div>
+
+            <div class="crm-card-grid">
+                <div><span>منطقه:</span> <strong>{{ prop.district }}</strong></div>
+                <div><span>متراژ:</span> <strong>{{ prop.area }} متر</strong></div>
+                <div><span>معامله:</span> <strong>{{ 'فروش' if prop.deal_type == 'sale' else 'رهن و اجاره' }}</strong></div>
+                <div><span>مالک:</span> <strong>{{ prop.owner.phone_number if prop.owner else 'نامشخص' }}</strong></div>
+            </div>
+
+            <div class="crm-card-actions">
+                <a href="/properties/{{ prop.id }}" target="_blank" class="btn-action btn-action-gold">
+                    📋 پرونده وب
+                </a>
+                <a href="tel:{{ prop.owner.phone_number if prop.owner else '' }}" class="btn-action btn-action-call">
+                    📞 تماس سریع
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #64748b;">
+            فایل ثبت‌شده مستقیمی در حال حاضر موجود نیست.
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ==================== TAB 2: BUYERS & TENANTS CRM ==================== -->
+    <div id="tab-leads" class="tab-content-panel">
+        <div style="font-size: 0.85rem; font-weight: 800; color: #cbd5e1; margin-bottom: 0.2rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>🟢 پرونده‌های اخیر متقاضیان (CRM مشتریان):</span>
+            <span style="font-size: 0.75rem; color: #34d399;">{{ leads|length }} متقاضی</span>
+        </div>
+
+        {% for lead in leads %}
+        <div class="crm-card" style="border-color: rgba(16, 185, 129, 0.3);">
+            <div class="crm-card-header">
+                <span class="crm-badge-green">{{ lead.full_name }}</span>
+                <span style="font-size: 0.7rem; color: #38bdf8;">{{ lead.active_messenger }}</span>
+            </div>
+
+            <div class="crm-card-grid">
+                <div><span>شماره:</span> <strong>{{ lead.phone_number }}</strong></div>
+                <div><span>تقاضا:</span> <strong>{{ 'خرید' if lead.deal_type == 'sale' else 'رهن و اجاره' }}</strong></div>
+                <div><span>مناطق:</span> <strong>{{ lead.preferred_districts|join('، ') if lead.preferred_districts else 'تهران' }}</strong></div>
+                <div><span>حداقل متراژ:</span> <strong>{{ lead.min_area }} متر</strong></div>
+            </div>
+
+            <div class="crm-card-actions">
+                <a href="https://t.me/+98{{ lead.phone_number[1:] if lead.phone_number.startswith('0') else lead.phone_number }}" target="_blank" class="btn-action btn-action-chat">
+                    💬 ارسال در پیام‌رسان
+                </a>
+                <a href="tel:{{ lead.phone_number }}" class="btn-action btn-action-call">
+                    📞 تماس تلفنی
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #64748b;">
+            متقاضی ثبت‌شده‌ای در حال حاضر یافت نشد.
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ==================== TAB 3: OMNI-CHANNELS & LOGS ==================== -->
+    <div id="tab-channels" class="tab-content-panel">
+        <div style="font-size: 0.85rem; font-weight: 800; color: #cbd5e1; margin-bottom: 0.2rem;">
+            <span>📡 درگاه‌های فعال n8n و لاگ دیسپچ:</span>
+        </div>
+
+        <!-- Channel Status Chips -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; margin-bottom: 0.75rem;">
+            {% for key, val in channel_names.items() %}
+            <div style="background: rgba(16, 16, 22, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); padding: 0.5rem 0.65rem; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem;">
+                <span style="color: #cbd5e1;">{{ val }}</span>
+                <span style="color: #10b981; font-weight: 800;">● فعال</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Recent Outreach Logs -->
+        <div style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; margin-top: 0.5rem;">آخرین ارسال‌های خودکار:</div>
+        {% for log in logs %}
+        <div style="background: rgba(14, 14, 19, 0.7); border-right: 3px solid #00d2ff; padding: 0.6rem 0.85rem; border-radius: 8px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="color: #ffffff; font-weight: 700;">فایل کد {{ log.property_code }} → پلتفرم {{ log.platform }}</div>
+                <div style="color: #64748b; font-size: 0.68rem;">{{ log.sent_at.strftime('%Y-%m-%d %H:%M') if log.sent_at else '' }}</div>
+            </div>
+            <span style="color: #10b981; font-weight: 700;">✓ ارسال شد</span>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 1.5rem; color: #64748b; font-size: 0.8rem;">
+            هنوز لاگ ارسالی ثبت نگردیده است.
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Fixed Bottom App Navigation -->
+    <nav class="bottom-nav">
+        <a href="javascript:void(0)" onclick="switchTab('properties', document.querySelectorAll('.tab-btn')[0])" class="bottom-nav-item active" id="bNavProp">
+            <span>🏢</span>
+            <span>مالکین</span>
+        </a>
+        <a href="javascript:void(0)" onclick="switchTab('leads', document.querySelectorAll('.tab-btn')[1])" class="bottom-nav-item" id="bNavLead">
+            <span>👥</span>
+            <span>مشتریان</span>
+        </a>
+        <a href="javascript:void(0)" onclick="switchTab('channels', document.querySelectorAll('.tab-btn')[2])" class="bottom-nav-item" id="bNavChan">
+            <span>📡</span>
+            <span>درگاه‌ها</span>
+        </a>
+        <a href="http://127.0.0.1:5000" target="_blank" class="bottom-nav-item">
+            <span>🌐</span>
+            <span>سایت اصلی</span>
+        </a>
+    </nav>
+
+    <script>
+        // Initialize Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+            window.Telegram.WebApp.setHeaderColor('#09090d');
+            window.Telegram.WebApp.setBackgroundColor('#09090d');
+        }
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            const targetPanel = document.getElementById('tab-' + tabId);
+            if (targetPanel) targetPanel.classList.add('active');
+            if (btn) btn.classList.add('active');
+
+            // Bottom nav update
+            document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
+            if (tabId === 'properties') document.getElementById('bNavProp').classList.add('active');
+            if (tabId === 'leads') document.getElementById('bNavLead').classList.add('active');
+            if (tabId === 'channels') document.getElementById('bNavChan').classList.add('active');
+
+            // Haptic Feedback for Telegram
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
+        }
+    </script>
+</body>
+</html>

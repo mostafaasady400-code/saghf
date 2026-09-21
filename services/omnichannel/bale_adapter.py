@@ -58,5 +58,26 @@ class BaleAdapter(BaseChannelAdapter):
             return {'success': False, 'platform': self.platform_name, 'error': str(e)}
 
     def send_property_package(self, recipient: str, property_item: Dict[str, Any], text: str) -> Dict[str, Any]:
-        # پیام‌رسان بله متن همراه با لینک آگهی را ارسال می‌کند
+        """ارسال کارت کامل ملک همراه با تصویر و دکمه‌های تعاملی در بله"""
+        from bale_bot.client import bale_client
+        images = property_item.get('images') or []
+        prop_id = property_item.get('id')
+
+        reply_markup = None
+        if prop_id:
+            from services.unified_bot_controller import UnifiedBotController
+            reply_markup = UnifiedBotController.build_property_action_markup('bale', prop_id)
+
+        if images and isinstance(images, list) and len(images) > 0:
+            res = bale_client.send_photo(
+                chat_id=recipient,
+                photo=images[0],
+                caption=text,
+                reply_markup=reply_markup
+            )
+            return {
+                'success': bool(res.get('ok')),
+                'platform': self.platform_name,
+                'response': res
+            }
         return self.send_text(recipient, text)

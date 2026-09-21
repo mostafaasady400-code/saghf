@@ -34,5 +34,8 @@ divar_rent_sample.json
 divar_sample_post.json
 .claude/
 .codex/
-.cursor/
 instance/
+*.db
+*.sqlite
+*.sqlite3
+saghf_database.db

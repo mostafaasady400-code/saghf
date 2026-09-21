@@ -1,0 +1,345 @@
+{
+  "name": "Saghf Real Estate - OmniChannel Ingestion & Dual CRM Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-voip",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-voip",
+      "name": "Webhook VoIP / Telephony",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 100],
+      "webhookId": "saghf-voip-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-sms",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-sms",
+      "name": "Webhook SMS",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 260],
+      "webhookId": "saghf-sms-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-instagram",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-instagram",
+      "name": "Webhook Instagram",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 420],
+      "webhookId": "saghf-instagram-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-whatsapp",
+      "name": "Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 580],
+      "webhookId": "saghf-whatsapp-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-telegram",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-telegram",
+      "name": "Webhook Telegram",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 740],
+      "webhookId": "saghf-telegram-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-bale",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-bale",
+      "name": "Webhook Bale",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 900],
+      "webhookId": "saghf-bale-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-eitaa",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-eitaa",
+      "name": "Webhook Eitaa",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 1060],
+      "webhookId": "saghf-eitaa-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-rubika",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-rubika",
+      "name": "Webhook Rubika",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 1220],
+      "webhookId": "saghf-rubika-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract channel from node or payload\nconst item = $input.item.json;\nlet channel = item.channel || 'webhook';\nif ($node.name && $node.name.includes('VoIP')) channel = 'voip';\nelse if ($node.name && $node.name.includes('SMS')) channel = 'sms';\nelse if ($node.name && $node.name.includes('Instagram')) channel = 'instagram';\nelse if ($node.name && $node.name.includes('WhatsApp')) channel = 'whatsapp';\nelse if ($node.name && $node.name.includes('Telegram')) channel = 'telegram';\nelse if ($node.name && $node.name.includes('Bale')) channel = 'bale';\nelse if ($node.name && $node.name.includes('Eitaa')) channel = 'eitaa';\nelse if ($node.name && $node.name.includes('Rubika')) channel = 'rubika';\n\nreturn {\n  json: {\n    channel: channel,\n    sender_id: item.sender_id || item.from || item.phone || item.user_id || 'unknown',\n    sender_name: item.sender_name || item.name || item.contact_name || '',\n    phone: item.phone || item.caller_number || item.from || '',\n    text: item.text || item.message || item.body || '',\n    audio_url: item.audio_url || item.recording_url || item.voice_url || null,\n    media_url: item.media_url || item.photo_url || null,\n    has_audio: Boolean(item.audio_url || item.recording_url || item.voice_url),\n    timestamp: new Date().toISOString(),\n    raw_payload: item\n  }\n};"
+      },
+      "id": "node-normalize-input",
+      "name": "Normalize Multi-Channel Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [400, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.has_audio }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node-check-audio",
+      "name": "Has Audio Recording?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [620, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/n8n/ingest/voip",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $json.channel }}\",\n  \"caller_number\": \"{{ $json.phone }}\",\n  \"audio_url\": \"{{ $json.audio_url }}\",\n  \"transcript\": \"{{ $json.text }}\",\n  \"sender_name\": \"{{ $json.sender_name }}\"\n}",
+        "options": {}
+      },
+      "id": "node-stt-transcribe",
+      "name": "Persian Speech-to-Text (STT)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 480]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/n8n/router/classify-and-extract",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"{{ $json.text || $json.data?.text || '' }}\",\n  \"phone\": \"{{ $json.phone || $json.data?.phone || '' }}\",\n  \"sender_name\": \"{{ $json.sender_name || $json.data?.sender_name || '' }}\",\n  \"channel\": \"{{ $json.channel || 'unknown' }}\",\n  \"audio_url\": \"{{ $json.audio_url || null }}\"\n}",
+        "options": {}
+      },
+      "id": "node-llm-classifier",
+      "name": "LLM Semantic Router & Classifier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1100, 600]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.extracted?.role || $json.data?.role }}",
+                    "operation": "equal",
+                    "value2": "property_owner"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.extracted?.role || $json.data?.role }}",
+                    "operation": "equal",
+                    "value2": "lead_buyer_tenant"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "id": "node-switch-role",
+      "name": "Switch: Owner vs Buyer",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [1350, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/n8n/crm/owner-property",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"owner_name\": \"{{ $json.extracted?.entities?.owner_name || $json.sender_name || 'مالک محترم' }}\",\n  \"phone\": \"{{ $json.extracted?.entities?.phone || $json.phone }}\",\n  \"platform_id\": \"{{ $json.channel }}\",\n  \"title\": \"{{ $json.extracted?.entities?.title || 'فایل ملکی جدید ثبت شده' }}\",\n  \"deal_type\": \"{{ $json.extracted?.entities?.deal_type || 'sale' }}\",\n  \"property_type\": \"{{ $json.extracted?.entities?.property_type || 'apartment' }}\",\n  \"district\": \"{{ $json.extracted?.entities?.district || 'نامشخص' }}\",\n  \"area\": {{ $json.extracted?.entities?.area || 100 }},\n  \"price\": {{ $json.extracted?.entities?.price || 0 }},\n  \"deposit\": {{ $json.extracted?.entities?.deposit || 0 }},\n  \"monthly_rent\": {{ $json.extracted?.entities?.monthly_rent || 0 }},\n  \"floor\": \"{{ $json.extracted?.entities?.floor || '1' }}\",\n  \"deed_status\": \"{{ $json.extracted?.entities?.deed_status || 'تک‌برگ عرصه و اعیان' }}\",\n  \"description\": \"{{ $json.raw_text || $json.extracted?.summary || '' }}\"\n}",
+        "options": {}
+      },
+      "id": "node-crm-owner",
+      "name": "Save to CRM 1 (Properties & Owners)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/n8n/crm/buyer-tenant",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"full_name\": \"{{ $json.extracted?.entities?.owner_name || $json.sender_name || 'متقاضی محترم' }}\",\n  \"phone\": \"{{ $json.extracted?.entities?.phone || $json.phone }}\",\n  \"deal_type\": \"{{ $json.extracted?.entities?.deal_type || 'buy' }}\",\n  \"target_districts\": {{ JSON.stringify($json.extracted?.entities?.target_districts || ['نیاوران', 'سعادت‌آباد']) }},\n  \"min_area\": {{ $json.extracted?.entities?.min_area || 80 }},\n  \"budget\": {{ $json.extracted?.entities?.budget || $json.extracted?.entities?.price || 5000000000 }},\n  \"preferred_channel\": \"{{ $json.channel }}\",\n  \"priorities\": {{ JSON.stringify($json.extracted?.entities?.priorities || ['نورگیر عالی', 'پارکینگ اختصاصی']) }}\n}",
+        "options": {}
+      },
+      "id": "node-crm-buyer",
+      "name": "Save to CRM 2 (Buyers & Tenants)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 780]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Owner automated welcome & media request formatting\nconst item = $input.item.json;\nconst p = item.property || {};\nconst o = item.owner || {};\nconst channel = item.owner?.platform_id || 'sms';\n\nconst message = `درود بر شما جناب/سرکار ${o.full_name || 'مالک گرامی'} ⚜️\\n\\nملک شما (${p.title || 'آپارتمان'}) در سامانه جامع املاک سقف با موفقیت ثبت اولیه گردید.\\nکد رهگیری فایل: #${p.id}\\n\\nجهت تکمیل پرونده و قرارگیری در اولویت خریداران VIP، لطفاً تصاویر و مستندات ملک را از طریق لینک اختصاصی زیر بارگذاری نمایید:\\n${item.upload_link || 'https://saghf.ir/upload/' + p.id}\\n\\nبا سپاس، دپارتمان تخصصی املاک سقف`;\n\nreturn {\n  json: {\n    channel: channel,\n    phone: o.phone,\n    message: message,\n    property_id: p.id,\n    telegram_alert: item.telegram_alert\n  }\n};"
+      },
+      "id": "node-owner-nurture",
+      "name": "Owner Welcome & Media Intake Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1880, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lead property matching & recommendation cards formatting\nconst item = $input.item.json;\nconst lead = item.lead || {};\nconst matched = item.matched_properties || [];\nconst channel = lead.preferred_channel || 'telegram';\n\nlet intro = `سلام جناب/سرکار ${lead.full_name || 'مشتری عزیز'} 🌟\\nمشاور هوشمند سقف بر اساس بودجه و نیاز ملکی شما، ${matched.length} فایل منتخب از مالکین تاییدشده را آماده کرده است:\\n\\n`;\nlet cards = matched.map((m, idx) => {\n  return `${idx+1}. ${m.title}\\n📍 منطقه: ${m.district}\\n📐 متراژ: ${m.area} متر | 💰 قیمت/ودیعه: ${m.price_formatted || m.price}\\n🔗 مشاهده جزئیات: ${m.view_link}`;\n}).join('\\n-----------------------\\n');\n\nconst fullMessage = intro + cards + '\\n\\nجهت هماهنگی بازدید حضوری و گفتگوی مستقیم با مشاور، روی لینک هر فایل کلیک کنید یا به همین پیام پاسخ دهید.';\n\nreturn {\n  json: {\n    channel: channel,\n    phone: lead.phone,\n    message: fullMessage,\n    lead_id: lead.id,\n    matched_count: matched.length,\n    telegram_alert: item.telegram_alert\n  }\n};"
+      },
+      "id": "node-lead-nurture",
+      "name": "Lead Recommendations Dispatch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1880, 780]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"pipeline\": \"owner_registered\",\n  \"status\": \"completed\",\n  \"property_id\": {{ $json.property_id }},\n  \"alert_level\": \"gold_vip\"\n}",
+        "options": {}
+      },
+      "id": "node-respond-owner",
+      "name": "Respond Owner Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2150, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"pipeline\": \"lead_matched\",\n  \"status\": \"completed\",\n  \"lead_id\": {{ $json.lead_id }},\n  \"matched_count\": {{ $json.matched_count }},\n  \"alert_level\": \"green_hot_lead\"\n}",
+        "options": {}
+      },
+      "id": "node-respond-lead",
+      "name": "Respond Lead Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2150, 780]
+    }
+  ],
+  "connections": {
+    "Webhook VoIP / Telephony": {
+      "main": [[{"node": "Normalize Multi-Channel Input", "type": "main", "index": 0}]]
+    },
+    "Webhook SMS": {
+      "main": [[{"node": "Normalize Multi-Channel Input", "type": "main", "index": 0}]]
+    },
+    "Webhook Instagram": {
+      "main": [[{"node": "Normalize Multi-Channel Input", "type": "main", "index": 0}]]
+    },
+    "Webhook WhatsApp": {
+      "main": [[{"node": "Normalize Multi-Channel Input", "type": "main", "index": 0}]]
+    },
+    "Webhook Telegram": {
+      "main": [[{"node": "Normalize Multi-Channel Input", "type": "main", "index": 0}]]
+    },
+    "Webhook Bale": {
+      "main": [[{"node": "Normalize Multi-Channel Input", "type": "main", "index": 0}]]
+    },
+    "Webhook Eitaa": {
+      "main": [[{"node": "Normalize Multi-Channel Input", "type": "main", "index": 0}]]
+    },
+    "Webhook Rubika": {
+      "main": [[{"node": "Normalize Multi-Channel Input", "type": "main", "index": 0}]]
+    },
+    "Normalize Multi-Channel Input": {
+      "main": [[{"node": "Has Audio Recording?", "type": "main", "index": 0}]]
+    },
+    "Has Audio Recording?": {
+      "main": [
+        [{"node": "Persian Speech-to-Text (STT)", "type": "main", "index": 0}],
+        [{"node": "LLM Semantic Router & Classifier", "type": "main", "index": 0}]
+      ]
+    },
+    "Persian Speech-to-Text (STT)": {
+      "main": [[{"node": "LLM Semantic Router & Classifier", "type": "main", "index": 0}]]
+    },
+    "LLM Semantic Router & Classifier": {
+      "main": [[{"node": "Switch: Owner vs Buyer", "type": "main", "index": 0}]]
+    },
+    "Switch: Owner vs Buyer": {
+      "main": [
+        [{"node": "Save to CRM 1 (Properties & Owners)", "type": "main", "index": 0}],
+        [{"node": "Save to CRM 2 (Buyers & Tenants)", "type": "main", "index": 0}]
+      ]
+    },
+    "Save to CRM 1 (Properties & Owners)": {
+      "main": [[{"node": "Owner Welcome & Media Intake Link", "type": "main", "index": 0}]]
+    },
+    "Save to CRM 2 (Buyers & Tenants)": {
+      "main": [[{"node": "Lead Recommendations Dispatch", "type": "main", "index": 0}]]
+    },
+    "Owner Welcome & Media Intake Link": {
+      "main": [[{"node": "Respond Owner Success", "type": "main", "index": 0}]]
+    },
+    "Lead Recommendations Dispatch": {
+      "main": [[{"node": "Respond Lead Success", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

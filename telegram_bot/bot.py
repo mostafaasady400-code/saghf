@@ -58,6 +58,7 @@ def _build_start_keyboard():
     btn_sale = InlineKeyboardButton("🏷️ آخرین فایل‌های فروش", callback_data="btn_latest_sale")
     btn_rent = InlineKeyboardButton("🔑 آخرین فایل‌های اجاره", callback_data="btn_latest_rent")
     btn_code_search = InlineKeyboardButton("🔢 دریافت آلبوم با کد فایل", callback_data="btn_code_info")
+    btn_crm = InlineKeyboardButton("💬 مشاوره با کارشناس ارشد", callback_data="btn_crm_consult")
     btn_search = InlineKeyboardButton("🔍 استعلام و فیلتر پیشرفته", callback_data="btn_search_info")
     
     # Web app link (defaults to localhost or configured web URL)
@@ -68,7 +69,8 @@ def _build_start_keyboard():
 
     markup.add(btn_wizard)
     markup.add(btn_sale, btn_rent)
-    markup.add(btn_code_search, btn_search)
+    markup.add(btn_code_search, btn_crm)
+    markup.add(btn_search)
     markup.add(btn_web)
     return markup
 
@@ -409,6 +411,25 @@ def _register_handlers(bot: telebot.TeleBot):
             bot.send_message(call.message.chat.id, text, parse_mode='HTML')
         except Exception as e:
             logger.error(f"Error handling code info callback: {e}")
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('act_') or call.data == 'btn_crm_consult')
+    def handle_unified_actions_callback(call):
+        try:
+            bot.answer_callback_query(call.id)
+        except Exception:
+            pass
+        app = get_flask_app()
+        with app.app_context():
+            from services.unified_bot_controller import UnifiedBotController
+            user_name = call.from_user.first_name if call.from_user else None
+            res = UnifiedBotController.handle_callback_query('telegram', call.message.chat.id, call.data, user_name)
+            
+            if res.get('type') == 'text':
+                bot.send_message(call.message.chat.id, res['message'], reply_markup=res.get('reply_markup'), parse_mode='HTML')
+            elif res.get('type') == 'property_package':
+                prop = res.get('property')
+                from .notifier import send_property_media_group
+                send_property_media_group(prop, call.message.chat.id)
 
     @bot.callback_query_handler(func=lambda call: call.data in ['btn_latest_sale', 'btn_latest_rent'])
     def handle_latest_properties_callback(call):
@@ -807,17 +828,49 @@ def _register_handlers(bot: telebot.TeleBot):
             bot.send_message(chat_id, text, reply_markup=_build_wizard_step4_markup(deal_type), parse_mode='HTML')
             return
 
-        text = (
-            "⚜️ <b>راهنمای ربات هوشمند املاک سقف</b> ⚜️\n\n"
-            "• جهت مشاهده آخرین فایل‌ها دستور /start را ارسال فرمایید.\n"
-            "• جهت فیلترینگ و استخراج زنده دستور /filter یا دکمه «🎯 فیلتر و استخراج جدید» را انتخاب کنید.\n"
-            "• برای دریافت سریع آلبوم تصاویر و مشخصات فنی، <b>کد فایل</b> (مانند <code>10001</code>) را ارسال کنید.\n"
-            "• جهت استعلام مستقیم، دستور <code>/code 10001</code> را وارد کنید."
-        )
-        try:
-            bot.reply_to(message, text, reply_markup=_build_start_keyboard(), parse_mode='HTML')
-        except Exception as e:
-            logger.error(f"Error sending fallback text: {e}")
+        app = get_flask_app()
+        with app.app_context():
+            from services.unified_bot_controller import UnifiedBotController
+            user_name = message.from_user.first_name if message.from_user else None
+            user_phone = getattr(getattr(message, 'contact', None), 'phone_number', None)
+            res = UnifiedBotController.handle_natural_text('telegram', chat_id, message.text, user_phone, user_name)
+
+            if res.get('type') == 'crm_matches':
+                intro = res.get('intro_message')
+                if intro:
+                    try:
+                        bot.send_message(chat_id, intro, parse_mode='HTML')
+                    except Exception:
+                        pass
+
+                for card in res.get('cards', []):
+                    prop = card.get('property')
+                    markup = card.get('reply_markup')
+                    card_text = card.get('card_text')
+                    images = []
+                    if prop and prop.images:
+                        try:
+                            import json
+                            images = json.loads(prop.images) if isinstance(prop.images, str) else prop.images
+                        except Exception:
+                            images = []
+                    if images and isinstance(images, list) and len(images) > 0:
+                        try:
+                            bot.send_photo(chat_id, images[0], caption=card_text, reply_markup=markup, parse_mode='HTML')
+                        except Exception:
+                            bot.send_message(chat_id, card_text, reply_markup=markup, parse_mode='HTML')
+                    else:
+                        bot.send_message(chat_id, card_text, reply_markup=markup, parse_mode='HTML')
+
+                bot.send_message(chat_id, "💡 جهت هماهنگی بازدید هر فایل، دکمه «✨ هماهنگی بازدید حضوری» را لمس فرمایید.", reply_markup=_build_start_keyboard(), parse_mode='HTML')
+                return
+
+            if res.get('type') == 'text':
+                try:
+                    bot.reply_to(message, res['message'], reply_markup=res.get('reply_markup') or _build_start_keyboard(), parse_mode='HTML')
+                except Exception as e:
+                    logger.error(f"Error sending CRM reply: {e}")
+                return
 
 def _format_compact_property(p):
     """

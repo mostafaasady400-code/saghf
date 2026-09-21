@@ -22,8 +22,10 @@ from routes.crm import crm_bp
 from routes.crawler_api import crawler_bp
 from routes.messenger_api import messenger_bp
 from routes.telegram_api import telegram_bp
+from routes.bale_api import bale_bp
 from routes.admin import admin_bp
 from routes.telephony_api import telephony_bp
+from routes.n8n_gateway import n8n_bp
 from flask_wtf.csrf import CSRFProtect, CSRFError
 
 csrf = CSRFProtect()
@@ -37,9 +39,20 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     crawler_manager.init_app(app)
 
-    # Exempt Telegram and Telephony webhooks from CSRF protection (External servers POST directly)
+    # Exempt Telegram, Bale, Telephony webhooks and AI/JSON APIs from CSRF protection
     csrf.exempt(telegram_bp)
+    csrf.exempt(bale_bp)
+    csrf.exempt(messenger_bp)
     csrf.exempt(telephony_bp)
+    csrf.exempt(n8n_bp)
+    from routes.properties import api_ai_voice_search, api_on_demand_search, api_voice_turn
+    from routes.crm import api_sales_assistant_onboard, api_sales_assistant_turn, api_sales_assistant_feedback
+    csrf.exempt(api_ai_voice_search)
+    csrf.exempt(api_on_demand_search)
+    csrf.exempt(api_voice_turn)
+    csrf.exempt(api_sales_assistant_onboard)
+    csrf.exempt(api_sales_assistant_turn)
+    csrf.exempt(api_sales_assistant_feedback)
 
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
@@ -61,8 +74,10 @@ def create_app(config_class=Config):
     app.register_blueprint(crawler_bp)
     app.register_blueprint(messenger_bp)
     app.register_blueprint(telegram_bp)
+    app.register_blueprint(bale_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(telephony_bp)
+    app.register_blueprint(n8n_bp)
 
     @app.route('/assets/<path:filename>')
     def serve_assets(filename):

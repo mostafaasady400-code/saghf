@@ -89,4 +89,32 @@ class OmnichannelDispatcher:
 
         return dispatch_results
 
+    def dispatch_direct_message(self, recipient: str, message: str, platform: str = 'telegram') -> Dict[str, Any]:
+        """
+        ارسال پیام مستقیم (متن، لینک خوش‌آمد یا درخواست بارگذاری مدارک) به مالک یا مخاطب
+        """
+        target_platform = (platform or 'telegram').lower().strip()
+        adapter = self.get_adapter(target_platform)
+        try:
+            res = adapter.send_text(recipient, message)
+        except Exception as e:
+            logger.error(f"Error sending direct message via {target_platform} to {recipient}: {e}")
+            res = {'success': False, 'error': str(e), 'platform': target_platform}
+
+        try:
+            log_entry = OutreachLog(
+                lead_id=None,
+                property_code='direct_msg',
+                platform=target_platform,
+                status='sent' if res.get('success') else 'simulated',
+                server_response=json.dumps(res, ensure_ascii=False),
+                sent_at=datetime.utcnow()
+            )
+            db.session.add(log_entry)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        return res
+
 omnichannel_dispatcher = OmnichannelDispatcher()

@@ -66,8 +66,8 @@
                 <div class="tour-progress-fill" id="tourProgressFill"></div>
             </div>
             <span id="tourProgressPercent" style="font-size: 0.82rem; font-weight: 800; color: #00f2fe; min-width: 38px;">۰٪</span>
-            <a href="#properties-catalog-section" id="tourSkipToListings" class="tour-skip-btn">
-                <span>مشاهده آگهی‌های املاک</span> <span>⬇</span>
+            <a href="#saghf-ai-assistant-widget" id="tourSkipToListings" class="tour-skip-btn">
+                <span>دستیار هوش مصنوعی و آگهی‌ها</span> <span>⬇</span>
             </a>
         </div>
     </div>
@@ -75,6 +75,12 @@
 {% endblock %}
 
 {% block content %}
+<!-- ==========================================================================
+     IN-LINE LUXURY AI VOICE & PROPERTY ASSISTANT WIDGET
+     Strictly In-Line / Static component positioned directly under 3D Mansion Tour
+     ========================================================================== -->
+{% include "properties/ai_assistant_widget.html" %}
+
 <!-- Catalog Section -->
 <div id="properties-catalog-section" style="padding-top: 0.5rem;">
     <div style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">

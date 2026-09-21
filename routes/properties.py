@@ -643,3 +643,169 @@ def api_poll_live():
         'items': [_property_to_json(p) for p in properties]
     })
 
+@properties_bp.route('/api/ai-voice-search', methods=['GET', 'POST'])
+def api_ai_voice_search():
+    """
+    تحلیل صوتی و متنی هوش مصنوعی، استخراج خودکار نیازمندی‌های مشتری (NLP) و کوئری/کراول همزمان
+    """
+    from services.nlp_extractor import PropertyLeadNLPExtractor
+    from crawler.crawler_manager import crawler_manager
+
+    data = request.get_json(silent=True) if request.is_json else request.args.to_dict()
+    if not data:
+        data = request.form.to_dict()
+    
+    user_query = (data.get('query') or data.get('text') or '').strip()
+    force_crawl = str(data.get('force_crawl', '0')).lower() in ['1', 'true', 'yes']
+
+    if not user_query:
+        return jsonify({
+            'success': False,
+            'message': 'متن یا صوت ورودی خالی است. لطفاً نیاز ملکی خود را بیان کنید.'
+        }), 400
+
+    # ۱. استخراج هوشمند پارامترها با موتور NLP
+    criteria = PropertyLeadNLPExtractor.extract_criteria(user_query)
+    deal_type = criteria.get('deal_type', 'sale')
+    districts = criteria.get('districts', [])
+    min_area = criteria.get('min_area', 0)
+    max_area = criteria.get('max_area', 0)
+    max_budget = criteria.get('max_budget', 0)
+    max_deposit = criteria.get('max_deposit', 0)
+    max_rent = criteria.get('max_rent', 0)
+    features = criteria.get('features', [])
+
+    # ۲. فیلتر املاک دیتابیس
+    query = Property.query.filter(Property.status != 'archived')
+
+    # حذف هرگونه آگهی واسطه/املاکی
+    for forbidden in ['املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس']:
+        query = query.filter(
+            Property.title.notilike(f'%{forbidden}%'),
+            Property.description.notilike(f'%{forbidden}%')
+        )
+
+    # تطابق نوع معامله
+    if deal_type and deal_type != 'all':
+        query = query.filter(Property.deal_type == deal_type)
+
+    # تطابق مناطق
+    if districts:
+        district_conditions = [Property.district.ilike(f'%{d}%') for d in districts]
+        query = query.filter(db.or_(*district_conditions))
+
+    # تطابق متراژ با تلورانس هوشمند
+    if min_area and min_area > 0:
+        query = query.filter(Property.area >= int(min_area * 0.85))
+
+    # تطابق مالی
+    if deal_type == 'sale' and max_budget and max_budget > 0:
+        query = query.filter(Property.total_price <= int(max_budget * 1.20))
+    elif deal_type == 'rent':
+        if max_deposit and max_deposit > 0:
+            query = query.filter(Property.deposit <= int(max_deposit * 1.25))
+        if max_rent and max_rent > 0:
+            query = query.filter(Property.monthly_rent <= int(max_rent * 1.25))
+
+    matched_props = query.order_by(Property.created_at.desc()).limit(15).all()
+
+    # ۳. فعال‌سازی کراولر بلادرنگ در صورت کمبود فایل یا درخواست اجباری
+    crawler_status = crawler_manager.get_status()
+    crawler_running = crawler_status.get('is_running', False)
+
+    if (len(matched_props) < 3 or force_crawl) and not crawler_running:
+        categories = ['buy-apartment'] if deal_type == 'sale' else ['rent-apartment']
+        target_district = districts[0] if districts else None
+        crawler_manager.start_crawl_task(
+            sources=['divar', 'sheypoor'],
+            categories=categories,
+            limit_per_cat=4,
+            city='tehran',
+            district=target_district,
+            districts=districts if districts else None,
+            min_price=int(max_budget * 0.5) if max_budget else None,
+            max_price=int(max_budget) if max_budget else None,
+            min_deposit=int(max_deposit * 0.5) if max_deposit else None,
+            max_deposit=int(max_deposit) if max_deposit else None,
+            min_area=min_area if min_area > 0 else None
+        )
+        crawler_running = True
+
+    # ۴. نمره‌دهی و تبدیل به JSON
+    scored_items = []
+    for p in matched_props:
+        item = _property_to_json(p)
+        score = 86
+        if districts and any(d in (p.district or '') for d in districts):
+            score += 8
+        if features:
+            for f in features:
+                if f == 'پارکینگ' and p.has_parking: score += 2
+                if f == 'آسانسور' and p.has_elevator: score += 2
+                if f == 'انباری' and p.has_warehouse: score += 2
+                if f == 'بالکن' and p.has_balcony: score += 1
+        item['match_score'] = min(99, score)
+        scored_items.append(item)
+
+    scored_items.sort(key=lambda x: x['match_score'], reverse=True)
+
+    # ۵. ساخت پیام صوتی/متنی تشریحی هوش مصنوعی به فارسی روان
+    districts_str = '، '.join(districts) if districts else 'مناطق هدف'
+    deal_title = 'خرید آپارتمان' if deal_type == 'sale' else 'رهن و اجاره'
+    count_found = len(scored_items)
+
+    budget_formatted = ""
+    if deal_type == 'sale' and max_budget:
+        billions = max_budget / 1_000_000_000
+        budget_formatted = f"با بودجه حداکثر {billions:.1f} میلیارد تومان" if not billions.is_integer() else f"با بودجه حداکثر {int(billions)} میلیارد تومان"
+    elif deal_type == 'rent' and (max_deposit or max_rent):
+        dep_m = (max_deposit or 0) / 1_000_000
+        rent_m = (max_rent or 0) / 1_000_000
+        budget_formatted = f"با ودیعه {int(dep_m)} میلیون و اجاره {int(rent_m)} میلیون"
+
+    if count_found > 0:
+        ai_msg = f"درخواست شما برای {deal_title} در {districts_str} {budget_formatted} پردازش شد. {count_found} فایل منطبق با تطابق طلایی آماده بررسی است."
+        if crawler_running:
+            ai_msg += " همزمان کراولر زنده در پس‌زمینه در حال رصد جدیدترین آگهی‌های دیوار و شیپور است."
+    else:
+        ai_msg = f"درخواست شما برای {deal_title} در {districts_str} {budget_formatted} ثبت گردید. در حال حاضر فایل مستقیمی در آرشیو منطبق نشد، لذا کراولر بلادرنگ برای دریافت جدیدترین آگهی‌های دیوار و شیپور فعال گردید."
+
+    return jsonify({
+        'success': True,
+        'criteria': {
+            'deal_type': deal_type,
+            'deal_type_fa': 'خرید و فروش' if deal_type == 'sale' else 'رهن و اجاره',
+            'districts': districts,
+            'min_area': min_area,
+            'max_area': max_area,
+            'max_budget': max_budget,
+            'max_deposit': max_deposit,
+            'max_rent': max_rent,
+            'features': features,
+            'budget_formatted': budget_formatted
+        },
+        'ai_message': ai_msg,
+        'count': count_found,
+        'items': scored_items,
+        'crawler_running': crawler_running
+    })
+
+@properties_bp.route('/api/voice-turn', methods=['POST'])
+def api_voice_turn():
+    """
+    پایپلاین جامع پردازش مکالمه دوطرفه صوتی سقف (Voice AI Engine)
+    سناریوی خریدار/مستأجر و سناریوی مالک/ثبت فایل
+    """
+    from services.voice_ai_engine import voice_ai_pipeline
+    
+    data = request.get_json(silent=True) if request.is_json else request.args.to_dict()
+    if not data:
+        data = request.form.to_dict()
+
+    session_id = data.get('session_id')
+    user_speech = (data.get('text') or data.get('query') or '').strip()
+
+    result = voice_ai_pipeline.process_turn(session_id, user_speech)
+    return jsonify(result)
+
+

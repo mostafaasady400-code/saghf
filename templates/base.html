@@ -7,11 +7,16 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}سامانه هوشمند فایلینگ و املاک سقف{% endblock %}</title>
     
-    <!-- Design System: Glassmorphism + Neon Dark -->
+    <!-- Design System: Glassmorphism + Neon Dark + Luxury AI Assistant -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/glassmorphism.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/neon-dark.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ai_assistant.css') }}">
     
+    <!-- Three.js 3D WebGL Engine & AI Orb -->
+    <script src="{{ url_for('static', filename='js/three.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/saghf_ai_orb.js') }}"></script>
+
     <!-- Chart.js for Dark Neon Charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>

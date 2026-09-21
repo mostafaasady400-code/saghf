@@ -1,0 +1,726 @@
+<!-- ==========================================================================
+     SAGHF IN-LINE LUXURY AI VOICE & PROPERTY ASSISTANT WIDGET
+     Strictly In-Line / Static component positioned directly under 3D Mansion Tour
+     Two-way Voice AI Engine: Scenario 1 (Lead Discovery) & Scenario 2 (Listing Intake)
+     ========================================================================== -->
+<section id="saghf-ai-assistant-widget" aria-label="دستیار هوش مصنوعی و فایلینگ صوتی سقف">
+    <div class="saghf-ai-luxury-card" id="saghfAiCard">
+        
+        <!-- ==================== TEASER HEADER (DEFAULT IN-LINE VIEW) ==================== -->
+        <div class="ai-widget-teaser" id="aiWidgetTeaser" title="کلیک برای فعال‌سازی دستیار صوتی دوطرفه و فایلینگ هوشمند سقف">
+            <div class="ai-teaser-right">
+                <!-- Mini Ambient Glow Orb Teaser Preview -->
+                <div class="ai-teaser-orb-preview">
+                    <div class="ai-teaser-orb-glow"></div>
+                    <div style="width: 58px; height: 58px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #050508 0%, #000000 85%); border: 1.5px solid rgba(0, 210, 255, 0.4); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(0, 210, 255, 0.35), inset 0 0 12px rgba(155, 81, 224, 0.3); z-index: 2;">
+                        <span style="font-size: 1.35rem; filter: drop-shadow(0 0 8px #00d2ff); animation: pulse 2s infinite;">🎙️</span>
+                    </div>
+                </div>
+
+                <div class="ai-teaser-info">
+                    <div class="ai-teaser-badge">
+                        <span>⚡</span> پایپلاین هوش مصنوعی و گفتار سقف (Voice AI)
+                    </div>
+                    <h3 class="ai-teaser-title">
+                        دستیار هوشمند صوتی <span class="highlight-gold">مشاور ارشد فایلینگ و ثبت املاک</span>
+                    </h3>
+                    <p class="ai-teaser-desc">
+                        مکالمه صوتی دوطرفه برای جستجوی دقیق خریدار یا واگذاری و ثبت خودکار فایل مالکین همراه با اتوماسیون چندکاناله پیام‌رسان‌ها.
+                    </p>
+                </div>
+            </div>
+
+            <div class="ai-teaser-left-action">
+                <button type="button" class="ai-teaser-cta-btn" id="aiTeaserToggleBtn">
+                    <span>✨ گفتگوی زنده با مشاور AI</span>
+                    <span class="ai-expand-arrow">⌄</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== EXPANDED STUDIO BODY (IN-PLACE EXPANSION) ==================== -->
+        <div class="ai-widget-expanded-body" id="aiExpandedBody">
+            <div class="ai-studio-grid">
+                
+                <!-- RIGHT COLUMN: 3D ORB & VOICE / NLP INTERACTION STUDIO -->
+                <div class="ai-studio-core-panel">
+                    
+                    <!-- Mode Indicator Pill -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 0.75rem;">
+                        <div id="aiModeBadge" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.7rem; border-radius: 9999px; background: rgba(212, 175, 55, 0.12); border: 1px solid rgba(212, 175, 55, 0.35); color: var(--ai-gold-light); font-size: 0.76rem; font-weight: 700;">
+                            <span>🔍</span> <span id="aiModeText">مود: جستجو و تطبیق خریدار</span>
+                        </div>
+                        <button type="button" id="aiTtsToggleBtn" class="glass-btn" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; border-radius: 9999px; color: #cbd5e1;" title="خاموش/روشن کردن صدای گفتار هوش مصنوعی">
+                            <span id="aiTtsIcon">🔊</span> صدا فعال
+                        </button>
+                    </div>
+
+                    <!-- 3D Three.js WebGL Orb Stage -->
+                    <div class="ai-orb-stage" id="aiOrbStage" title="روی گوی کلیک کنید تا شروع به صحبت کند یا گوش دهد">
+                        <canvas id="ai-orb-canvas" width="280" height="280"></canvas>
+                        <div class="ai-orb-pedestal-glow"></div>
+                    </div>
+
+                    <!-- Orb Status Pill -->
+                    <div class="ai-orb-status-pill status-standby" id="aiOrbStatusPill">
+                        <span class="ai-status-pulse-dot"></span>
+                        <span id="aiOrbStatusText">حالت آماده‌باش هوشمند</span>
+                    </div>
+
+                    <!-- Dynamic Live Waveform Visualizer -->
+                    <div class="ai-waveform-visualizer" id="aiWaveformContainer" aria-label="فرکانس صوتی زنده">
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                        <span class="ai-wave-bar"></span>
+                    </div>
+
+                    <!-- Voice & Text Input Bar -->
+                    <div class="ai-voice-controls-row">
+                        <button type="button" class="ai-mic-btn" id="aiMicRecordBtn" title="روشن/خاموش کردن میکروفون برای صحبت">
+                            <span id="aiMicIcon">🎙️</span>
+                        </button>
+                        
+                        <div class="ai-input-wrapper">
+                            <input type="text" 
+                                   id="aiVoiceTextInput" 
+                                   class="ai-text-input" 
+                                   placeholder="صحبت کنید یا بنویسید (مثال: آپارتمان ۱۸۰ متری سعادت آباد یا ملک برای فروش دارم)..."
+                                   autocomplete="off">
+                            <button type="button" class="ai-submit-btn" id="aiQuerySubmitBtn" title="ارسال و پردازش درخواست">
+                                <span>⏎</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scenario Presets Bar (Lead Discovery vs Listing Intake) -->
+                    <div style="width: 100%; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+                        <div style="display: flex; gap: 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.35rem;">
+                            <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">سناریوهای سریع:</span>
+                        </div>
+                        <div class="ai-quick-chips-bar" aria-label="نمونه سناریوهای آماده">
+                            <!-- Scenario 1: Buyer/Renter -->
+                            <button type="button" class="ai-chip-btn" data-query="خرید آپارتمان ۱۸۰ متری سعادت آباد بودجه ۲۵ میلیارد با پارکینگ و آسانسور">
+                                🏢 خرید ۱۸۰متر سعادت‌آباد
+                            </button>
+                            <button type="button" class="ai-chip-btn" data-query="رهن و اجاره نیاوران ۳ خوابه با استخر و پارکینگ">
+                                🔑 رهن نیاوران ۳خواب
+                            </button>
+                            <!-- Scenario 2: Listing Intake -->
+                            <button type="button" class="ai-chip-btn" style="border-color: rgba(0, 210, 255, 0.35); color: #38bdf8;" data-query="می‌خوام آپارتمانم رو در سعادت آباد برای فروش ثبت کنم. متراژ ۱۴۰ متر، قیمت ۲۲ میلیارد، شماره من 09129998877">
+                                📝 ثبت ملک فروشنده: ۱۴۰متر سعادت‌آباد
+                            </button>
+                            <button type="button" class="ai-chip-btn" style="border-color: rgba(16, 185, 129, 0.35); color: #34d399;" data-query="مالک هستم؛ یک واحد ۱۲۰ متری در شهرک غرب رهن کامل با پارکینگ و انباری دارم. شماره تماسم 09123334455">
+                                📝 ثبت اجاره مالک: ۱۲۰متر شهرک غرب
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Extracted Requirements Tags Showcase (NER) -->
+                    <div class="ai-extracted-criteria-box" id="aiCriteriaBox" style="display: none;">
+                        <div class="ai-criteria-title">
+                            <span>📋 استخراج داده‌ها (NER & Pipeline):</span>
+                            <span id="aiCriteriaMatchCount" style="color: var(--ai-gold-light); font-weight: 800;"></span>
+                        </div>
+                        <div class="ai-tags-row" id="aiCriteriaTags"></div>
+                    </div>
+
+                    <!-- AI Speech / Dialogue Feedback Bubble -->
+                    <div class="ai-dialogue-bubble" id="aiDialogueBubble">
+                        «سلام، خوش آمدید به سقف. من مشاور ارشد فایلینگ هستم. برای خرید یا اجاره چه متراژ و در چه منطقه‌ای مد نظرتونه؟ (اگر مالک هستید، مشخصات ملکتان را جهت ثبت و واگذاری بفرمایید)»
+                    </div>
+
+                </div>
+
+                <!-- LEFT COLUMN: SYNCHRONIZED MATCHING PROPERTY SLIDER & RESULTS -->
+                <div class="ai-studio-results-panel">
+                    
+                    <div class="ai-results-header">
+                        <div class="ai-results-title-group">
+                            <h3 id="aiResultsMainTitle">
+                                <span>🏛️</span> گزینه‌های روی میز و پیشنهادات کارشناسی
+                            </h3>
+                            <p class="ai-results-subtitle" id="aiResultsSubtitle">
+                                مکالمه را هدایت کنید؛ گزینه‌ها و اقدامات سیستمی به صورت لحظه‌ای در این پنل همگام‌سازی می‌شوند.
+                            </p>
+                        </div>
+
+                        <div class="ai-crawler-pulse-badge" id="aiCrawlerStatusBadge">
+                            <span class="neon-pulse-dot emerald"></span>
+                            <span id="aiCrawlerStatusText">موتور تطبیق آماده</span>
+                        </div>
+                    </div>
+
+                    <!-- Matching Cards Container -->
+                    <div class="ai-results-cards-container" id="aiResultsCardsContainer">
+                        
+                        <!-- Initial Placeholder State -->
+                        <div class="ai-results-empty-state" id="aiEmptyState">
+                            <div class="ai-empty-icon">💎</div>
+                            <div style="font-weight: 700; color: #cbd5e1; font-size: 1rem;">منتظر هدایت مکالمه توسط شما</div>
+                            <p style="font-size: 0.85rem; color: #64748b; margin: 0; max-width: 340px;">
+                                نیازمندی خریدار را بیان فرمایید تا فایل‌های منطبق استخراج شوند، یا مشخصات ملک خود را برای ثبت خودکار و اتوماسیون چندکاناله اعلام نمایید.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ==========================================================================
+     SAGHF AI WIDGET CLIENT CONTROLLER (VOICE AI ENGINE INTEGRATION)
+     ========================================================================== -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Initialize 3D Orb
+    let orb = null;
+    try {
+        if (window.SaghfAiOrb) {
+            orb = new SaghfAiOrb('ai-orb-canvas');
+            window.saghfOrb = orb;
+        }
+    } catch (e) {
+        console.warn('[Saghf AI] Three.js orb init error:', e);
+    }
+
+    // Elements
+    const widgetCard = document.getElementById('saghfAiCard');
+    const teaser = document.getElementById('aiWidgetTeaser');
+    const toggleBtn = document.getElementById('aiTeaserToggleBtn');
+    const micBtn = document.getElementById('aiMicRecordBtn');
+    const micIcon = document.getElementById('aiMicIcon');
+    const textInput = document.getElementById('aiVoiceTextInput');
+    const submitBtn = document.getElementById('aiQuerySubmitBtn');
+    const quickChips = document.querySelectorAll('.ai-chip-btn');
+    const dialogueBubble = document.getElementById('aiDialogueBubble');
+    const criteriaBox = document.getElementById('aiCriteriaBox');
+    const criteriaTags = document.getElementById('aiCriteriaTags');
+    const matchCountEl = document.getElementById('aiCriteriaMatchCount');
+    const resultsContainer = document.getElementById('aiResultsCardsContainer');
+    const resultsSubtitle = document.getElementById('aiResultsSubtitle');
+    const resultsMainTitle = document.getElementById('aiResultsMainTitle');
+    const crawlerBadge = document.getElementById('aiCrawlerStatusBadge');
+    const crawlerText = document.getElementById('aiCrawlerStatusText');
+    const modeBadge = document.getElementById('aiModeBadge');
+    const modeText = document.getElementById('aiModeText');
+    const ttsToggleBtn = document.getElementById('aiTtsToggleBtn');
+    const ttsIcon = document.getElementById('aiTtsIcon');
+
+    let isExpanded = false;
+    let isRecording = false;
+    let ttsEnabled = true;
+    let speechRecognition = null;
+    let audioContext = null;
+    let currentSessionId = 'saghf_sess_' + Math.random().toString(36).substr(2, 9);
+
+    // 2. TTS (Text to Speech Synthesis) Engine
+    function speakPersian(text) {
+        if (!ttsEnabled || !window.speechSynthesis || !text) return;
+        
+        try {
+            window.speechSynthesis.cancel(); // Stop any pending speech
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'fa-IR';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.05;
+
+            // Attempt to choose Persian voice if available on system
+            const voices = window.speechSynthesis.getVoices();
+            const faVoice = voices.find(v => v.lang.includes('fa') || v.lang.includes('IR') || v.name.includes('Persian'));
+            if (faVoice) utterance.voice = faVoice;
+
+            utterance.onstart = () => {
+                if (orb) orb.setState('speaking');
+            };
+
+            utterance.onend = () => {
+                if (orb && orb.state === 'speaking') orb.setState('standby');
+            };
+
+            utterance.onerror = () => {
+                if (orb && orb.state === 'speaking') orb.setState('standby');
+            };
+
+            window.speechSynthesis.speak(utterance);
+        } catch (e) {
+            console.warn('[TTS] Synthesis error:', e);
+        }
+    }
+
+    if (ttsToggleBtn) {
+        ttsToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ttsEnabled = !ttsEnabled;
+            if (ttsEnabled) {
+                ttsIcon.textContent = '🔊';
+                ttsToggleBtn.style.color = '#cbd5e1';
+            } else {
+                ttsIcon.textContent = '🔇';
+                ttsToggleBtn.style.color = '#64748b';
+                if (window.speechSynthesis) window.speechSynthesis.cancel();
+            }
+        });
+    }
+
+    // 3. Expand / Collapse Widget Toggle
+    function toggleWidget(expand) {
+        isExpanded = expand !== undefined ? expand : !isExpanded;
+        if (isExpanded) {
+            widgetCard.classList.add('expanded');
+            if (orb) orb.setState('standby');
+            // Play initial Senior Consultant welcome greeting
+            const initialGreeting = "سلام، خوش آمدید به سقف. برای خرید یا اجاره چه متراژ و در چه منطقه‌ای مد نظرتونه؟";
+            dialogueBubble.textContent = `«${initialGreeting}»`;
+            speakPersian(initialGreeting);
+        } else {
+            widgetCard.classList.remove('expanded');
+            if (isRecording) stopRecording();
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+        }
+    }
+
+    if (teaser) {
+        teaser.addEventListener('click', (e) => {
+            if (e.target.closest('#aiTeaserToggleBtn')) return;
+            toggleWidget();
+        });
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleWidget();
+        });
+    }
+
+    // 4. Web Speech Recognition (STT fa-IR)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        speechRecognition = new SpeechRecognition();
+        speechRecognition.lang = 'fa-IR';
+        speechRecognition.interimResults = true;
+        speechRecognition.continuous = false;
+
+        speechRecognition.onstart = () => {
+            isRecording = true;
+            micBtn.classList.add('recording');
+            micIcon.textContent = '⏹️';
+            if (orb) orb.setState('listening');
+            dialogueBubble.textContent = 'در حال شنیدن صدای شما... نیاز یا مشخصات ملکتان را بیان فرمایید.';
+        };
+
+        speechRecognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            if (textInput) textInput.value = transcript;
+            dialogueBubble.textContent = `«${transcript}»`;
+        };
+
+        speechRecognition.onerror = (event) => {
+            console.warn('[SpeechRecognition] Error:', event.error);
+            stopRecording();
+            if (event.error === 'not-allowed') {
+                dialogueBubble.textContent = 'دسترسی به میکروفون مجاز نشد. می‌توانید با کادر متنی یا سناریوهای آماده ادامه دهید.';
+            }
+        };
+
+        speechRecognition.onend = () => {
+            stopRecording();
+            const text = textInput ? textInput.value.trim() : '';
+            if (text) {
+                executeVoiceTurn(text);
+            } else {
+                if (orb) orb.setState('standby');
+            }
+        };
+    }
+
+    function startRecording() {
+        if (!isExpanded) toggleWidget(true);
+
+        // Try to connect Web Audio API analyser to mic stream
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !audioContext) {
+            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const source = audioContext.createMediaStreamSource(stream);
+                    const analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 64;
+                    source.connect(analyser);
+                    if (orb) orb.setAudioAnalyser(analyser);
+                } catch (err) {
+                    console.warn('[WebAudio] Analyser init error:', err);
+                }
+            }).catch(() => {});
+        }
+
+        if (speechRecognition) {
+            try {
+                speechRecognition.start();
+            } catch (err) {
+                console.warn('[SpeechRecognition] start error:', err);
+            }
+        } else {
+            isRecording = true;
+            micBtn.classList.add('recording');
+            micIcon.textContent = '⏹️';
+            if (orb) orb.setState('listening');
+            dialogueBubble.textContent = 'مرورگر شما از ورودی صوتی پشتیبانی نمی‌کند؛ لطفاً نیاز خود را تایپ فرمایید.';
+            if (textInput) textInput.focus();
+        }
+    }
+
+    function stopRecording() {
+        isRecording = false;
+        if (micBtn) micBtn.classList.remove('recording');
+        if (micIcon) micIcon.textContent = '🎙️';
+        if (speechRecognition) {
+            try { speechRecognition.stop(); } catch (e) {}
+        }
+    }
+
+    if (micBtn) {
+        micBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isRecording) {
+                stopRecording();
+                const text = textInput ? textInput.value.trim() : '';
+                if (text) executeVoiceTurn(text);
+            } else {
+                startRecording();
+            }
+        });
+    }
+
+    // Orb click handler
+    window.saghfAiWidget = {
+        handleOrbClick: () => {
+            if (!isExpanded) {
+                toggleWidget(true);
+            } else {
+                if (!isRecording) startRecording();
+                else stopRecording();
+            }
+        }
+    };
+
+    // 5. Submit Query via Text or Button
+    if (submitBtn && textInput) {
+        submitBtn.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            if (text) executeVoiceTurn(text);
+        });
+
+        textInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const text = textInput.value.trim();
+                if (text) executeVoiceTurn(text);
+            }
+        });
+    }
+
+    // Quick prompt chips
+    quickChips.forEach(chip => {
+        chip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const query = chip.getAttribute('data-query');
+            if (query) {
+                if (!isExpanded) toggleWidget(true);
+                if (textInput) textInput.value = query;
+                executeVoiceTurn(query);
+            }
+        });
+    });
+
+    // 6. Execute Voice AI Pipeline (Dialogue Engine Turn)
+    async function executeVoiceTurn(queryText) {
+        if (!queryText) return;
+
+        // UI state: Processing
+        if (orb) orb.setState('processing');
+        if (crawlerBadge) {
+            crawlerBadge.className = 'ai-crawler-pulse-badge active-crawling';
+            crawlerText.textContent = 'در حال تحلیل مکالمه و اجرای پایپلاین...';
+        }
+        dialogueBubble.textContent = `در حال پردازش: «${queryText}»...`;
+
+        // Render skeleton in results
+        resultsContainer.innerHTML = `
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; padding: 3.5rem 1rem; flex-direction: column; gap: 1rem; color: #cbd5e1;">
+                <div class="ai-teaser-orb-glow" style="position: relative; width: 60px; height: 60px; border-radius: 50%;"></div>
+                <div style="font-weight: 700;">هسته پردازشی در حال تحلیل هوشمند، کوئری و اجرای اتوماسیون...</div>
+            </div>
+        `;
+
+        try {
+            const response = await fetch('/properties/api/voice-turn', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: currentSessionId,
+                    text: queryText
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Update Mode Badge
+                if (data.intent === 'listing_intake') {
+                    modeBadge.style.background = 'rgba(0, 210, 255, 0.15)';
+                    modeBadge.style.borderColor = 'rgba(0, 210, 255, 0.45)';
+                    modeBadge.style.color = '#38bdf8';
+                    modeText.textContent = 'مود: ثبت و واگذاری فایل مالک (Listing Intake)';
+                    resultsMainTitle.innerHTML = '<span>📝</span> فایل ثبت‌شده و وضعیت اتوماسیون پیام‌رسان‌ها';
+                } else {
+                    modeBadge.style.background = 'rgba(212, 175, 55, 0.12)';
+                    modeBadge.style.borderColor = 'rgba(212, 175, 55, 0.35)';
+                    modeBadge.style.color = 'var(--ai-gold-light)';
+                    modeText.textContent = 'مود: جستجو و تطبیق خریدار (Lead Discovery)';
+                    resultsMainTitle.innerHTML = '<span>🏛️</span> گزینه‌های روی میز و پیشنهادات کارشناسی';
+                }
+
+                // AI Response Text & TTS Voice Output
+                dialogueBubble.textContent = data.ai_response_text;
+                speakPersian(data.ai_response_text);
+
+                // Show extracted criteria tags
+                renderCriteriaTags(data.extracted_entities, data.matched_properties.length, data.intent);
+
+                // Update crawler badge
+                if (data.crawler_running) {
+                    crawlerBadge.className = 'ai-crawler-pulse-badge active-crawling';
+                    crawlerText.textContent = '🕷️ کراولر زنده در حال پایش دیوار و شیپور';
+                } else if (data.intake_completed) {
+                    crawlerBadge.className = 'ai-crawler-pulse-badge';
+                    crawlerBadge.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+                    crawlerBadge.style.color = '#34d399';
+                    crawlerText.textContent = '✓ ثبت فایل و دیسپچ پیامک/تلگرام انجام شد';
+                } else {
+                    crawlerBadge.className = 'ai-crawler-pulse-badge';
+                    crawlerText.textContent = '✓ پردازش مرحله انجام شد';
+                }
+
+                if (resultsSubtitle) {
+                    if (data.intent === 'listing_intake') {
+                        resultsSubtitle.textContent = data.intake_completed 
+                            ? 'فایل شما با موفقیت در دیتابیس ثبت و تاییدیه ارسال گردید.' 
+                            : 'اطلاعات در حال تکمیل است؛ لطفاً موارد باقی‌مانده را بفرمایید.';
+                    } else {
+                        resultsSubtitle.textContent = `تعداد ${data.matched_properties.length} فایل منطبق بر اساس نیازهای شما روی میز کارشناسی قرار گرفت.`;
+                    }
+                }
+
+                // Render property cards or intake confirmation card
+                if (data.intake_completed) {
+                    renderIntakeSuccessCard(data);
+                } else {
+                    renderPropertyCards(data.matched_properties, data.intent);
+                }
+
+            } else {
+                if (orb) orb.setState('standby');
+                dialogueBubble.textContent = data.ai_response_text || 'خطا در پردازش.';
+            }
+
+        } catch (error) {
+            console.error('[Voice AI] Turn error:', error);
+            if (orb) orb.setState('standby');
+            dialogueBubble.textContent = 'ارتباط با هسته صوتی برقرار نشد. لطفاً مجدداً تلاش فرمایید.';
+        }
+    }
+
+    // 7. Render Extracted NLP Tags
+    function renderCriteriaTags(entities, count, intent) {
+        if (!entities || !criteriaBox || !criteriaTags) return;
+
+        criteriaBox.style.display = 'flex';
+        if (matchCountEl) {
+            matchCountEl.textContent = intent === 'listing_intake' ? 'فایل مالک' : `${count} فایل منطبق`;
+        }
+
+        let tagsHtml = '';
+
+        if (entities.deal_type) {
+            const dtFa = entities.deal_type === 'sale' ? 'فروش' : 'رهن و اجاره';
+            tagsHtml += `<span class="ai-entity-tag">🏷️ ${dtFa}</span>`;
+        }
+
+        if (entities.districts && entities.districts.length > 0) {
+            entities.districts.forEach(d => {
+                tagsHtml += `<span class="ai-entity-tag tag-district">📍 ${d}</span>`;
+            });
+        }
+
+        if (entities.min_area > 0) {
+            tagsHtml += `<span class="ai-entity-tag">📐 ${entities.min_area} متر</span>`;
+        }
+
+        if (entities.max_budget > 0) {
+            const b = entities.max_budget / 1000000000;
+            tagsHtml += `<span class="ai-entity-tag">💰 بودجه: ${b} میلیارد</span>`;
+        }
+
+        if (entities.owner_phone) {
+            tagsHtml += `<span class="ai-entity-tag" style="background: rgba(0,210,255,0.15); border-color: rgba(0,210,255,0.4); color: #38bdf8;">📞 مالک: ${entities.owner_phone}</span>`;
+        }
+
+        if (entities.features && entities.features.length > 0) {
+            entities.features.forEach(f => {
+                tagsHtml += `<span class="ai-entity-tag tag-feature">✨ ${f}</span>`;
+            });
+        }
+
+        criteriaTags.innerHTML = tagsHtml;
+    }
+
+    // 8. Render Matching Property Cards
+    function renderPropertyCards(items, intent) {
+        if (!items || items.length === 0) {
+            const emptyMsg = intent === 'listing_intake' 
+                ? 'در انتظار اعلام مشخصات تکمیلی ملک از جانب شما...' 
+                : 'فایل مستقیمی در آرشیو فعلی منطبق نشد؛ پایشگر زنده دیوار و شیپور فعال است.';
+            resultsContainer.innerHTML = `
+                <div class="ai-results-empty-state" style="grid-column: 1 / -1;">
+                    <div class="ai-empty-icon">🔍</div>
+                    <div style="font-weight: 700; color: #cbd5e1;">${emptyMsg}</div>
+                    <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">
+                        می‌توانید اطلاعات بیشتری از قبیل بازه قیمت یا امکانات را برای فیلتر دقیق‌تر بیان نمایید.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        items.forEach(item => {
+            const imgSrc = item.images && item.images.length > 0 ? item.images[0] : '/static/images/luxury/living_room.jpg';
+            const priceHtml = item.deal_type === 'sale'
+                ? `<span class="ai-price-primary">${formatToman(item.total_price)}</span>`
+                : `<span class="ai-price-primary">ودیعه: ${formatToman(item.deposit)}</span>
+                   <span class="ai-price-sub">اجاره: ${formatToman(item.monthly_rent)}</span>`;
+
+            html += `
+                <div class="ai-property-match-card">
+                    <div class="ai-card-media">
+                        <img src="${imgSrc}" alt="${item.title || 'ملک'}" loading="lazy" onerror="this.src='/static/images/luxury/living_room.jpg'">
+                        <div class="ai-match-score-badge">
+                            <span>⚡</span> <span>${item.match_score || 90}٪ تطابق</span>
+                        </div>
+                        <div class="ai-source-badge">
+                            ${item.source === 'divar' ? 'دیوار' : (item.source === 'sheypoor' ? 'شیپور' : 'دفتر رسمی')}
+                        </div>
+                    </div>
+                    <div class="ai-card-body">
+                        <h4 class="ai-card-title">${item.title || 'ملک کارشناسی‌شده'}</h4>
+                        
+                        <div class="ai-card-specs-row">
+                            <span>📍 ${item.district || 'تهران'}</span>
+                            <span>📐 ${item.area || '—'} متر</span>
+                            <span>🛏️ ${item.rooms ? item.rooms + ' خواب' : '—'}</span>
+                        </div>
+
+                        <div class="ai-card-pricing">
+                            ${priceHtml}
+                        </div>
+
+                        <div class="ai-card-actions">
+                            <a href="/properties/${item.id}" class="ai-card-btn ai-card-btn-primary">
+                                مشاهده جزئیات فایل
+                            </a>
+                            <button type="button" 
+                                    class="ai-card-btn ai-card-btn-ghost" 
+                                    onclick="openContactModal('${item.id}', '${item.phone_number || ''}')"
+                                    title="تماس با مالک">
+                                📞 تماس
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        resultsContainer.innerHTML = html;
+    }
+
+    // 9. Render Intake Success Card (Scenario 2)
+    function renderIntakeSuccessCard(data) {
+        const p = data.matched_properties && data.matched_properties.length > 0 ? data.matched_properties[0] : null;
+        resultsContainer.innerHTML = `
+            <div style="grid-column: 1 / -1; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(14, 14, 19, 0.95) 100%); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 18px; padding: 1.75rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                            ✓
+                        </div>
+                        <div>
+                            <h4 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin: 0;">ثبت قطعی فایل ملک در پایگاه داده سقف</h4>
+                            <p style="font-size: 0.82rem; color: #34d399; margin: 0.2rem 0 0 0;">اتوماسیون چندکاناله فعال شد و تاییدیه به پیام‌رسان مالک دیسپچ گردید.</p>
+                        </div>
+                    </div>
+                    <span class="badge-neon badge-neon-emerald">فایل معتبر کارشناسی</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; background: rgba(8, 8, 12, 0.6); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.06);">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;">کد شناسه فایل</div>
+                        <div style="font-size: 0.95rem; font-weight: 800; color: #fce79f;">${p ? p.title : 'فایل ثبت‌شده'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;">شماره همراه مالک</div>
+                        <div style="font-size: 0.95rem; font-weight: 800; color: #38bdf8;">${data.extracted_entities.owner_phone || '—'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;">متراژ و منطقه</div>
+                        <div style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">${data.extracted_entities.min_area || '—'} متر | ${data.extracted_entities.districts.join('، ') || 'تهران'}</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <a href="/properties/${data.intake_property_id}" class="ai-card-btn ai-card-btn-primary" style="padding: 0.65rem 1.25rem; font-size: 0.85rem;">
+                        🏢 مشاهده پرونده رسمی فایل در سامانه
+                    </a>
+                    <a href="${data.upload_link || '#'}" class="ai-card-btn ai-card-btn-ghost" style="padding: 0.65rem 1.25rem; font-size: 0.85rem;" target="_blank">
+                        📸 لینک اختصاصی آپلود تصاویر و مدارک
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    function formatToman(val) {
+        if (!val || val === 0) return 'توافقی';
+        val = parseInt(val);
+        if (val >= 1000000000) {
+            const b = val / 1000000000;
+            return b % 1 === 0 ? `${b} میلیارد تومان` : `${b.toFixed(1)} میلیارد تومان`;
+        } else if (val >= 1000000) {
+            const m = val / 1000000;
+            return m % 1 === 0 ? `${m} میلیون تومان` : `${m.toFixed(1)} میلیون تومان`;
+        }
+        return `${val.toLocaleString()} تومان`;
+    }
+});
+</script>

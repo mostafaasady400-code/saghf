@@ -65,6 +65,12 @@ class Config:
     TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
     TELEGRAM_CHANNEL_ID = os.environ.get('TELEGRAM_CHANNEL_ID', '')
     TELEGRAM_WEBHOOK_URL = os.environ.get('TELEGRAM_WEBHOOK_URL', '')
+
+    # Bale Bot Configurations (Domestic Messenger)
+    BALE_BOT_TOKEN = os.environ.get('BALE_BOT_TOKEN', '')
+    BALE_CHANNEL_ID = os.environ.get('BALE_CHANNEL_ID', '')
+    BALE_WEBHOOK_URL = os.environ.get('BALE_WEBHOOK_URL', '')
+    ADMIN_BALE_ID = os.environ.get('ADMIN_BALE_ID', '').strip()
     
     # Crawler configurations
     DIVAR_OPEN_PLATFORM_POST_URL = os.environ.get(

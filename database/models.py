@@ -198,6 +198,11 @@ class Property(db.Model):
         except Exception:
             return None
 
+    @classmethod
+    def find_by_file_code(cls, code):
+        """نام مستعار برای get_by_code"""
+        return cls.get_by_code(code)
+
     @property
     def features(self):
         try:
