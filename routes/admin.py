@@ -88,3 +88,22 @@ def dashboard():
         divar_auth=divar_auth,
         recent_properties=recent_properties
     )
+
+@admin_bp.route('/health')
+@admin_required
+def system_health():
+    from services.system_health import SystemHealthService
+    report = SystemHealthService.get_full_report()
+    return render_template(
+        'admin/system_health.html',
+        admin_user=session.get('admin_user', Config.ADMIN_USERNAME),
+        report=report
+    )
+
+@admin_bp.route('/health/data')
+@admin_required
+def system_health_data():
+    from services.system_health import SystemHealthService
+    report = SystemHealthService.get_full_report()
+    return jsonify(report)
+

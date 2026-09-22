@@ -100,15 +100,15 @@ def start_dual_polling(flask_app=None):
     print("=" * 60, flush=True)
 
     # ۱. راه‌اندازی بله
-    if Config.BALE_BOT_TOKEN:
-        try:
-            start_bale_polling(flask_app)
-            print("✅ پروسه Polling بله فعال شد.")
-        except Exception as e:
-            logger.error(f"Failed to start Bale polling: {e}")
-            print(f"⚠️ خطای راه‌اندازی بله: {e}")
-    else:
-        print("ℹ️ BALE_BOT_TOKEN تنظیم نشده است؛ کلاینت بله در حالت شبیه‌سازی آماده دریافت رویداد است.")
+    try:
+        start_bale_polling(flask_app)
+        if Config.BALE_BOT_TOKEN:
+            print("✅ پروسه Polling بله با توکن رسمی فعال شد.")
+        else:
+            print("✅ پروسه بله در حالت آماده‌باش/شبیه‌سازی (BALE_BOT_TOKEN تنظیم نشده) فعال شد.")
+    except Exception as e:
+        logger.error(f"Failed to start Bale polling: {e}")
+        print(f"⚠️ خطای راه‌اندازی بله: {e}")
 
     # ۲. راه‌اندازی تلگرام در ترد اختصاصی
     if Config.TELEGRAM_BOT_TOKEN:
@@ -120,9 +120,9 @@ def start_dual_polling(flask_app=None):
 
         _tg_thread = threading.Thread(target=_run_tg, daemon=True)
         _tg_thread.start()
-        print("✅ پروسه Polling تلگرام فعال شد.")
+        print("✅ پروسه Polling تلگرام با موفقیت فعال شد.")
     else:
-        print("ℹ️ TELEGRAM_BOT_TOKEN تنظیم نشده است.")
+        print("ℹ️ TELEGRAM_BOT_TOKEN در فایل .env تنظیم نشده است (در صورت افزودن توکن، بات تلگرام متصل خواهد شد).")
 
 
 def stop_dual_polling():
@@ -141,3 +141,11 @@ if __name__ == '__main__':
         import pprint
         print("وضعیت اتصال ربات‌ها:")
         pprint.pprint(status)
+        start_dual_polling(app)
+        print("🟢 ربات‌ها در حال شنود رویدادها هستند. جهت توقف Ctrl+C را بزنید.", flush=True)
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            stop_dual_polling()
+            print("🛑 ربات‌ها متوقف شدند.")

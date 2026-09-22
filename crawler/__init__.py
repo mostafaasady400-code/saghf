@@ -6,6 +6,9 @@ from .crawler_manager import CrawlerManager, crawler_manager
 from .schemas import NormalizedPropertySchema, OwnerSchema
 from .dedup import dedup_engine
 from .fallback_solver import fallback_solver
+from .parsers import DivarStructuredParser, SheypoorStructuredParser, UnifiedDataNormalizer
+from .privacy import PrivacyManager
+from .contact_extractor import ContactExtractor
 
 __all__ = [
     'DivarCrawler',
@@ -17,5 +20,10 @@ __all__ = [
     'NormalizedPropertySchema',
     'OwnerSchema',
     'dedup_engine',
-    'fallback_solver'
+    'fallback_solver',
+    'DivarStructuredParser',
+    'SheypoorStructuredParser',
+    'UnifiedDataNormalizer',
+    'PrivacyManager',
+    'ContactExtractor'
 ]

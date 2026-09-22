@@ -23,12 +23,20 @@ def telegram_webhook():
     if not update_data:
         return jsonify({'error': 'Empty JSON payload'}), 400
 
+    if not Config.TELEGRAM_BOT_TOKEN:
+        return jsonify({
+            'status': 'unconfigured',
+            'configured': False,
+            'message': 'توکن ربات تلگرام در متغیرهای محیطی (.env) تنظیم نشده است.',
+            'processed': False
+        }), 200
+
     try:
         success = process_update(update_data)
         return jsonify({'status': 'ok', 'processed': success}), 200
     except Exception as e:
         logger.error(f"Error handling Telegram webhook: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': str(e)}), 200
 
 @telegram_bp.route('/status', methods=['GET'])
 def telegram_status():

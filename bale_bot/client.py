@@ -22,7 +22,7 @@ class BaleBotClient:
     BASE_URL = "https://tapi.bale.ai/bot"
 
     def __init__(self, token: Optional[str] = None):
-        self.token = (token or Config.BALE_BOT_TOKEN or "").strip()
+        self.token = (token if token is not None else (Config.BALE_BOT_TOKEN or "")).strip()
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'SaghfRealEstateBot/2.0 (BaleClient)',

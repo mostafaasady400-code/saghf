@@ -79,6 +79,38 @@ def create_app(config_class=Config):
     app.register_blueprint(telephony_bp)
     app.register_blueprint(n8n_bp)
 
+    @app.route('/api/health', methods=['GET'])
+    @csrf.exempt
+    def api_health():
+        from datetime import datetime
+        from flask import jsonify
+        from services.system_health import SystemHealthService
+        uptime = SystemHealthService.get_uptime_seconds()
+        db_stat = SystemHealthService.get_database_health()
+        bots_stat = SystemHealthService.get_bots_health()
+        crawler_stat = SystemHealthService.get_crawler_health()
+        status = 'healthy' if (db_stat['status'] == 'healthy' and bots_stat['status'] != 'critical' and crawler_stat['status'] == 'healthy') else 'degraded'
+        return jsonify({
+            'status': status,
+            'timestamp': datetime.now().isoformat(),
+            'uptime_seconds': uptime,
+            'services': {
+                'database': db_stat['status'],
+                'telegram_bot': 'online' if bots_stat['telegram']['healthy'] else 'offline',
+                'bale_bot': 'online' if bots_stat['bale']['healthy'] else 'offline',
+                'bot_runner_process': 'running' if bots_stat['process_runner']['active'] else 'stopped',
+                'crawler_tier1': 'ready' if crawler_stat['tier1_tls_impersonator']['available'] else 'unavailable'
+            }
+        })
+
+    @app.route('/api/health/detailed', methods=['GET'])
+    @csrf.exempt
+    def api_health_detailed():
+        from flask import jsonify
+        from services.system_health import SystemHealthService
+        report = SystemHealthService.get_full_report()
+        return jsonify(report)
+
     @app.route('/assets/<path:filename>')
     def serve_assets(filename):
         from flask import send_from_directory

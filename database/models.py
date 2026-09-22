@@ -261,8 +261,8 @@ class Property(db.Model):
 
         self.images_json = json.dumps(clean_urls, ensure_ascii=False)
 
-    def to_messenger_dict(self):
-        """ساختار استاندارد و آماده جهت ارسال به پایپ‌لاین پیام‌رسان‌ها (تلگرام، بله، ایتا و پیامک)"""
+    def to_messenger_dict(self, masked: bool = False, mask_style: str = "asterisk"):
+        """ساختار استاندارد و آماده جهت ارسال به پایپ‌لاین پیام‌رسان‌ها (تلگرام، بله، ایتا و پیامک) با پشتیبانی از محرمانگی"""
         deal_label = 'فروش' if self.deal_type == 'sale' else 'رهن و اجاره'
         if self.deal_type == 'sale':
             price_txt = f"{self.total_price:,} تومان" if self.total_price else "توافقی"
@@ -270,7 +270,12 @@ class Property(db.Model):
             price_txt = f"ودیعه: {self.deposit:,} تومان | اجاره: {self.monthly_rent:,} تومان"
 
         owner_name = self.owner.full_name if self.owner else 'مالک محترم'
-        owner_phone = self.owner.phone_number if self.owner else 'ثبت در سیستم'
+        raw_phone = self.owner.phone_number if self.owner else 'ثبت در سیستم'
+        try:
+            from crawler.privacy import PrivacyManager
+            owner_phone = PrivacyManager.mask_phone(raw_phone, style=mask_style) if (masked and raw_phone != 'ثبت در سیستم') else raw_phone
+        except Exception:
+            owner_phone = raw_phone
 
         features_str = ' | '.join(self.features) if self.features else 'سند رسمی، نورگیر عالی'
         messenger_text = (

@@ -1,12 +1,16 @@
+import os
 import threading
 import time
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 class ProxyManager:
     """
     مدیریت و چرخش استخر پراکسی‌های مسکونی و موبایلی با سنجش سلامت و حذف خودکار پراکسی‌های معیوب
     """
     def __init__(self, proxies: Optional[List[str]] = None):
+        if proxies is None:
+            env_proxies = os.getenv('CRAWLER_PROXIES') or os.getenv('PROXY_POOL') or ''
+            proxies = [p.strip() for p in env_proxies.split(',') if p.strip()]
         self.proxies = proxies or []
         self.current_idx = 0
         self.lock = threading.Lock()

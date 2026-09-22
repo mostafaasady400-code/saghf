@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime, timedelta
 from app import create_app
 from database.db import db
-from database.models import Property, Owner, Client
+from database.models import Property, Owner, Client, Interaction
 from services.messenger_service import OmniMessengerService
 
 class TestLifecycleAndMessenger(unittest.TestCase):
@@ -128,6 +128,7 @@ class TestLifecycleAndMessenger(unittest.TestCase):
         self.assertEqual(res2['status'], 'archived')
 
         # Clean up
+        Interaction.query.filter_by(property_id=prop.id).delete()
         db.session.delete(prop)
         db.session.delete(owner)
         db.session.commit()

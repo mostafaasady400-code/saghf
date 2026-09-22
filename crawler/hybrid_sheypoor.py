@@ -4,12 +4,13 @@ from urllib.parse import unquote, quote
 from typing import List, Dict, Any, Optional, Tuple, Callable
 from bs4 import BeautifulSoup
 from .network.impersonator import TLSImpersonatorClient
-from .network.rate_limiter import TokenBucketRateLimiter
+from .network.rate_limiter import TokenBucketRateLimiter, domain_rate_limiter
 from .network.proxy_manager import ProxyManager
 from .dedup import dedup_engine
 from .fallback_solver import fallback_solver
 from .schemas import NormalizedPropertySchema, OwnerSchema, parse_price, persian_to_english_numbers
 from .owner_filter import OwnerFilter, extract_phone_number
+from .parsers.sheypoor_parser import SheypoorStructuredParser
 
 def is_older_than_5_days(text: str) -> bool:
     """بررسی اینکه آگهی متعلق به بیش از ۵ روز گذشته است یا خیر"""
@@ -41,7 +42,7 @@ class HybridSheypoorCrawler:
     def __init__(self, city: str = 'tehran', proxy_manager: Optional[ProxyManager] = None):
         self.city = city
         self.proxy_manager = proxy_manager or ProxyManager()
-        self.rate_limiter = TokenBucketRateLimiter(capacity=3, fill_rate=1.2)
+        self.rate_limiter = domain_rate_limiter.get_limiter("sheypoor.com")
         self.client = TLSImpersonatorClient(
             impersonate="chrome120",
             proxy=self.proxy_manager.get_proxy()
@@ -69,21 +70,22 @@ class HybridSheypoorCrawler:
 
             def _do_request():
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                     'Accept-Language': 'fa,en;q=0.9',
                     'Referer': f"https://www.sheypoor.com/s/{self.city}/real-estate"
                 }
                 return self.client.get(url, headers=headers, timeout=15)
 
-            response = fallback_solver.execute_with_resilience("SheypoorSearchLive", _do_request)
+            response = fallback_solver.execute_with_resilience(f"SheypoorSearchLive_P{page}", _do_request, fallback_url=url)
 
             if response and response.status_code == 200:
                 page_results, reached_time_limit = self._parse_html(response.text, category_meta, limit - len(all_results), on_item_found=on_item_found)
                 all_results.extend(page_results)
                 print(f"[HybridSheypoor] صفحه {page}: تعداد {len(page_results)} آگهی شخصی استخراج شد (مجموع: {len(all_results)})")
-                if reached_time_limit:
-                    print("[HybridSheypoor] رسیدن به مرز زمانی ۵ روز پیش در شیپور؛ توقف صفحه‌بندی.")
+                # تنها در صورتی صفحه‌بندی متوقف می‌شود که کل صفحه حاوی آگهی‌های قدیمی باشد و هیچ فایل جدیدی دریافت نشده باشد
+                if reached_time_limit and len(page_results) == 0:
+                    print("[HybridSheypoor] رسیدن به مرز زمانی ۵ روز گذشته؛ توقف صفحه‌بندی.")
                     break
             else:
                 status = response.status_code if response else "No Response"
@@ -97,7 +99,15 @@ class HybridSheypoorCrawler:
         دریافت بلادرنگ متن کامل، اعتبارسنجی هویت فروشنده و استخراج کلیه عکس‌های ملک از شیپور
         """
         try:
-            resp = self.client.get(url, timeout=8)
+            def _req():
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Referer': 'https://www.sheypoor.com/'
+                }
+                return self.client.get(url, headers=headers, timeout=10)
+
+            resp = fallback_solver.execute_with_resilience("SheypoorDetailPage", _req, fallback_url=url)
             if resp and resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 html_raw = resp.text
@@ -105,56 +115,38 @@ class HybridSheypoorCrawler:
                 is_agency = False
                 agency_reasons = []
 
-                # ۱. بررسی پیوندهای تجاری/مشاوران در کل صفحه
-                if soup.find('a', href=re.compile(r'/shops/|/consultant/|/real-estate-agencies/')):
-                    is_agency = True
-                    agency_reasons.append("لینک فروشگاه یا مشاور در صفحه")
+                # ۱. استخراج داده‌های استاندارد و ساختاریافته Schema.org JSON-LD با SheypoorStructuredParser
+                json_ld_data = SheypoorStructuredParser.parse_json_ld(soup)
 
-                # ۲. بررسی کلیدواژه‌های معرف مشاور یا آژانس در کل صفحه
-                page_text = soup.get_text(' ', strip=True)
-                for term in ['مشاور این آگهی', 'همه مشاوران', 'عضو شیپور از', 'آژانس املاک', 'دفتر املاک', 'دپارتمان املاک', 'بانک اطلاعات مسکن']:
-                    if term in page_text:
-                        is_agency = True
-                        agency_reasons.append(f"کلیدواژه صنفی '{term}'")
-
-                # ۳. بررسی نام املاک یا مسکن در سراسر صفحه
-                agency_match = re.search(r'(?:املاک|مسکن|دپارتمان|آژانس|بنگاه)\s+([آ-ی]{3,})', page_text)
-                if agency_match:
-                    name_found = agency_match.group(1)
-                    if name_found not in ['خرید', 'فروش', 'رهن', 'اجاره', 'مسکونی', 'تجاری', 'اداری', 'تهران', 'ایران']:
-                        is_agency = True
-                        agency_reasons.append(f"نام صنف املاک '{agency_match.group(0)}'")
-
-                # ۴. بررسی تگ‌های بخش فروشنده/مشاور در سورس HTML
-                if any(x in html_raw.lower() for x in ['shop-info', 'consultant-info', 'seller-profile', 'realestate-agency']):
-                    is_agency = True
-                    agency_reasons.append("ویجت اختصاصی پنل املاک شیپور")
-
-                desc_elem = soup.find('p', class_=re.compile(r'description|desc', re.I)) or soup.find('div', id='description') or soup.find('section', id='description')
-                desc_text = desc_elem.get_text(separator='\n', strip=True) if desc_elem else ""
-
+                # ۲. استخراج عنوان اصلی و متن توضیحات (از H1 یا JSON-LD رسمی)
+                h1_elem = soup.find('h1')
+                real_title = h1_elem.get_text(strip=True) if h1_elem else (json_ld_data.get('title') or '')
+                desc_text = json_ld_data.get('description', '')
+                if not desc_text:
+                    desc_elem = soup.find('p', class_=re.compile(r'description|desc', re.I)) or soup.find('div', id='description') or soup.find('section', id='description')
+                    desc_text = desc_elem.get_text(separator='\n', strip=True) if desc_elem else ""
                 if not desc_text:
                     meta = soup.find('meta', attrs={'name': 'description'}) or soup.find('meta', attrs={'property': 'og:description'})
                     if meta and meta.get('content'):
                         desc_text = meta.get('content').strip()
 
-                imgs = []
-                for img in soup.find_all('img'):
-                    src = img.get('src') or img.get('data-src')
-                    if src and ('img.sheypoor.com' in src or 'sheypoor' in src):
-                        src_large = src.replace('/small/', '/large/').replace('/thumb/', '/large/')
-                        if src_large not in imgs and not any(ic in src_large for ic in ['logo', 'icon', 'banner', 'avatar']):
-                            imgs.append(src_large)
+                # ۳. بررسی دقیق هویت فروشنده و تفکیک مشاور/بنگاه از مالک شخصی
+                is_agency, agency_reason = SheypoorStructuredParser.detect_agency(soup, desc_text)
+
+                # ۴. استخراج تصاویر با کیفیت بالا از CDN شیپور با ابعاد ارتقایافته 800x800
+                imgs = SheypoorStructuredParser.extract_and_upscale_images(soup)
 
                 return {
-                    'description': desc_text, 
+                    'title': real_title,
+                    'description': desc_text,
                     'images': imgs,
                     'is_agency': is_agency,
-                    'agency_reason': " / ".join(agency_reasons) if agency_reasons else ""
+                    'agency_reason': agency_reason,
+                    'json_ld': json_ld_data
                 }
-        except Exception:
+        except Exception as e:
             pass
-        return {'description': '', 'images': [], 'is_agency': False, 'agency_reason': ''}
+        return {'description': '', 'images': [], 'is_agency': False, 'agency_reason': '', 'json_ld': {}}
 
     def _parse_html(self, html_text: str, category_meta: Dict[str, Any], limit: int, on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None) -> Tuple[List[NormalizedPropertySchema], bool]:
         soup = BeautifulSoup(html_text, 'html.parser')
@@ -222,47 +214,68 @@ class HybridSheypoorCrawler:
             if not all_images and img_url:
                 all_images = [img_url]
 
+            json_ld = detail_info.get('json_ld', {})
+
             # محله
-            dist_m = re.search(r'تهران[،\s]+([^\s\|،]+)', text)
-            district = dist_m.group(1).strip() if dist_m else 'تهران'
+            if json_ld.get('district'):
+                district = str(json_ld['district']).strip()
+            else:
+                dist_m = re.search(r'تهران[،\s]+([^\s\|،]+)', text)
+                district = dist_m.group(1).strip() if dist_m else 'تهران'
 
             # متراژ
-            area_m = re.search(r'\b(\d{2,4})\s*(?:متر|متی)', persian_to_english_numbers(text))
-            area = min(int(area_m.group(1)), 5000) if area_m else 95
+            if json_ld.get('area') and str(json_ld['area']).isdigit() and int(json_ld['area']) > 0:
+                area = min(int(json_ld['area']), 5000)
+            else:
+                area_m = re.search(r'\b(\d{2,4})\s*(?:متر|متی)', persian_to_english_numbers(f"{text} {real_desc}"))
+                area = min(int(area_m.group(1)), 5000) if area_m else 95
 
             # خواب
-            rooms_m = re.search(r'\b([1-9])\s*(?:خواب|خوابه)', persian_to_english_numbers(text))
-            rooms = int(rooms_m.group(1)) if rooms_m else (1 if area < 70 else (2 if area < 130 else 3))
+            if json_ld.get('rooms') is not None:
+                rooms = int(json_ld['rooms'])
+            else:
+                rooms_m = re.search(r'\b([1-9])\s*(?:خواب|خوابه)', persian_to_english_numbers(f"{text} {real_desc}"))
+                rooms = int(rooms_m.group(1)) if rooms_m else (1 if area < 70 else (2 if area < 130 else 3))
 
             # تمیز کردن عنوان
-            clean_title = text
-            for token in ['تومان', 'تهران', 'Ad']:
-                if token in clean_title:
-                    clean_title = clean_title.split(token)[0]
-            clean_title = re.sub(r'^(?:فوری\s*\d*\s*|\d+\s*)', '', clean_title.strip()).strip()[:120]
-            if not clean_title or len(clean_title) < 6:
-                clean_title = f"{category_meta['name']} {area} متری در {district}"
+            if detail_info.get('title') and len(detail_info['title']) > 5:
+                clean_title = detail_info['title']
+            else:
+                clean_title = text
+                for token in ['تومان', 'تهران', 'Ad']:
+                    if token in clean_title:
+                        clean_title = clean_title.split(token)[0]
+                clean_title = re.sub(r'^(?:فوری\s*\d*\s*|\d+\s*)', '', clean_title.strip()).strip()[:120]
+                if not clean_title or len(clean_title) < 6:
+                    clean_title = f"{category_meta['name']} {area} متری در {district}"
 
             final_desc = real_desc if (real_desc and len(real_desc) > 10) else f"فایل شخصی استخراج شده از شیپور. {clean_title} واقع در منطقه {district}."
 
             # قیمت
-            price = parse_price(text)
-            if 0 < price < 10_000_000:
-                price *= 1_000_000
+            if json_ld.get('price') and str(json_ld['price']).isdigit() and int(json_ld['price']) > 0:
+                price = int(json_ld['price'])
+            else:
+                price = parse_price(f"{text} {real_desc}")
+                if 0 < price < 10_000_000:
+                    price *= 1_000_000
 
             total_price = price if deal_type == 'sale' else 0
             deposit = price if deal_type == 'rent' else 0
             monthly_rent = 0
-            meter_price = int(total_price / area) if area > 0 and total_price > 0 else 0
+            
+            if json_ld.get('meter_price') and str(json_ld['meter_price']).isdigit() and int(json_ld['meter_price']) > 0:
+                meter_price = int(json_ld['meter_price'])
+            else:
+                meter_price = int(total_price / area) if area > 0 and total_price > 0 else 0
 
             # استخراج شماره تماس واقعی مالک از متن یا توضیحات
             extracted_phone = extract_phone_number(f"{clean_title} {real_desc} {text}")
             owner_phone = extracted_phone if extracted_phone else ""
 
-            # امکانات از متن
-            has_elev = 'آسانسور' in f"{clean_title} {real_desc}" and 'بدون آسانسور' not in f"{clean_title} {real_desc}"
-            has_park = 'پارکینگ' in f"{clean_title} {real_desc}" and 'بدون پارکینگ' not in f"{clean_title} {real_desc}"
-            has_ware = 'انباری' in f"{clean_title} {real_desc}" and 'بدون انباری' not in f"{clean_title} {real_desc}"
+            # امکانات
+            has_elev = json_ld.get('has_elevator') or ('آسانسور' in f"{clean_title} {real_desc}" and 'بدون آسانسور' not in f"{clean_title} {real_desc}")
+            has_park = json_ld.get('has_parking') or ('پارکینگ' in f"{clean_title} {real_desc}" and 'بدون پارکینگ' not in f"{clean_title} {real_desc}")
+            has_ware = json_ld.get('has_warehouse') or ('انباری' in f"{clean_title} {real_desc}" and 'بدون انباری' not in f"{clean_title} {real_desc}")
             has_balc = 'بالکن' in f"{clean_title} {real_desc}" or 'تراس' in f"{clean_title} {real_desc}"
 
             item_dict = {
@@ -283,10 +296,10 @@ class HybridSheypoorCrawler:
                 'rooms': rooms,
                 'floor': 1,
                 'build_year': 1400,
-                'has_elevator': has_elev,
-                'has_parking': has_park,
-                'has_warehouse': has_ware,
-                'has_balcony': has_balc,
+                'has_elevator': bool(has_elev),
+                'has_parking': bool(has_park),
+                'has_warehouse': bool(has_ware),
+                'has_balcony': bool(has_balc),
                 'features': ['فایل شخصی شیپور', 'تأییدشده بدون واسطه'],
                 'description': final_desc,
                 'images': all_images,

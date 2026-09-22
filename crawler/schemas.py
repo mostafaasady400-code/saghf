@@ -16,25 +16,36 @@ def parse_price(val: Any) -> int:
         return 0
     if isinstance(val, (int, float)):
         return min(int(val), 500_000_000_000)
-    text = persian_to_english_numbers(str(val))
-    # 1. Comma-separated currency formatting (e.g. 22,000,000,000)
-    m = re.search(r'(\d{1,3}(?:[,\،]\d{3})+)', text)
+
+    # استانداردسازی تمامی جداکننده‌ها و ارقام فارسی/عربی
+    text = (
+        persian_to_english_numbers(str(val))
+        .replace('٬', ',')
+        .replace('،', ',')
+        .replace('٫', '.')
+    )
+
+    # ۱. مبالغ با جداکننده کاما یا ارقام پیوسته (مانند 22,000,000,000 یا ۹٬۵۰۰٬۰۰۰٬۰۰۰)
+    m = re.search(r'(\d{1,3}(?:,\d{3})+)', text)
     if m:
-        cleaned = m.group(1).replace(',', '').replace('،', '')
+        cleaned = m.group(1).replace(',', '')
         return min(int(cleaned), 500_000_000_000)
 
-    # 2. Text words like میلیارد or میلیون
-    m2 = re.search(r'(\d+)\s*(?:میلیارد|همت)', text)
+    # ۲. مبالغ کلامی اعشاری یا صحیح با کلمات کلیدی میلیارد یا همت (مانند ۱۲.۵ میلیارد یا ۵۰ همت)
+    m2 = re.search(r'(\d+(?:\.\d+)?)\s*(?:میلیارد|همت)', text)
     if m2:
-        return min(int(m2.group(1)) * 1_000_000_000, 500_000_000_000)
-    m3 = re.search(r'(\d+)\s*(?:میلیون)', text)
-    if m3:
-        return min(int(m3.group(1)) * 1_000_000, 500_000_000_000)
+        return min(int(float(m2.group(1)) * 1_000_000_000), 500_000_000_000)
 
-    # 3. Discrete numbers
-    digits = re.findall(r'\b\d{5,13}\b', text.replace(',', '').replace('،', ''))
+    # ۳. مبالغ کلامی میلیون (مانند ۸۵۰ میلیون)
+    m3 = re.search(r'(\d+(?:\.\d+)?)\s*(?:میلیون)', text)
+    if m3:
+        return min(int(float(m3.group(1)) * 1_000_000), 500_000_000_000)
+
+    # ۴. ارقام عددی پیوسته
+    digits = re.findall(r'\b\d{5,13}\b', text.replace(',', ''))
     if digits:
         return min(int(digits[0]), 500_000_000_000)
+
     return 0
 
 class OwnerSchema(BaseModel):

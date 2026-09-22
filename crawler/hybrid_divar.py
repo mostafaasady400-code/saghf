@@ -4,12 +4,12 @@ import json
 import time
 from typing import List, Dict, Any, Optional, Tuple, Callable
 from .network.impersonator import TLSImpersonatorClient
-from .network.rate_limiter import TokenBucketRateLimiter
+from .network.rate_limiter import TokenBucketRateLimiter, domain_rate_limiter
 from .network.proxy_manager import ProxyManager
 from .dedup import dedup_engine
 from .fallback_solver import fallback_solver
 from .schemas import NormalizedPropertySchema, OwnerSchema, parse_price, persian_to_english_numbers
-
+from .parsers.divar_parser import DivarStructuredParser
 from .owner_filter import OwnerFilter, extract_phone_number
 
 def is_older_than_5_days(text: str) -> bool:
@@ -45,7 +45,7 @@ class HybridDivarCrawler:
     def __init__(self, city: str = 'tehran', proxy_manager: Optional[ProxyManager] = None):
         self.city = city
         self.proxy_manager = proxy_manager or ProxyManager()
-        self.rate_limiter = TokenBucketRateLimiter(capacity=3, fill_rate=1.2)
+        self.rate_limiter = domain_rate_limiter.get_limiter("divar.ir")
         self.client = TLSImpersonatorClient(
             impersonate="chrome120",
             proxy=self.proxy_manager.get_proxy()
@@ -144,8 +144,8 @@ class HybridDivarCrawler:
         if min_year:
             url_query_parts.append(f"production-year={min_year}-")
 
-        # ۲. پیمایش صفحات جهت استخراج عمیق تا سقف ۵ روز گذشته از موتور هیبریدی زنده
-        for page in range(1, 4):
+        # ۲. پیمایش عمیق صفحات تا سقف ۵ روز گذشته از موتور هیبریدی زنده
+        for page in range(1, 11):
             if len(results) >= limit:
                 break
 
@@ -166,7 +166,11 @@ class HybridDivarCrawler:
                 }
                 return self.client.get(url, headers=headers, timeout=15)
 
-            response = fallback_solver.execute_with_resilience(f"DivarSearchLive_P{page}", _do_request)
+            response = fallback_solver.execute_with_resilience(
+                f"DivarSearchLive_P{page}",
+                _do_request,
+                fallback_url=url
+            )
             if response and response.status_code == 200:
                 page_items, reached_limit = self._parse_html_state(
                     response.text,
@@ -176,8 +180,9 @@ class HybridDivarCrawler:
                     on_item_found=on_item_found
                 )
                 results.extend(page_items)
-                print(f"[HybridDivar] صفحه {page}: تعداد {len(page_items)} آگهی واجد شرایط دریافت شد.")
-                if reached_limit or len(page_items) == 0:
+                print(f"[HybridDivar] صفحه {page}: تعداد {len(page_items)} آگهی شخصی واجد شرایط تایید شد (مجموع: {len(results)}/{limit})")
+                if reached_limit:
+                    print(f"[HybridDivar] رسیدن به انتهای بازه ۵ روز اخیر در صفحه {page}.")
                     break
             else:
                 break
@@ -287,126 +292,40 @@ class HybridDivarCrawler:
             'phone': None
         }
         try:
-            resp = self.client.get(url, timeout=8)
+            def _fetch_api_or_web():
+                return self.client.get(url, timeout=8)
+
+            resp = fallback_solver.execute_with_resilience(
+                f"DivarDetail_{token}",
+                _fetch_api_or_web,
+                fallback_url=f"https://divar.ir/v/{token}"
+            )
             if resp and resp.status_code == 200:
-                data = resp.json()
-                sections = data.get('sections', [])
-                images: List[str] = []
-                features: List[str] = []
+                data = None
+                try:
+                    data = resp.json()
+                except Exception:
+                    m = re.search(r'window\.__PRELOADED_STATE__\s*=\s*(\{.*?\});', resp.text)
+                    if m:
+                        try:
+                            preloaded = json.loads(m.group(1))
+                            data = preloaded.get('post', {}).get('data', {}) or preloaded.get('post', {})
+                        except Exception:
+                            pass
 
-                for sec in sections:
-                    for w in sec.get('widgets', []):
-                        wt = w.get('widget_type', '')
-                        wd = w.get('data', {})
+                if not data or not isinstance(data, dict):
+                    return details
 
-                        # ۰. بررسی و رد ویجت‌های اختصاصی پنل‌های املاک و اکانت‌های تجاری دیوار
-                        if wt == 'LAZY_SECTION':
-                            req_data = wd.get('request_data', {})
-                            biz_type = str(req_data.get('post_business_type', '')).lower()
-                            if biz_type in ['premium-panel', 'business', 'agency', 'consultant', 'real_estate_agency']:
-                                details['is_agency_post'] = True
-                        elif any(x in wt.lower() for x in ['agency_info', 'business_section', 'seller_profile']):
-                            details['is_agency_post'] = True
+                # استخراج ساختاریافته کامل ویجت‌ها با DivarStructuredParser
+                parsed_tree = DivarStructuredParser.parse_widget_tree(data)
+                for k, v in parsed_tree.items():
+                    if k in details and v is not None:
+                        details[k] = v
+                if parsed_tree.get('is_agency'):
+                    details['is_agency_post'] = True
 
-                        # ۱. متن کامل توضیحات
-                        elif wt == 'DESCRIPTION_ROW':
-                            text = wd.get('text', '')
-                            if text:
-                                details['description'] = text.strip()
-
-                        # ۲. استخراج تمامی تصاویر واقعی خود آگهی از CDN دیوار
-                        elif wt in ['IMAGE_CAROUSEL', 'IMAGE_SLIDER', 'IMAGES_ROW']:
-                            for it in wd.get('items', []):
-                                u = it.get('image', {}).get('url') or it.get('url')
-                                if u and u not in images and 'divarcdn.com' in u:
-                                    images.append(u)
-
-                        # ۳. اطلاعات ساختاری پایه (متراژ، ساخت، اتاق)
-                        elif wt == 'GROUP_INFO_ROW':
-                            for item in wd.get('items', []):
-                                t = item.get('title', '')
-                                v = item.get('value', '')
-                                if 'متراژ' in t:
-                                    m = re.search(r'\d+', persian_to_english_numbers(v))
-                                    if m:
-                                        details['area'] = int(m.group(0))
-                                elif 'ساخت' in t:
-                                    m = re.search(r'\d+', persian_to_english_numbers(v))
-                                    if m:
-                                        details['build_year'] = int(m.group(0))
-                                elif 'اتاق' in t:
-                                    if 'بدون' in v:
-                                        details['rooms'] = 0
-                                    else:
-                                        m = re.search(r'\d+', persian_to_english_numbers(v))
-                                        if m:
-                                            details['rooms'] = int(m.group(0))
-
-                        # ۴. اطلاعات قیمتی، طبقه و ویژگی‌های تفصیلی
-                        elif wt == 'UNEXPANDABLE_ROW':
-                            t = wd.get('title', '')
-                            v = wd.get('value', '')
-                            if 'قیمت کل' in t:
-                                p = parse_price(v)
-                                if p > 0:
-                                    details['total_price'] = p
-                            elif 'قیمت هر متر' in t:
-                                mp = parse_price(v)
-                                if mp > 0:
-                                    details['meter_price'] = mp
-                            elif 'ودیعه' in t:
-                                dep = parse_price(v)
-                                if dep > 0:
-                                    details['deposit'] = dep
-                            elif 'اجاره' in t:
-                                rnt = parse_price(v)
-                                if rnt > 0:
-                                    details['monthly_rent'] = rnt
-                            elif 'طبقه' in t:
-                                v_en = persian_to_english_numbers(v)
-                                m_floors = re.search(r'(\d+)\s*از\s*(\d+)', v_en)
-                                if m_floors:
-                                    details['floor'] = int(m_floors.group(1))
-                                    details['total_floors'] = int(m_floors.group(2))
-                                elif 'همکف' in v:
-                                    details['floor'] = 0
-                                elif 'زیر' in v:
-                                    details['floor'] = -1
-                                else:
-                                    m_f = re.search(r'\d+', v_en)
-                                    if m_f:
-                                        details['floor'] = int(m_f.group(0))
-                            elif 'تصویر' in t and 'همین ملک' in t and 'بله' in v:
-                                details['verified_photos'] = True
-                                features.append("تصاویر متعلق به همین ملک (تأییدشده در دیوار)")
-                            elif t and v and t not in ['گزارش آگهی', 'شناسه آگهی']:
-                                features.append(f"{t}: {v}")
-
-                        # ۵. اسلایدر تبدیل ودیعه و اجاره
-                        elif wt == 'RENT_SLIDER':
-                            c_val = wd.get('credit', {}).get('value')
-                            r_val = wd.get('rent', {}).get('value')
-                            if c_val:
-                                p_c = parse_price(c_val)
-                                if p_c > 0:
-                                    details['deposit'] = p_c
-                            if r_val:
-                                p_r = parse_price(r_val)
-                                if p_r > 0:
-                                    details['monthly_rent'] = p_r
-
-                        # ۶. امکانات و مشاعات اصلی (آسانسور، پارکینگ، انباری)
-                        elif wt == 'GROUP_FEATURE_ROW':
-                            for fit in wd.get('items', []):
-                                ftitle = fit.get('title', '')
-                                avail = fit.get('available', True)
-                                if 'آسانسور' in ftitle:
-                                    details['has_elevator'] = avail and ('ندارد' not in ftitle)
-                                elif 'پارکینگ' in ftitle:
-                                    details['has_parking'] = avail and ('ندارد' not in ftitle)
-                                elif 'انباری' in ftitle:
-                                    details['has_warehouse'] = avail and ('ندارد' not in ftitle)
-                                features.append(ftitle)
+                images = list(details['images'])
+                features = list(details['features'])
 
                 # تصاویر تکمیلی از web_images و seo در صورت وجود
                 if not images:
@@ -453,6 +372,8 @@ class HybridDivarCrawler:
         prop_type = category_meta['property_type']
         reached_limit = False
 
+        older_count = 0
+
         # روش اول: استخراج از window.__PRELOADED_STATE__
         match = re.search(r'window\.__PRELOADED_STATE__\s*=\s*(\{.*?\});', html_text)
         if match:
@@ -485,9 +406,11 @@ class HybridDivarCrawler:
                     middle_desc = d.get('middle_description_text', '')
                     bottom_desc = d.get('bottom_description_text', '')
 
-                    # بررسی بازه زمانی: توقف در صورت قدیمی‌تر بودن از ۵ روز گذشته
+                    # بررسی بازه زمانی: رد آگهی در صورت قدیمی‌تر بودن از ۵ روز گذشته
                     if is_older_than_5_days(bottom_desc) or is_older_than_5_days(middle_desc):
-                        reached_limit = True
+                        older_count += 1
+                        if older_count >= 8:
+                            reached_limit = True
                         continue
 
                     # فیلتر مرحله اول: بررسی متادیتای اولیه

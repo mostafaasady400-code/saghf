@@ -478,18 +478,20 @@ class UnifiedBotController:
         if data.startswith('act_budget_'):
             prop_id = int(data.replace('act_budget_', ''))
             res = CRMSalesAssistantEngine.handle_feedback_and_qualification(phone, "قیمت و بودجه این فایل بالاست، فایل مناسب‌تر می‌خوام")
+            reply_txt = res.get('client_message') or res.get('message') or "پیام شما دریافت گردید و فیلترهای بودجه تنظیم شد."
             return {
                 'type': 'text',
-                'message': res['message'],
+                'message': reply_txt,
                 'reply_markup': cls.build_main_keyboard(platform)
             }
 
         if data.startswith('act_loc_'):
             prop_id = int(data.replace('act_loc_', ''))
             res = CRMSalesAssistantEngine.handle_feedback_and_qualification(phone, "لوکیشن و محله این فایل مناسب من نیست")
+            reply_txt = res.get('client_message') or res.get('message') or "پیام شما دریافت گردید و فیلترهای موقعیت تنظیم شد."
             return {
                 'type': 'text',
-                'message': res['message'],
+                'message': reply_txt,
                 'reply_markup': cls.build_main_keyboard(platform)
             }
 

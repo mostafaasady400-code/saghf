@@ -304,9 +304,8 @@ class CrawlerManager:
                         self.add_log(f"خطا در پایپ‌لاین {cat}: {str(err)}", 'error')
 
         with self.lock:
-            self.stats['new_saved'] += saved_count
             self.stats['duplicates_skipped'] += skipped_count
-            self.stats['total_crawled'] += (saved_count + skipped_count)
+            self.stats['total_crawled'] += skipped_count
             self.stats['dlq_count'] = len(fallback_solver.dlq)
             self.stats['status'] = 'completed'
             self.is_running = False

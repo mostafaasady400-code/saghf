@@ -65,6 +65,7 @@ class Config:
     TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
     TELEGRAM_CHANNEL_ID = os.environ.get('TELEGRAM_CHANNEL_ID', '')
     TELEGRAM_WEBHOOK_URL = os.environ.get('TELEGRAM_WEBHOOK_URL', '')
+    TELEGRAM_PROXY = os.environ.get('TELEGRAM_PROXY', '')
 
     # Bale Bot Configurations (Domestic Messenger)
     BALE_BOT_TOKEN = os.environ.get('BALE_BOT_TOKEN', '')

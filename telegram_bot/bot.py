@@ -42,8 +42,15 @@ def get_bot():
         token = Config.TELEGRAM_BOT_TOKEN or ""
         if not token:
             logger.warning("⚠️ TELEGRAM_BOT_TOKEN is not configured in environment variables.")
+        if getattr(Config, 'TELEGRAM_PROXY', None):
+            try:
+                from telebot import apihelper
+                apihelper.proxy = {'https': Config.TELEGRAM_PROXY, 'http': Config.TELEGRAM_PROXY}
+                logger.info(f"Telegram proxy configured: {Config.TELEGRAM_PROXY}")
+            except Exception as e:
+                logger.warning(f"Could not configure Telegram proxy: {e}")
         # Create non-threaded bot instance optimized for Flask webhook and polling handling
-        _bot_instance = telebot.TeleBot(token=token, threaded=False)
+        _bot_instance = telebot.TeleBot(token=token or "0000000000:AA_dummy_unconfigured_token", threaded=False)
         _register_handlers(_bot_instance)
     return _bot_instance
 
@@ -995,8 +1002,9 @@ def start_polling(flask_app=None):
         bot.remove_webhook()
         me = bot.get_me()
         logger.info(f"🚀 Telegram Bot Polling started for @{me.username} (ID: {me.id})")
-        print(f"✅ ربات تلگرام سقف (@{me.username}) با موفقیت به سرورهای تلگرام متصل شد و آماده دریافت پیام است...", flush=True)
-        bot.infinity_polling(timeout=20, long_polling_timeout=20, skip_pending=True)
+        from telebot import apihelper
+        apihelper.READ_TIMEOUT = 40
+        bot.infinity_polling(timeout=10, long_polling_timeout=10, skip_pending=True)
     except Exception as e:
         logger.error(f"Telegram polling terminated: {e}")
         print(f"⚠️ خطای توقف Polling ربات تلگرام: {e}", flush=True)

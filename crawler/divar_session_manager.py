@@ -251,46 +251,7 @@ class DivarSessionManager:
 
     @classmethod
     def _extract_phone_from_json(cls, data: Any) -> Optional[str]:
-        """جستجوی بازگشتی در کل ساختار داده جهت یافتن هرگونه شماره موبایل معتبر ایران"""
-        import re
-        from crawler.owner_filter import convert_persian_words_to_digits
-
-        if isinstance(data, dict):
-            # 1. Direct key checks
-            for key in ['phone_number', 'phone', 'mobile', 'call_number']:
-                if key in data and data[key]:
-                    val = str(data[key])
-                    m = re.search(r'09\d{9}', val)
-                    if m:
-                        return m.group(0)
-            
-            # 2. Check widget action payload specifically
-            action = data.get('action', {})
-            payload = action.get('payload', {}) if isinstance(action, dict) else {}
-            for key in ['phone_number', 'phone']:
-                if key in payload and payload[key]:
-                    m = re.search(r'09\d{9}', str(payload[key]))
-                    if m:
-                        return m.group(0)
-
-            # 3. Recurse into all dict values
-            for v in data.values():
-                res = cls._extract_phone_from_json(v)
-                if res:
-                    return res
-
-        elif isinstance(data, list):
-            for item in data:
-                res = cls._extract_phone_from_json(item)
-                if res:
-                    return res
-
-        elif isinstance(data, str):
-            # Check string for standard or persian digits 09...
-            p_text = convert_persian_words_to_digits(data)
-            m = re.search(r'09\d{9}', p_text)
-            if m:
-                return m.group(0)
-
-        return None
+        """جستجوی بازگشتی در کل ساختار داده جهت یافتن هرگونه شماره موبایل معتبر ایران با ContactExtractor"""
+        from crawler.contact_extractor import ContactExtractor
+        return ContactExtractor.extract_from_json_recursive(data)
 

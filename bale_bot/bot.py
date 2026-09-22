@@ -232,13 +232,18 @@ def _bale_polling_worker(flask_app):
     while _polling_active:
         try:
             updates_res = bale_client.get_updates(offset=last_update_id + 1, timeout=12)
-            if updates_res.get('ok'):
+            if updates_res.get('ok') and not updates_res.get('simulated'):
                 result = updates_res.get('result', [])
-                for upd in result:
-                    upd_id = upd.get('update_id')
-                    if upd_id:
-                        last_update_id = max(last_update_id, upd_id)
-                    process_bale_update(upd)
+                if isinstance(result, list):
+                    for upd in result:
+                        upd_id = upd.get('update_id')
+                        if upd_id:
+                            last_update_id = max(last_update_id, upd_id)
+                        process_bale_update(upd)
+            elif updates_res.get('error_code') == 401:
+                logger.warning("BALE_BOT_TOKEN is rejected by Bale API (401 Unauthorized).")
+                print("⚠️ خطای احراز هویت بله: توکن فعلی مورد تأیید سرور بله نیست (401 Unauthorized). در انتظار توکن صحیح...", flush=True)
+                time.sleep(20)
             elif updates_res.get('simulated'):
                 # بدون توکن، با فواصل استراحت بررسی می‌شود
                 time.sleep(10)
