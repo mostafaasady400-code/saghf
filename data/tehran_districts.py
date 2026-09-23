@@ -1,71 +1,113 @@
 """
-کاتالوگ جامع مناطق و محله‌های شهر تهران با تمرکز ویژه بر منطقه ۵ و مناطق پرتقاضا
-جهت فیلترینگ چندانتخابی (Multi-Select) در کراولر دیوار و شیپور و استخراج NLP
+کاتالوگ جامع مناطق ۲۲گانه و محله‌های شهر تهران
+متصل به tehran_districts.json جهت فیلترینگ چندانتخابی دقیق، تطابق با API دیوار و شیپور و استخراج NLP
 """
 
+import os
+import json
 from typing import Dict, List, Any, Optional
 
-TEHRAN_REGIONS: Dict[str, Dict[str, Any]] = {
-    '5': {
-        'name': 'منطقه ۵ (غرب تهران)',
-        'description': 'شامل پونک، جنت‌آباد، صادقیه، شهران، باغ‌فیض، بلوار فردوس و...',
-        'districts': [
-            {'name': 'پونک', 'divar_slug': 'poonak', 'sheypoor_id': 'poonak', 'keywords': ['پونک', 'همیلا', 'عدل', 'کمالی', 'سردار جنگل']},
-            {'name': 'جنت‌آباد', 'divar_slug': 'jannat-abad', 'sheypoor_id': 'jannat-abad', 'keywords': ['جنت‌آباد', 'جنت اباد', 'جنت‌آباد جنوبی', 'جنت‌آباد مرکزی', 'جنت‌آباد شمالی', 'چهارباغ', 'لاله', 'کبیرزاده']},
-            {'name': 'جنت‌آباد مرکزی', 'divar_slug': 'central-jannat-abad', 'sheypoor_id': 'central-jannat-abad', 'keywords': ['جنت‌آباد مرکزی', 'جنت اباد مرکزی', 'مخبری', 'شاهین شمالی']},
-            {'name': 'جنت‌آباد جنوبی', 'divar_slug': 'south-jannat-abad', 'sheypoor_id': 'south-jannat-abad', 'keywords': ['جنت‌آباد جنوبی', 'جنت اباد جنوبی', 'چهارباغ', 'لاله شرقی']},
-            {'name': 'جنت‌آباد شمالی', 'divar_slug': 'north-jannat-abad', 'sheypoor_id': 'north-jannat-abad', 'keywords': ['جنت‌آباد شمالی', 'جنت اباد شمالی', 'گلزار', 'ایرانپارس']},
-            {'name': 'صادقیه', 'divar_slug': 'sadeghiyeh', 'sheypoor_id': 'sadeghiyeh', 'keywords': ['صادقیه', 'آریاشهر', 'فلکه اول صادقیه', 'فلکه دوم صادقیه', 'ستارخان']},
-            {'name': 'شهران', 'divar_slug': 'shahran', 'sheypoor_id': 'shahran', 'keywords': ['شهران', 'شهران شمالی', 'شهران جنوبی', 'طوقانی']},
-            {'name': 'باغ‌فیض', 'divar_slug': 'bagh-e-feyz', 'sheypoor_id': 'bagh-e-feyz', 'keywords': ['باغ‌فیض', 'باغ فیض', 'تیراژه', 'مهستان', 'ناطق نوری']},
-            {'name': 'بلوار فردوس', 'divar_slug': 'ferdows', 'sheypoor_id': 'ferdows', 'keywords': ['بلوار فردوس', 'فردوس شرق', 'فردوس غرب', 'وفا آذر', 'سلیمی جهرمی']},
-            {'name': 'اباذر', 'divar_slug': 'abazar', 'sheypoor_id': 'abazar', 'keywords': ['اباذر', 'کاشانی', 'بهنام']},
-            {'name': 'اکباتان', 'divar_slug': 'ekbatan', 'sheypoor_id': 'ekbatan', 'keywords': ['اکباتان', 'شهرک اکباتان', 'فاز ۱ اکباتان', 'فاز ۲ اکباتان']},
-            {'name': 'شاهین', 'divar_slug': 'shahin', 'sheypoor_id': 'shahin', 'keywords': ['شاهین', 'شاهین جنوبی', 'شاهین شمالی']},
-            {'name': 'سازمان برنامه', 'divar_slug': 'sazman-barnameh', 'sheypoor_id': 'sazman-barnameh', 'keywords': ['سازمان برنامه', 'برنامه شمالی', 'برنامه جنوبی', 'شقایق']},
-            {'name': 'شهرزیبا', 'divar_slug': 'shahr-e-ziba', 'sheypoor_id': 'shahr-e-ziba', 'keywords': ['شهرزیبا', 'شهر زیبا', 'آلاله', 'نیلوفر']},
-            {'name': 'کوهسار', 'divar_slug': 'koohsar', 'sheypoor_id': 'koohsar', 'keywords': ['کوهسار', 'شهدای گمنام']},
-            {'name': 'کن', 'divar_slug': 'kan', 'sheypoor_id': 'kan', 'keywords': ['کن', 'محله کن']}
-        ]
-    },
-    '2': {
-        'name': 'منطقه ۲ (شمال غرب تهران)',
-        'description': 'شامل سعادت‌آباد، شهرک غرب، گیشا، مرزداران، ستارخان و...',
-        'districts': [
-            {'name': 'سعادت‌آباد', 'divar_slug': 'saadat-abad', 'sheypoor_id': 'saadat-abad', 'keywords': ['سعادت‌آباد', 'سعادت اباد', 'علامه', 'کاج', 'سرو']},
-            {'name': 'شهرک غرب', 'divar_slug': 'shahrak-e-gharb', 'sheypoor_id': 'shahrak-e-gharb', 'keywords': ['شهرک غرب', 'شهرک قدس', 'ایران زمین', 'مهستان', 'گلستان']},
-            {'name': 'گیشا', 'divar_slug': 'gisha', 'sheypoor_id': 'gisha', 'keywords': ['گیشا', 'کوی نصر', 'فاضل']},
-            {'name': 'مرزداران', 'divar_slug': 'marzdaran', 'sheypoor_id': 'marzdaran', 'keywords': ['مرزداران', 'ناهید', 'اشرفی']},
-            {'name': 'ستارخان', 'divar_slug': 'sattarkhan', 'sheypoor_id': 'sattarkhan', 'keywords': ['ستارخان', 'باقرخان', 'تهران ویلا']}
-        ]
-    },
-    '1': {
-        'name': 'منطقه ۱ (شمال تهران)',
-        'description': 'شامل الهیه، زعفرانیه، نیاوران، کامرانیه، ولنجک و...',
-        'districts': [
-            {'name': 'الهیه', 'divar_slug': 'elahieh', 'sheypoor_id': 'elahieh', 'keywords': ['الهیه', 'فرشته']},
-            {'name': 'زعفرانیه', 'divar_slug': 'zafaraniyeh', 'sheypoor_id': 'zafaraniyeh', 'keywords': ['زعفرانیه', 'آصف']},
-            {'name': 'نیاوران', 'divar_slug': 'niavaran', 'sheypoor_id': 'niavaran', 'keywords': ['نیاوران', 'جمشیدیه', 'باهنر']},
-            {'name': 'ولنجک', 'divar_slug': 'velenjak', 'sheypoor_id': 'velenjak', 'keywords': ['ولنجک', 'دانشجو']},
-            {'name': 'کامرانیه', 'divar_slug': 'kamranieh', 'sheypoor_id': 'kamranieh', 'keywords': ['کامرانیه', 'کامرانیه شمالی', 'کامرانیه جنوبی']}
-        ]
-    }
-}
+JSON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tehran_districts.json')
+
+_CACHE_REGIONS: Optional[Dict[str, Dict[str, Any]]] = None
+_CACHE_SLUG_MAP: Optional[Dict[str, str]] = None
+_CACHE_NAME_TO_SLUG: Optional[Dict[str, str]] = None
+
+def _load_data():
+    global _CACHE_REGIONS, _CACHE_SLUG_MAP, _CACHE_NAME_TO_SLUG
+    if _CACHE_REGIONS is not None and len(_CACHE_REGIONS) > 0:
+        return
+
+    _CACHE_REGIONS = {}
+    _CACHE_SLUG_MAP = {}
+    _CACHE_NAME_TO_SLUG = {}
+
+    if os.path.exists(JSON_PATH):
+        try:
+            with open(JSON_PATH, 'r', encoding='utf-8') as f:
+                raw_data = json.load(f)
+                for reg in raw_data.get('regions', []):
+                    reg_id = str(reg.get('id'))
+                    districts_list = reg.get('districts', [])
+                    _CACHE_REGIONS[reg_id] = {
+                        'id': reg_id,
+                        'region_id': int(reg_id) if reg_id.isdigit() else reg_id,
+                        'name': reg.get('name'),
+                        'districts': districts_list,
+                        'sub_districts': districts_list
+                    }
+                    for d in districts_list:
+                        d_name = d.get('name')
+                        d_slug = d.get('divar_slug')
+                        if d_name and d_slug:
+                            _CACHE_SLUG_MAP[d_slug] = d_name
+                            _CACHE_NAME_TO_SLUG[d_name] = d_slug
+        except Exception as e:
+            print(f"[TehranDistricts] خطا در بارگذاری {JSON_PATH}: {e}")
+
+_load_data()
+
+# دیکشنری سازگار با نسخه‌های قبلی
+TEHRAN_REGIONS: Dict[str, Dict[str, Any]] = _CACHE_REGIONS or {}
+
+def get_all_tehran_regions() -> List[Dict[str, Any]]:
+    """دریافت ساختار کامل تمام مناطق ۲۲گانه و محله‌های زیرمجموعه"""
+    _load_data()
+    return list(_CACHE_REGIONS.values()) if _CACHE_REGIONS else []
 
 def get_region_districts(region_id: str = '5') -> List[Dict[str, Any]]:
     """لیست محله‌های یک منطقه خاص"""
-    reg = TEHRAN_REGIONS.get(str(region_id))
+    _load_data()
+    reg = _CACHE_REGIONS.get(str(region_id))
     return reg['districts'] if reg else []
 
 def get_district_names(region_id: Optional[str] = None) -> List[str]:
-    """دریافت نام محله‌ها به صورت متنی"""
-    if region_id and str(region_id) in TEHRAN_REGIONS:
-        return [d['name'] for d in TEHRAN_REGIONS[str(region_id)]['districts']]
+    """دریافت نام محله‌ها به صورت لیست رشته‌ای"""
+    _load_data()
+    if region_id and str(region_id) in _CACHE_REGIONS:
+        return [d['name'] for d in _CACHE_REGIONS[str(region_id)]['districts']]
     all_names = []
-    for reg in TEHRAN_REGIONS.values():
+    for reg in _CACHE_REGIONS.values():
         for d in reg['districts']:
             all_names.append(d['name'])
     return all_names
+
+def _clean_persian_str(s: str) -> str:
+    if not s:
+        return ""
+    return s.replace('\u200c', ' ').replace('ي', 'ی').replace('ك', 'ک').strip()
+
+def _clean_compact_str(s: str) -> str:
+    return _clean_persian_str(s).replace(' ', '')
+
+def get_divar_slug_for_district(district_name: str) -> Optional[str]:
+    """تبدیل نام محله فارسی به slug معادل در دیوار"""
+    if not district_name:
+        return None
+    _load_data()
+    name = district_name.strip()
+    if name in _CACHE_NAME_TO_SLUG:
+        return _CACHE_NAME_TO_SLUG[name]
+
+    name_clean = _clean_persian_str(name)
+    name_compact = _clean_compact_str(name)
+
+    # تطابق مستقیم با نام‌های نرمال‌شده
+    for d_name, d_slug in _CACHE_NAME_TO_SLUG.items():
+        if _clean_persian_str(d_name) == name_clean or _clean_compact_str(d_name) == name_compact:
+            return d_slug
+
+    # جستجو در کلیدواژه‌ها
+    for reg in _CACHE_REGIONS.values():
+        for d in reg['districts']:
+            for kw in d.get('keywords', []):
+                kw_clean = _clean_persian_str(kw)
+                kw_compact = _clean_compact_str(kw)
+                if kw_clean == name_clean or kw_compact == name_compact:
+                    return d['divar_slug']
+                if len(kw_compact) >= 3 and (kw_compact in name_compact or name_compact in kw_compact):
+                    return d['divar_slug']
+    return None
 
 def find_matched_district(text: str) -> Optional[str]:
     """
@@ -73,12 +115,21 @@ def find_matched_district(text: str) -> Optional[str]:
     """
     if not text:
         return None
-    normalized = text.replace('ي', 'ی').replace('ك', 'ک')
+    _load_data()
+    normalized = _clean_persian_str(text)
+    norm_compact = _clean_compact_str(text)
     
-    # اولویت جستجو با محله‌های منطقه ۵
-    for reg_key in ['5', '2', '1']:
-        for d in TEHRAN_REGIONS[reg_key]['districts']:
-            for kw in d.get('keywords', [d['name']]):
-                if kw in normalized:
-                    return d['name']
+    # اولویت جستجو با مناطق پرتقاضا: ۵، ۲، ۱، ۳، ۴
+    priority_order = ['5', '2', '1', '3', '4', '6', '7', '8', '22']
+    all_keys = priority_order + [k for k in _CACHE_REGIONS.keys() if k not in priority_order]
+
+    for reg_key in all_keys:
+        if reg_key in _CACHE_REGIONS:
+            for d in _CACHE_REGIONS[reg_key]['districts']:
+                keywords = d.get('keywords', []) + [d['name']]
+                for kw in keywords:
+                    kw_clean = _clean_persian_str(kw)
+                    kw_compact = _clean_compact_str(kw)
+                    if kw_clean in normalized or (len(kw_compact) >= 4 and kw_compact in norm_compact):
+                        return d['name']
     return None

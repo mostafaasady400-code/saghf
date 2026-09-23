@@ -12,26 +12,66 @@
             پایش هوشمند فایل‌های شخصی تا ۵ روز گذشته، فیلتر حذف قطعی مشاوران و تفکیک دپارتمان‌های فروش و اجاره
         </p>
     </div>
-    <div id="crawler-status-pill" class="badge-neon badge-neon-cyan" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
-        <span class="neon-pulse-dot cyan"></span> موتور آماده به کار
+    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <button type="button" onclick="openDivarSessionModal()" id="divar-session-btn" class="glass-btn" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease;">
+            <span id="divar-session-icon">🔑</span>
+            <span id="divar-session-status-text">اتصال دیوار و کنار (شماره واقعی)</span>
+        </button>
+        <div id="crawler-status-pill" class="badge-neon badge-neon-cyan" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+            <span class="neon-pulse-dot cyan"></span> موتور آماده به کار
+        </div>
     </div>
 </div>
 
 <!-- Crawler Control & Real-Time Stats (Grid Layout) -->
 <div class="grid-2" style="margin-bottom: 2rem;">
-    <!-- Column 1: Live Terminal & Live Stats -->
-    <div class="glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-            <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
-                <span>📟</span> کنسول و گزارش زنده کراولر
-            </h3>
-            <div style="font-size: 0.78rem; color: #64748b;">
-                استریم بلادرنگ رویدادها
-            </div>
-        </div>
+    <!-- Column 1: Background Crawl Status & Real-time Metrics (Replacing legacy terminal box) -->
+    <div class="glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(0, 242, 254, 0.2); position: relative; overflow: hidden;">
+        <!-- Background Ambient Glow -->
+        <div style="position: absolute; top: -20px; right: -20px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(0,242,254,0.12) 0%, transparent 70%); pointer-events: none;"></div>
 
-        <div id="crawler-terminal" class="terminal-box" style="height: 250px;">
-            <div class="terminal-line" style="color: #64748b;">[آماده] سیستم آماده دریافت دستور کراولینگ است...</div>
+        <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; margin: 0; color: #f8fafc;">
+                    <span>⚡</span> مانیتورینگ خودکار پس‌زمینه
+                </h3>
+                <span class="badge-neon badge-neon-emerald" style="font-size: 0.74rem;">
+                    بدون توقف در بک‌گراند
+                </span>
+            </div>
+
+            <!-- Sleek Status Card -->
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.1)); border: 1px solid rgba(0,242,254,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                        📡
+                    </div>
+                    <div>
+                        <div style="font-size: 0.88rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.2rem;">
+                            استخراج غیرهمزمان و بلادرنگ
+                        </div>
+                        <div style="font-size: 0.76rem; color: #94a3b8; line-height: 1.5;">
+                            فرآیند واکشی آگهی‌های شخصی و ارزیابی شروط، پشت صحنه اجرا شده و نتایج بدون معطلی به دپارتمان‌های زیر افزوده می‌شوند.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Highlights -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.76rem; color: #cbd5e1;">
+                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.4rem;">
+                    <span style="color: #10b981;">✓</span> فیلتر حذف قطعی املاک
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.4rem;">
+                    <span style="color: #10b981;">✓</span> تفکیک هوشمند سن بنا و بودجه
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.4rem;">
+                    <span style="color: #00f2fe;">✓</span> رتبه‌بندی کیفی فایل‌ها
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.4rem;">
+                    <span style="color: #00f2fe;">✓</span> استریم ۵ تا ۱۰ ثانیه‌ای
+                </div>
+            </div>
         </div>
 
         <!-- Quick Stats Counters -->
@@ -649,5 +689,358 @@ function switchDepartment(type) {
         tabAll.style.boxShadow = '0 0 15px rgba(139,92,246,0.3)';
     }
 }
+
+// =====================================================================
+// Divar Session & Kenar OpenAPI Modal Logic
+// =====================================================================
+
+function openDivarSessionModal() {
+    const modal = document.getElementById('divarSessionModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        refreshDivarSessionStatus();
+    }
+}
+
+function closeDivarSessionModal() {
+    const modal = document.getElementById('divarSessionModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function switchSessionTab(tab) {
+    const tabOtp = document.getElementById('tab-btn-otp');
+    const tabApi = document.getElementById('tab-btn-api');
+    const secOtp = document.getElementById('section-tab-otp');
+    const secApi = document.getElementById('section-tab-api');
+
+    if (tab === 'otp') {
+        secOtp.style.display = 'block';
+        secApi.style.display = 'none';
+        tabOtp.style.background = 'rgba(245,158,11,0.2)';
+        tabOtp.style.color = '#fbbf24';
+        tabOtp.style.border = 'none';
+        tabApi.style.background = 'transparent';
+        tabApi.style.color = '#94a3b8';
+        tabApi.style.border = '1px solid rgba(255,255,255,0.1)';
+    } else {
+        secOtp.style.display = 'none';
+        secApi.style.display = 'block';
+        tabApi.style.background = 'rgba(245,158,11,0.2)';
+        tabApi.style.color = '#fbbf24';
+        tabApi.style.border = 'none';
+        tabOtp.style.background = 'transparent';
+        tabOtp.style.color = '#94a3b8';
+        tabOtp.style.border = '1px solid rgba(255,255,255,0.1)';
+    }
+}
+
+async function refreshDivarSessionStatus() {
+    const dot = document.getElementById('divar-status-dot');
+    const msg = document.getElementById('divar-status-msg');
+    const btnText = document.getElementById('divar-session-status-text');
+    const btn = document.getElementById('divar-session-btn');
+
+    try {
+        const res = await fetch('/crawler/divar-session/status');
+        const data = await res.json();
+        if (data.authenticated) {
+            if (dot) {
+                dot.style.background = '#10b981';
+                dot.style.boxShadow = '0 0 10px #10b981';
+            }
+            if (msg) msg.innerHTML = '<span style="color: #10b981; font-weight: 700;">🟢 اتصال برقرار است</span> — نشست احراز هویت دیوار فعال است و شماره‌های واقعی خودکار دریافت می‌شوند.';
+            if (btnText) btnText.textContent = '🟢 اتصال دیوار فعال است';
+            if (btn) {
+                btn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                btn.style.color = '#10b981';
+            }
+        } else {
+            if (dot) {
+                dot.style.background = '#f59e0b';
+                dot.style.boxShadow = '0 0 10px #f59e0b';
+            }
+            if (msg) msg.innerHTML = '<span style="color: #f59e0b; font-weight: 700;">🟡 در انتظار اتصال</span> — برای استخراج ۱۰۰٪ شماره‌های واقعی، کد پیامکی یا کلید کنار دیوار را ثبت کنید.';
+            if (btnText) btnText.textContent = '🔑 اتصال دیوار و کنار (شماره واقعی)';
+            if (btn) {
+                btn.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                btn.style.color = '#fbbf24';
+            }
+        }
+    } catch (e) {
+        console.error('Error fetching session status:', e);
+    }
+}
+
+function showDivarAlert(text, isError = false) {
+    const alertBox = document.getElementById('divar-session-alert');
+    if (!alertBox) return;
+    alertBox.style.display = 'block';
+    alertBox.style.background = isError ? 'rgba(244, 63, 94, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+    alertBox.style.border = isError ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)';
+    alertBox.style.color = isError ? '#f43f5e' : '#10b981';
+    alertBox.textContent = text;
+}
+
+async function handleRequestDivarSms() {
+    const phoneInput = document.getElementById('divar-phone-input');
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const btn = document.getElementById('btn-request-sms');
+    const codeContainer = document.getElementById('divar-code-container');
+
+    if (!phone || !phone.startsWith('09') || phone.length !== 11) {
+        showDivarAlert('لطفاً شماره موبایل معتبر ۱۱ رقمی (شروع با ۰۹) وارد کنید.', true);
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'در حال ارسال پیامک...';
+    }
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-session/request-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf
+            },
+            body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showDivarAlert(data.message, false);
+            if (codeContainer) codeContainer.style.display = 'block';
+            const codeInput = document.getElementById('divar-code-input');
+            if (codeInput) codeInput.focus();
+        } else {
+            showDivarAlert(data.message || 'خطا در ارسال پیامک کد.', true);
+        }
+    } catch (e) {
+        showDivarAlert('خطای ارتباط با سرور: ' + e.message, true);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '📩 ارسال مجدد کد';
+        }
+    }
+}
+
+async function handleConfirmDivarSms() {
+    const phone = document.getElementById('divar-phone-input')?.value.trim();
+    const code = document.getElementById('divar-code-input')?.value.trim();
+    const btn = document.getElementById('btn-confirm-sms');
+
+    if (!code) {
+        showDivarAlert('لطفاً کد تأیید پیامک‌شده را وارد نمایید.', true);
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'در حال اعتبارسنجی...';
+    }
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-session/confirm', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf
+            },
+            body: JSON.stringify({ phone, code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showDivarAlert(data.message, false);
+            refreshDivarSessionStatus();
+            setTimeout(() => {
+                closeDivarSessionModal();
+            }, 2000);
+        } else {
+            showDivarAlert(data.message || 'کد وارد شده نامعتبر است.', true);
+        }
+    } catch (e) {
+        showDivarAlert('خطا در اعتبارسنجی کد: ' + e.message, true);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '✅ تأیید و اتصال نهایی';
+        }
+    }
+}
+
+async function handleSaveDivarApiKey() {
+    const key = document.getElementById('divar-apikey-input')?.value.trim();
+    if (!key) {
+        showDivarAlert('لطفاً کلید کنار دیوار را وارد کنید.', true);
+        return;
+    }
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-openapi/set-key', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf
+            },
+            body: JSON.stringify({ api_key: key })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showDivarAlert(data.message, false);
+            refreshDivarSessionStatus();
+            setTimeout(() => {
+                closeDivarSessionModal();
+            }, 1500);
+        } else {
+            showDivarAlert(data.message || 'خطا در ذخیره کلید.', true);
+        }
+    } catch (e) {
+        showDivarAlert('خطا در ذخیره کلید: ' + e.message, true);
+    }
+}
+
+async function handleSaveDivarManualToken() {
+    const token = document.getElementById('divar-apikey-input')?.value.trim();
+    if (!token) {
+        showDivarAlert('لطفاً توکن سشن را وارد کنید.', true);
+        return;
+    }
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-session/manual-token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf
+            },
+            body: JSON.stringify({ token })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showDivarAlert(data.message, false);
+            refreshDivarSessionStatus();
+            setTimeout(() => {
+                closeDivarSessionModal();
+            }, 1500);
+        } else {
+            showDivarAlert(data.message || 'خطا در ذخیره توکن.', true);
+        }
+    } catch (e) {
+        showDivarAlert('خطا در ذخیره توکن: ' + e.message, true);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    refreshDivarSessionStatus();
+});
 </script>
+
+<!-- Divar Session & Kenar Connection Modal Component -->
+<div id="divarSessionModal" style="display: none; position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(12px); z-index: 10000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="glass-panel" style="max-width: 580px; width: 100%; border: 1px solid rgba(245, 158, 11, 0.35); box-shadow: 0 0 40px rgba(245, 158, 11, 0.15); border-radius: 18px; padding: 1.75rem; position: relative; max-height: 90vh; overflow-y: auto;">
+        
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.85rem;">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                    🔑
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #f8fafc;">
+                        اتصال به دیوار و استخراج شماره‌های واقعی
+                    </h3>
+                    <p style="margin: 0.15rem 0 0; font-size: 0.76rem; color: #94a3b8;">
+                        فعال‌سازی استخراج خودکار شماره همراه مالک جهت انتقال مستقیم به CRM و n8n
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="closeDivarSessionModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#f8fafc'" onmouseout="this.style.color='#94a3b8'">
+                ✕
+            </button>
+        </div>
+
+        <!-- Live Connection Status Banner -->
+        <div id="divar-modal-status-banner" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 0.85rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span id="divar-status-dot" class="neon-pulse-dot" style="background: #f59e0b; box-shadow: 0 0 8px #f59e0b; width: 10px; height: 10px; border-radius: 50%; display: inline-block;"></span>
+                <span id="divar-status-msg" style="font-size: 0.84rem; color: #e2e8f0; font-weight: 600;">در حال بررسی وضعیت اتصال...</span>
+            </div>
+            <button type="button" onclick="refreshDivarSessionStatus()" class="glass-btn" style="padding: 0.25rem 0.6rem; font-size: 0.74rem; color: #94a3b8;">
+                🔄 بررسی مجدد
+            </button>
+        </div>
+
+        <!-- Tabs -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.5rem;">
+            <button type="button" id="tab-btn-otp" onclick="switchSessionTab('otp')" style="flex: 1; padding: 0.55rem 0.75rem; font-size: 0.84rem; font-weight: 700; border-radius: 8px; border: none; background: rgba(245,158,11,0.2); color: #fbbf24; cursor: pointer; transition: all 0.2s;">
+                📱 روش ۱: ورود با پیامک دیوار (ساده و سریع)
+            </button>
+            <button type="button" id="tab-btn-api" onclick="switchSessionTab('api')" style="flex: 1; padding: 0.55rem 0.75rem; font-size: 0.84rem; font-weight: 700; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #94a3b8; cursor: pointer; transition: all 0.2s;">
+                ⚡ روش ۲: کلید کنار دیوار (Kenar API Key)
+            </button>
+        </div>
+
+        <!-- Tab 1: OTP SMS Section -->
+        <div id="section-tab-otp" style="display: block;">
+            <p style="font-size: 0.8rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 1rem; background: rgba(0,242,254,0.05); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid rgba(0,242,254,0.15);">
+                💡 شماره موبایل خود را وارد کنید تا دیوار یک کد پیامک برای شما ارسال کند. پس از ثبت کد، نشست شما فعال شده و کراولر تمامی شماره‌های آگهی‌ها را استخراج می‌کند.
+            </p>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.4rem;">
+                    شماره موبایل حساب دیوار:
+                </label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="tel" id="divar-phone-input" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" class="glass-input" style="flex: 1; padding: 0.55rem 0.75rem; font-size: 0.95rem; font-weight: 700; letter-spacing: 1px; text-align: center;">
+                    <button type="button" id="btn-request-sms" onclick="handleRequestDivarSms()" class="glass-btn" style="padding: 0.55rem 1rem; font-size: 0.82rem; font-weight: 700; border-color: rgba(0,242,254,0.4); color: #00f2fe; white-space: nowrap;">
+                        📩 ارسال پیامک کد
+                    </button>
+                </div>
+            </div>
+
+            <!-- Verification Code Input (Shown after SMS sent) -->
+            <div id="divar-code-container" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; color: #10b981; font-weight: 700; margin-bottom: 0.4rem;">
+                    کد تأیید پیامک‌شده از دیوار را وارد کنید:
+                </label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="divar-code-input" placeholder="کد ۵ رقمی" dir="ltr" maxlength="6" class="glass-input" style="flex: 1; padding: 0.55rem 0.75rem; font-size: 1.1rem; font-weight: 800; letter-spacing: 3px; text-align: center;">
+                    <button type="button" id="btn-confirm-sms" onclick="handleConfirmDivarSms()" class="btn-luxury-gold" style="padding: 0.55rem 1.25rem; font-size: 0.85rem; font-weight: 800; white-space: nowrap;">
+                        ✅ تأیید و اتصال نهایی
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: OpenAPI Key / Manual Token Section -->
+        <div id="section-tab-api" style="display: none;">
+            <p style="font-size: 0.8rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 1rem; background: rgba(245,158,11,0.06); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid rgba(245,158,11,0.18);">
+                🔐 اگر در پنل <b>کنار دیوار (kenar.divar.ir)</b> کلید API اختصاصی دارید یا می‌خواهید توکن سشن کوکی دیوار را مستقیماً وارد کنید، آن را در این فیلد قرار دهید:
+            </p>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.4rem;">
+                    کلید کنار دیوار (DIVAR_API_KEY) یا توکن سشن:
+                </label>
+                <textarea id="divar-apikey-input" rows="3" placeholder="کلید API پلتفرم باز یا توکن احراز هویت را اینجا جای‌گذاری نمایید..." dir="ltr" class="glass-input" style="width: 100%; padding: 0.6rem; font-size: 0.82rem; font-family: monospace; resize: vertical; margin-bottom: 0.6rem;"></textarea>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" id="btn-save-apikey" onclick="handleSaveDivarApiKey()" class="glass-btn" style="padding: 0.55rem 1.2rem; font-size: 0.82rem; font-weight: 700; border-color: rgba(245,158,11,0.4); color: #fbbf24;">
+                        💾 ذخیره کلید کنار دیوار
+                    </button>
+                    <button type="button" id="btn-save-token" onclick="handleSaveDivarManualToken()" class="glass-btn" style="padding: 0.55rem 1.2rem; font-size: 0.82rem; font-weight: 700; border-color: rgba(0,242,254,0.4); color: #00f2fe;">
+                        💾 ذخیره به عنوان توکن سشن
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="divar-session-alert" style="display: none; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.82rem; margin-top: 0.75rem;"></div>
+
+    </div>
+</div>
 {% endblock %}

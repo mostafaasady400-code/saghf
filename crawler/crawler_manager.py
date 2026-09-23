@@ -57,7 +57,7 @@ class CrawlerManager:
         self,
         sources: Optional[List[str]] = None,
         categories: Optional[List[str]] = None,
-        limit_per_cat: int = 10,
+        limit_per_cat: int = 35,
         city: str = 'tehran',
         district: Optional[str] = None,
         districts: Optional[List[str]] = None,
@@ -69,7 +69,14 @@ class CrawlerManager:
         max_rent: Optional[int] = None,
         min_area: Optional[int] = None,
         max_area: Optional[int] = None,
-        min_year: Optional[int] = None
+        min_year: Optional[int] = None,
+        rooms: Optional[int] = None,
+        has_parking: Optional[bool] = None,
+        has_elevator: Optional[bool] = None,
+        has_warehouse: Optional[bool] = None,
+        has_balcony: Optional[bool] = None,
+        property_type: Optional[str] = None,
+        **kwargs
     ):
         if self.is_running:
             return False, "فرآیند کراولینگ در حال حاضر در حال اجرا است."
@@ -89,8 +96,18 @@ class CrawlerManager:
             'max_rent': max_rent,
             'min_area': min_area,
             'max_area': max_area,
-            'min_year': min_year
+            'min_year': min_year,
+            'max_year': kwargs.get('max_year'),
+            'min_age': kwargs.get('min_age'),
+            'max_age': kwargs.get('max_age'),
+            'rooms': rooms,
+            'has_parking': has_parking,
+            'has_elevator': has_elevator,
+            'has_warehouse': has_warehouse,
+            'has_balcony': has_balcony,
+            'property_type': property_type
         }
+        filters_dict.update(kwargs)
 
         worker_thread = threading.Thread(
             target=self._run_hybrid_worker,
@@ -145,13 +162,33 @@ class CrawlerManager:
                     self.add_log(f"آگهی در بازبینی فیلتر دومرحله‌ای رد شد: {schema_item.title[:45]}... ({double_check.reason})", 'warning')
                     return
 
-                # گیت نهایی حذف قطعی هرگونه آگهی حاوی کلمات املاک و مشاور
+                # گیت نهایی حذف قطعی هرگونه آگهی حاوی کلمات املاک، مشاور، کارشناس و اسامی فیک
                 combined_check = f"{schema_item.title} {schema_item.description or ''}"
-                for forbidden in ['املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس', 'سرمایه گذاری', 'هلدینگ']:
+                for forbidden in [
+                    'املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوران', 'مشاورین', 'مشاوره', 'آژانس',
+                    'دپارتمان', 'دپارتمان املاک', 'بنگاه', 'کارشناس', 'کارشناسان', 'کارشناس فروش', 'مشاور فروش', 'امین شما',
+                    'مشاور شما', 'کارشناس منطقه', 'سرمایه گذاری', 'هلدینگ', 'کمیسیون', 'حق الزحمه', 'فایلینگ', 'موارد مشابه'
+                ]:
                     if forbidden in combined_check:
                         skipped_count += 1
                         self.add_log(f"آگهی حاوی واژه املاکی '{forbidden}' در گیت نهایی رد شد: {schema_item.title[:45]}...", 'warning')
                         return
+
+                # گیت نهایی حذف قطعی هرگونه آگهی همخونه و اسکان اشتراکی
+                for shared_word in OwnerFilter.SHARED_HOUSING_NEGATIVE_KEYWORDS:
+                    if shared_word in combined_check:
+                        skipped_count += 1
+                        self.add_log(f"آگهی همخونه/اشتراکی حاوی '{shared_word}' در گیت نهایی رد شد: {schema_item.title[:45]}...", 'warning')
+                        return
+
+                # تشخیص و اعطای اولویت حداکثری به آگهی‌های اعلام صریح مالک مستقیم
+                is_direct_owner = OwnerFilter.is_direct_owner_declared(schema_item.title, schema_item.description or '')
+                if is_direct_owner:
+                    schema_item.score = 99
+                    schema_item.is_personal_owner = True
+                    schema_item.filter_log = "👑 مالک مستقیم و شخصی (اعلام صریح در متن)"
+                    if "👑 مالک مستقیم" not in schema_item.features:
+                        schema_item.features.insert(0, "👑 مالک مستقیم")
 
                 existing = Property.query.filter_by(source_id=sid).first()
                 if existing:
@@ -294,10 +331,41 @@ class CrawlerManager:
                                 min_area=filters_dict.get('min_area'),
                                 max_area=filters_dict.get('max_area'),
                                 min_year=filters_dict.get('min_year'),
+                                max_year=filters_dict.get('max_year'),
+                                min_age=filters_dict.get('min_age'),
+                                max_age=filters_dict.get('max_age'),
+                                rooms=filters_dict.get('rooms'),
+                                has_parking=filters_dict.get('has_parking'),
+                                has_elevator=filters_dict.get('has_elevator'),
+                                has_warehouse=filters_dict.get('has_warehouse'),
+                                has_balcony=filters_dict.get('has_balcony'),
+                                property_type=filters_dict.get('property_type'),
                                 on_item_found=on_item_crawled
                             )
                         else:
-                            self.sheypoor_crawler.fetch_listings(category_key=cat, limit=cat_limit, query=district, on_item_found=on_item_crawled)
+                            self.sheypoor_crawler.fetch_listings(
+                                category_key=cat,
+                                limit=cat_limit,
+                                query=district,
+                                min_price=filters_dict.get('min_price'),
+                                max_price=filters_dict.get('max_price'),
+                                min_deposit=filters_dict.get('min_deposit'),
+                                max_deposit=filters_dict.get('max_deposit'),
+                                min_rent=filters_dict.get('min_rent'),
+                                max_rent=filters_dict.get('max_rent'),
+                                min_area=filters_dict.get('min_area'),
+                                max_area=filters_dict.get('max_area'),
+                                min_year=filters_dict.get('min_year'),
+                                max_year=filters_dict.get('max_year'),
+                                min_age=filters_dict.get('min_age'),
+                                max_age=filters_dict.get('max_age'),
+                                rooms=filters_dict.get('rooms'),
+                                has_parking=filters_dict.get('has_parking'),
+                                has_elevator=filters_dict.get('has_elevator'),
+                                has_warehouse=filters_dict.get('has_warehouse'),
+                                has_balcony=filters_dict.get('has_balcony'),
+                                on_item_found=on_item_crawled
+                            )
                         time.sleep(0.5)
                     except Exception as err:
                         db.session.rollback()

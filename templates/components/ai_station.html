@@ -1,0 +1,194 @@
+<!-- ==========================================================================
+     SAGHF IN-LINE LUXURY AI ADVISOR & WEBGL 3D ORB WIDGET
+     - کامپوننت کاملاً ثابت و درون‌صفحه‌ای (In-line / Static) مستقیماً زیر تور ۳۶۰ درجه
+     - فاقد هرگونه آیکون یا حباب شناور / چسبان در صفحه
+     - رندر گوی ۳ بعدی با WebGL / Three.js:
+       * هسته مشکی ابسیدین (#050508)
+       * پرتوهای آبی متالیک (#00D2FF) و بنفش نئونی (#9B51E0) - بدون رنگ طلایی در گوی
+       * ۳ حالت: standby (امواج سیال)، listening/speaking (پالس و اعوجاج فرکانسی)، processing (گرداب نور)
+     - سناریوی ۱: کشف نیاز خریدار/مستأجر و رندر همزمان فایل‌ها در پنل اسلایدی کنار گوی
+     - سناریوی ۲: ثبت خودکار فایل جدید ملک و ارسال خودکار به پیام‌رسان‌ها (واتساپ/تلگرام/بله/ایتا)
+     ========================================================================== -->
+
+<section id="ai-station" class="saghf-inline-ai-widget" dir="rtl">
+  <div class="saghf-ai-glass-wrapper">
+    
+    <!-- نوار سربرگ بالایی کامپوننت -->
+    <div class="saghf-ai-header-bar">
+      <div class="saghf-ai-title-group">
+        <div class="saghf-ai-status-pulse"></div>
+        <h3 class="saghf-ai-main-title">دستیار صوتی و هوش مصنوعی مشاور <span class="text-neon-cyan">«سقف»</span></h3>
+        <span class="saghf-ai-mode-badge" id="aiModeBadge">آماده شنود و انطباق لحظه‌ای</span>
+        <div id="divarLiveMonitorTicker" class="saghf-live-monitor-pill" title="پایش خودکار و استخراج لحظه‌ای آگهی‌های دیوار منطقه ۵">
+          <span class="live-blink-dot"></span>
+          <span id="divarLiveMonitorText">پایش مداوم منطقه ۵: آنلاین</span>
+        </div>
+      </div>
+      <div class="saghf-ai-tools-group">
+        <button type="button" id="aiScenarioToggleBtn" onclick="toggleAiScenarioMode()" class="saghf-ai-pill-btn" title="تغییر سناریو (جستجوی متقاضی / ثبت خودکار فایل)">
+          <span id="aiScenarioIcon">🔍</span>
+          <span id="aiScenarioText">حالت: کشف نیاز خریدار/مستأجر</span>
+        </button>
+        <button type="button" id="aiExpandCollapseBtn" onclick="toggleInPageAssistant()" class="saghf-ai-collapse-btn">
+          <span id="aiExpandCollapseText">باز کردن کنسول تعاملی</span>
+          <span id="aiExpandCollapseIcon">▼</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ۱. حالت فشرده و استندبای گوی در مرکز -->
+    <div id="aiStationStandbyView" class="saghf-ai-standby-view">
+      <div class="saghf-webgl-orb-anchor" onclick="expandAndStartListening()" title="کلیک برای فعال‌سازی مشاوره صوتی">
+        <div class="saghf-orb-aurora-glow"></div>
+        <div class="saghf-orb-gyro-ring ring-cyan"></div>
+        <div class="saghf-orb-gyro-ring ring-violet"></div>
+        <div class="saghf-orb-shadow-base"></div>
+        <canvas id="saghf3DOrbCanvas" class="saghf-webgl-canvas" width="280" height="280"></canvas>
+        <div class="saghf-orb-interactive-tag">
+          <span class="luxury-pulse-ring"></span>
+          <span>کلیک جهت گفتگوی صوتی و استخراج زنده ملک</span>
+        </div>
+      </div>
+
+      <!-- چیپ‌های راهنمای صوتی سریع -->
+      <div class="saghf-ai-quick-chips">
+        <button type="button" onclick="quickPromptSelect('فایل‌های رهن و اجاره در منطقه ۵')" class="saghf-chip-btn">🔑 رهن و اجاره منطقه ۵</button>
+        <button type="button" onclick="quickPromptSelect('خرید آپارتمان نوساز در منطقه ۲')" class="saghf-chip-btn">🏢 خرید نوساز منطقه ۲</button>
+        <button type="button" onclick="quickPromptSelect('ودیعه ۵۰۰ تا ۸۰۰ میلیون رهن و اجاره')" class="saghf-chip-btn">💰 ودیعه ۵۰۰ تا ۸۰۰ م</button>
+        <button type="button" onclick="quickPromptSelect('خرید تا ۱۵ میلیارد پونک')" class="saghf-chip-btn">🏷️ خرید تا ۱۵ میلیارد پونک</button>
+        <button type="button" onclick="quickPromptSelect('قصد واگذاری و ثبت فایل ملک دارم')" class="saghf-chip-btn chip-intake">📝 ثبت خودکار فایل جدید</button>
+      </div>
+    </div>
+
+    <!-- ۲. حالت فعال دوبخشی همگام (Split Dashboard) -->
+    <div id="aiStationExpandedView" class="saghf-ai-expanded-view hidden">
+      <div class="saghf-ai-split-grid">
+        
+        <!-- ستون راست: کنسول صوتی، گوی ۳ بعدی WebGL و فرم ورودی -->
+        <div class="saghf-ai-console-col">
+          <div class="saghf-console-orb-wrap">
+            <div class="saghf-active-orb-canvas-container" onclick="toggleMicrophoneLive()" title="کلیک برای شروع / توقف شنود">
+              <div id="saghfOrbActiveGlow" class="saghf-orb-active-glow"></div>
+              <div class="saghf-orb-gyro-ring ring-cyan-sm"></div>
+              <div class="saghf-orb-gyro-ring ring-violet-sm"></div>
+              <canvas id="saghf3DOrbCanvasActive" class="saghf-webgl-canvas active" width="210" height="210"></canvas>
+              <div id="saghfMicStateIndicator" class="saghf-mic-badge">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              </div>
+            </div>
+            
+            <!-- امواج نوسانگر صوتی پویا -->
+            <div id="saghfAudioVisualizer" class="saghf-visualizer-bars">
+              <span class="v-bar"></span><span class="v-bar"></span><span class="v-bar"></span>
+              <span class="v-bar"></span><span class="v-bar"></span><span class="v-bar"></span>
+              <span class="v-bar"></span><span class="v-bar"></span>
+            </div>
+          </div>
+
+          <!-- کارت ترنسکریپت زنده گفتار و پاسخ مشاور -->
+          <div class="saghf-transcript-card">
+            <div class="saghf-transcript-meta">
+              <span id="saghfSpeakerLabel" class="saghf-speaker-pill">مشاور هوشمند سقف</span>
+              <span id="saghfStateText" class="saghf-state-pulse">آماده شنود...</span>
+            </div>
+            <p id="saghfLiveTranscript" class="saghf-transcript-text">
+              «سلام، خوش آمدید به سقف. برای خرید یا اجاره چه متراژ و در چه منطقه‌ای مد نظرتونه؟»
+            </p>
+          </div>
+
+          <!-- فرم ورودی صوتی و متنی -->
+          <form id="saghfVoiceInputForm" onsubmit="handleVoiceFormSubmit(event); return false;" class="saghf-voice-form">
+            <button type="button" id="saghfMainMicBtn" onclick="toggleMicrophoneLive()" class="saghf-mic-action-btn" title="شروع شنود صوتی">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+            </button>
+            <input type="text" id="saghfTextInput" placeholder="بگویید یا بنویسید (مثلاً: رهن و اجاره تا ۸۰۰ میلیون در منطقه ۵)..." class="saghf-voice-input" dir="rtl" autocomplete="off" onkeydown="if(event.key==='Enter'){handleVoiceFormSubmit(event); return false;}">
+            <button type="button" id="saghfSendBtn" onclick="handleVoiceFormSubmit(event)" class="saghf-send-btn">
+              <span>ارسال</span> <span>↵</span>
+            </button>
+          </form>
+
+          <!-- تگ‌های پارامترهای استخراج‌شده (NER) -->
+          <div id="saghfExtractedEntities" class="saghf-entities-box hidden">
+            <div class="saghf-entities-title">موجودیت‌های استخراج‌شده از کلام شما:</div>
+            <div id="saghfEntitiesList" class="saghf-entities-tags"></div>
+          </div>
+        </div>
+
+        <!-- ستون چپ: پنل اسلایدی همگام نتایج استخراج‌شده -->
+        <div class="saghf-ai-results-col">
+          
+          <!-- سناریوی اول: پنل نتایج زنده املاک مطابق خواسته مشتری -->
+          <div id="saghfMatchingPanel" class="saghf-results-subpanel">
+            <div class="saghf-results-header">
+              <div class="saghf-results-count-title">
+                <span class="neon-pulse-dot emerald"></span>
+                <span>فایل‌های منطبق استخراج‌شده:</span>
+                <span id="saghfMatchCountBadge" class="saghf-badge-counter">۰ فایل</span>
+              </div>
+              <a href="{{ url_for('properties.list_properties') }}" class="saghf-view-catalog-link">مشاهده همه در کاتالوگ ↵</a>
+            </div>
+
+            <div id="saghfMatchListContainer" class="saghf-cards-scroll-grid">
+              <div class="saghf-empty-hint">
+                <span>🔍</span>
+                <p>در حال شنود... به محض بیان ویژگی‌های ملک، نتایج تطبیق به‌صورت بلادرنگ در این بخش نمایش داده می‌شوند.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- سناریوی دوم: فرم ویزارد دریافت مشخصات ملک و اتوماسیون پیام‌رسان‌ها -->
+          <div id="saghfIntakePanel" class="saghf-results-subpanel hidden">
+            <div class="saghf-results-header">
+              <div class="saghf-results-count-title">
+                <span class="neon-pulse-dot amber"></span>
+                <span>ثبت خودکار فایل و اتصال به پیام‌رسان‌ها</span>
+              </div>
+              <span class="saghf-badge-counter" style="background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24;">Omni-Channel Auto</span>
+            </div>
+
+            <div class="saghf-intake-wizard-content">
+              <p class="saghf-intake-desc">مشخصات ملک بیان‌شده توسط مالک مستقیماً استخراج شده و پیام خوش‌آمد + دریافت مدارک به پیام‌رسان‌ها ارسال می‌گردد:</p>
+              
+              <div class="saghf-intake-fields-grid">
+                <div class="saghf-field-item">
+                  <label>نوع معامله:</label>
+                  <span id="intakeDealType" class="saghf-val-pill">رهن و اجاره</span>
+                </div>
+                <div class="saghf-field-item">
+                  <label>محدوده / منطقه:</label>
+                  <span id="intakeDistrict" class="saghf-val-pill">منطقه ۵ (پونک)</span>
+                </div>
+                <div class="saghf-field-item">
+                  <label>متراژ و خواب:</label>
+                  <span id="intakeMeterage" class="saghf-val-pill">۱۱۰ متر / ۲ خواب</span>
+                </div>
+                <div class="saghf-field-item">
+                  <label>مبلغ / شرایط مالی:</label>
+                  <span id="intakePrice" class="saghf-val-pill">ودیعه ۵۰۰ م - اجاره ۳۵ م</span>
+                </div>
+                <div class="saghf-field-item full-row">
+                  <label>شماره تماس مالک جهت استعلام پیام‌رسان:</label>
+                  <input type="tel" id="intakeOwnerPhone" placeholder="0912..." class="glass-input" dir="ltr" value="09123456789">
+                </div>
+              </div>
+
+              <!-- کلیدهای ارسال به پیام‌رسان‌ها -->
+              <div class="saghf-omni-triggers-bar">
+                <span class="saghf-omni-label">اتوماسیون پیام‌رسان‌ها (ارسال پیام خوش‌آمد و لینک مدارک):</span>
+                <button type="button" onclick="triggerOmniChannelIntake('whatsapp')" class="saghf-omni-btn whatsapp">واتساپ</button>
+                <button type="button" onclick="triggerOmniChannelIntake('telegram')" class="saghf-omni-btn telegram">تلگرام</button>
+                <button type="button" onclick="triggerOmniChannelIntake('bale')" class="saghf-omni-btn bale">بله</button>
+                <button type="button" onclick="triggerOmniChannelIntake('eitaa')" class="saghf-omni-btn eitaa">ایتا</button>
+              </div>
+
+              <div id="saghfIntakeSubmitStatus" class="saghf-intake-status hidden"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>

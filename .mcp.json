@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "n8n-cloud": {
+      "type": "http",
+      "url": "https://kian1377.app.n8n.cloud/mcp-server/http",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjYTE1ODhmMC1hMzNiLTRjZGEtOGEzZS1mOTcxNTQwNmY2ZWEiLCJpc3MiOiJuOG4iLCJhdWQiOiJtY3Atc2VydmVyLWFwaSIsImp0aSI6ImY0ODRhOTg3LWE3NTItNDA5NS1iYzllLTY0ZmE2ZmEzMWU5YSIsImlhdCI6MTc4OTU4NDcxNH0.qgoNkHKcWE6JFDYUgbIoWHsg1-BQVQOEdC4CLcC_UyY"
+      }
+    }
+  }
+}

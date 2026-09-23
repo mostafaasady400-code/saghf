@@ -1,5 +1,8 @@
+import os
+import json
 import logging
 import html
+from datetime import datetime
 import telebot
 from telebot.types import (
     InlineKeyboardMarkup,
@@ -49,6 +52,15 @@ def get_bot():
                 logger.info(f"Telegram proxy configured: {Config.TELEGRAM_PROXY}")
             except Exception as e:
                 logger.warning(f"Could not configure Telegram proxy: {e}")
+        else:
+            try:
+                import socket
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.3)
+                    if s.connect_ex(('127.0.0.1', 8088)) == 0:
+                        telebot.apihelper.proxy = {'https': 'http://127.0.0.1:8088'}
+            except Exception:
+                pass
         # Create non-threaded bot instance optimized for Flask webhook and polling handling
         _bot_instance = telebot.TeleBot(token=token or "0000000000:AA_dummy_unconfigured_token", threaded=False)
         _register_handlers(_bot_instance)
@@ -56,17 +68,22 @@ def get_bot():
 
 wizard_sessions = {}
 
-def _build_start_keyboard():
+def _build_start_keyboard(user_id=None):
     """
     Creates luxury gold/black style inline keyboard for /start command.
+    Shows admin button exclusively if user_id is an authorized admin.
     """
     markup = InlineKeyboardMarkup(row_width=2)
+    if user_id and is_admin_telegram_user(user_id):
+        markup.add(InlineKeyboardButton("👑 پنل اختصاصی مدیریت (Admin)", callback_data="admin_cb_menu"))
+
     btn_wizard = InlineKeyboardButton("🎯 فیلتر و استخراج جدید", callback_data="wiz_start")
     btn_sale = InlineKeyboardButton("🏷️ آخرین فایل‌های فروش", callback_data="btn_latest_sale")
     btn_rent = InlineKeyboardButton("🔑 آخرین فایل‌های اجاره", callback_data="btn_latest_rent")
     btn_code_search = InlineKeyboardButton("🔢 دریافت آلبوم با کد فایل", callback_data="btn_code_info")
     btn_crm = InlineKeyboardButton("💬 مشاوره با کارشناس ارشد", callback_data="btn_crm_consult")
     btn_search = InlineKeyboardButton("🔍 استعلام و فیلتر پیشرفته", callback_data="btn_search_info")
+    btn_myid = InlineKeyboardButton("🆔 شناسه من (User ID)", callback_data="btn_myid")
     
     # Web app link (defaults to localhost or configured web URL)
     web_url = Config.TELEGRAM_WEBHOOK_URL.replace('/api/telegram/webhook', '') if Config.TELEGRAM_WEBHOOK_URL else 'http://127.0.0.1:5000'
@@ -77,8 +94,55 @@ def _build_start_keyboard():
     markup.add(btn_wizard)
     markup.add(btn_sale, btn_rent)
     markup.add(btn_code_search, btn_crm)
-    markup.add(btn_search)
+    markup.add(btn_search, btn_myid)
     markup.add(btn_web)
+    return markup
+
+def send_telegram_login_prompt(chat_id: str or int, session_token: str, phone: str = "") -> bool:
+    """
+    ارسال پیام تایید ورود فوری با دکمه شیشه‌ای تایید به تلگرام کاربر
+    """
+    bot = get_bot()
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        InlineKeyboardButton("✅ تایید و ورود به سامانه سقف", callback_data=f"tg_confirm_{session_token}"),
+        InlineKeyboardButton("❌ لغو درخواست", callback_data=f"tg_reject_{session_token}")
+    )
+    disp_phone = phone if phone else "شماره همراه شما"
+    prompt_text = (
+        "⚜️ <b>درخواست ورود به سامانه هوشمند فایلینگ سقف</b> ⚜️\n\n"
+        f"همراه گرامی، درخواستی جهت ورود به سایت سقف با شماره <code>{disp_phone}</code> ثبت شده است.\n\n"
+        "آیا تایید می‌فرمایید که وارد سایت شوید؟"
+    )
+    try:
+        bot.send_message(chat_id, prompt_text, reply_markup=markup, parse_mode='HTML')
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to send direct Telegram prompt to {chat_id}: {e}")
+        return False
+
+def _build_admin_panel_markup():
+    """
+    Creates inline control buttons for the Admin Console.
+    """
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton("📊 آمار دیتابیس", callback_data="admin_cb_stats"),
+        InlineKeyboardButton("🕷️ استخراج فوری", callback_data="admin_cb_crawl")
+    )
+    markup.add(
+        InlineKeyboardButton("👥 لیست مدیران", callback_data="admin_cb_list"),
+        InlineKeyboardButton("➕ افزودن مدیر جدید", callback_data="admin_cb_add_guide")
+    )
+    web_url = Config.TELEGRAM_WEBHOOK_URL.replace('/api/telegram/webhook', '') if Config.TELEGRAM_WEBHOOK_URL else 'http://127.0.0.1:5000'
+    if not web_url.startswith(('http://', 'https://')):
+        web_url = f"http://{web_url}"
+    admin_web_url = f"{web_url}/admin/dashboard"
+    users_web_url = f"{web_url}/admin/users"
+    markup.add(
+        InlineKeyboardButton("👥 مدیریت کاربران (CRUD)", url=users_web_url),
+        InlineKeyboardButton("🌐 داشبورد مدیریت وب", url=admin_web_url)
+    )
     return markup
 
 def _build_wizard_step1_markup():
@@ -168,31 +232,176 @@ def _is_property_code_query(text: str) -> bool:
     cleaned = cleaned.strip()
     return cleaned.isdigit() and (1 <= len(cleaned) <= 6)
 
+ADMIN_STORAGE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'telegram_admins.json')
+
+def _load_admin_store() -> dict:
+    """
+    Loads persistent Telegram admin IDs and metadata.
+    Ensures Super Admin ID 7495565146 is always present and protected.
+    """
+    default_store = {
+        "super_admins": ["7495565146"],
+        "admins": ["7495565146"],
+        "admin_metadata": {
+            "7495565146": {
+                "role": "super_admin",
+                "title": "مدیر ارشد و بنیان‌گذار",
+                "added_at": "2026-09-17 12:00:00"
+            }
+        }
+    }
+    if not os.path.exists(ADMIN_STORAGE_FILE):
+        try:
+            os.makedirs(os.path.dirname(ADMIN_STORAGE_FILE), exist_ok=True)
+            with open(ADMIN_STORAGE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(default_store, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Error creating admin storage file: {e}")
+        return default_store
+
+    try:
+        with open(ADMIN_STORAGE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            admins = data.setdefault("admins", [])
+            super_admins = data.setdefault("super_admins", [])
+            
+            # Ensure 7495565146 is always super admin
+            if "7495565146" not in super_admins:
+                super_admins.append("7495565146")
+            if "7495565146" not in admins:
+                admins.append("7495565146")
+                
+            # Ensure config admin is also present if set
+            env_admin = str(Config.ADMIN_TELEGRAM_ID or "").strip()
+            if env_admin:
+                for aid in env_admin.split(','):
+                    aid = aid.strip()
+                    if aid and aid not in admins:
+                        admins.append(aid)
+            return data
+    except Exception as e:
+        logger.error(f"Error reading admin store: {e}")
+        return default_store
+
+def _save_admin_store(data: dict) -> bool:
+    try:
+        os.makedirs(os.path.dirname(ADMIN_STORAGE_FILE), exist_ok=True)
+        with open(ADMIN_STORAGE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving admin store: {e}")
+        return False
+
+def get_all_admin_telegram_ids() -> set[str]:
+    """
+    Returns set of all authorized admin telegram user IDs (strings).
+    """
+    store = _load_admin_store()
+    admin_set = set(str(x).strip() for x in store.get("admins", []))
+    env_admin = str(Config.ADMIN_TELEGRAM_ID or "").strip()
+    if env_admin:
+        for aid in env_admin.split(','):
+            if aid.strip():
+                admin_set.add(aid.strip())
+    admin_set.add("7495565146")
+    return admin_set
+
 def is_admin_telegram_user(user_id) -> bool:
     """
-    Checks if the Telegram user ID matches ADMIN_TELEGRAM_ID in config.
+    Checks if the Telegram user ID is an authorized admin.
     """
-    admin_id_str = str(Config.ADMIN_TELEGRAM_ID or "").strip()
-    if not admin_id_str:
+    if not user_id:
         return False
-    return str(user_id).strip() == admin_id_str
+    return str(user_id).strip() in get_all_admin_telegram_ids()
+
+def is_super_admin(user_id) -> bool:
+    """
+    Checks if the Telegram user ID is a super admin.
+    """
+    if not user_id:
+        return False
+    uid = str(user_id).strip()
+    store = _load_admin_store()
+    super_admins = set(str(x).strip() for x in store.get("super_admins", []))
+    env_admin = str(Config.ADMIN_TELEGRAM_ID or "").strip()
+    if env_admin:
+        super_admins.add(env_admin)
+    super_admins.add("7495565146")
+    return uid in super_admins
+
+def add_admin_telegram_user(target_id: str, added_by: str = None) -> tuple[bool, str]:
+    """
+    Dynamically adds a new Telegram admin user ID to persistent storage.
+    """
+    target_id = str(target_id).strip()
+    fa_to_en = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
+    target_id = target_id.translate(fa_to_en)
+    
+    if not target_id.isdigit() or len(target_id) < 5:
+        return False, "شناسه عددی واردشده نامعتبر است (باید حداقل ۵ رقم و فقط شامل ارقام باشد)."
+        
+    store = _load_admin_store()
+    admins = store.setdefault("admins", [])
+    if target_id in admins:
+        return False, f"شناسه عددی <code>{target_id}</code> در حال حاضر در لیست مدیران سامانه وجود دارد."
+        
+    admins.append(target_id)
+    store.setdefault("admin_metadata", {})[target_id] = {
+        "role": "admin",
+        "title": "مدیر سیستم",
+        "added_by": str(added_by or ""),
+        "added_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    _save_admin_store(store)
+    logger.info(f"Telegram Admin added: {target_id} (added by {added_by})")
+    return True, f"کاربر با شناسه عددی <code>{target_id}</code> با موفقیت به لیست مدیران مجاز سقف اضافه شد."
+
+def remove_admin_telegram_user(target_id: str) -> tuple[bool, str]:
+    """
+    Removes a Telegram admin user ID from storage (Super Admin 7495565146 cannot be removed).
+    """
+    target_id = str(target_id).strip()
+    fa_to_en = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
+    target_id = target_id.translate(fa_to_en)
+    
+    if target_id == "7495565146":
+        return False, "امکان حذف مدیر ارشد و مالک اصلی سیستم (<code>7495565146</code>) وجود ندارد."
+        
+    env_admin = str(Config.ADMIN_TELEGRAM_ID or "").strip()
+    if env_admin and target_id == env_admin:
+        return False, "این شناسه در تنظیمات اصلی سرور به عنوان مدیر تعریف شده و از داخل بات قابل حذف نیست."
+        
+    store = _load_admin_store()
+    admins = store.get("admins", [])
+    if target_id not in admins:
+        return False, f"شناسه <code>{target_id}</code> در لیست مدیران فعلی یافت نشد."
+        
+    admins.remove(target_id)
+    if "admin_metadata" in store and target_id in store["admin_metadata"]:
+        del store["admin_metadata"][target_id]
+    _save_admin_store(store)
+    logger.info(f"Telegram Admin removed: {target_id}")
+    return True, f"مدیر با شناسه عددی <code>{target_id}</code> با موفقیت از لیست مدیران حذف گردید."
 
 def send_admin_system_alert(text: str) -> bool:
     """
-    Sends critical system notifications directly to the configured ADMIN_TELEGRAM_ID.
+    Sends critical system notifications directly to all configured admin Telegram IDs.
     """
-    admin_id_str = str(Config.ADMIN_TELEGRAM_ID or "").strip()
-    if not admin_id_str:
+    admin_ids = get_all_admin_telegram_ids()
+    if not admin_ids:
         return False
     bot = get_bot()
     if not bot:
         return False
-    try:
-        bot.send_message(int(admin_id_str), f"🔔 <b>هشدار سیستمی سقف (Super Admin):</b>\n\n{text}", parse_mode='HTML')
-        return True
-    except Exception as e:
-        logger.error(f"Failed to send admin system alert: {e}")
-        return False
+    success = False
+    for aid in admin_ids:
+        try:
+            bot.send_message(int(aid), f"🔔 <b>هشدار سیستمی سقف (Admin Alert):</b>\n\n{text}", parse_mode='HTML')
+            success = True
+        except Exception as e:
+            logger.error(f"Failed to send admin alert to {aid}: {e}")
+    return success
 
 def _register_handlers(bot: telebot.TeleBot):
     """
@@ -201,10 +410,42 @@ def _register_handlers(bot: telebot.TeleBot):
 
     @bot.message_handler(commands=['start', 'help'])
     def handle_start(message):
-        # 1. Check if deep link contains property code (e.g. /start code_10001 or /start 10001)
+        # 1. Check if deep link contains login token (e.g. /start login_xyz123)
         text_parts = message.text.split() if message.text else []
         if len(text_parts) > 1:
             param = text_parts[1].strip()
+
+            if param.startswith('login_') or param.startswith('auth_'):
+                session_token = param.replace('login_', '').replace('auth_', '').strip()
+                app = get_flask_app()
+                with app.app_context():
+                    from database.models import AuthSession
+                    from database.db import db
+                    auth_sess = AuthSession.query.filter_by(session_token=session_token).first()
+                    if auth_sess and not auth_sess.is_expired and auth_sess.status == 'pending':
+                        auth_sess.messenger_user_id = str(message.chat.id)
+                        auth_sess.messenger_user_name = message.from_user.first_name or ''
+                        db.session.commit()
+
+                        markup = InlineKeyboardMarkup(row_width=1)
+                        markup.add(
+                            InlineKeyboardButton("✅ تایید و ورود به سامانه سقف", callback_data=f"tg_confirm_{session_token}"),
+                            InlineKeyboardButton("❌ لغو درخواست", callback_data=f"tg_reject_{session_token}")
+                        )
+                        disp_phone = auth_sess.phone if auth_sess.phone else "شماره همراه شما"
+                        prompt_text = (
+                            "⚜️ <b>درخواست ورود به سامانه فایلینگ سقف</b> ⚜️\n\n"
+                            f"سلام <b>{html.escape(message.from_user.first_name or 'کاربر گرامی')}</b>،\n"
+                            f"درخواستی برای ورود/ثبت‌نام با شماره <code>{disp_phone}</code> به سایت سقف ارسال شده است.\n\n"
+                            "آیا تایید می‌فرمایید که با این حساب تلگرام وارد سامانه سقف شوید؟"
+                        )
+                        bot.send_message(message.chat.id, prompt_text, reply_markup=markup, parse_mode='HTML')
+                        return
+                    else:
+                        bot.send_message(message.chat.id, "⚠️ این نشست ورود منقضی شده یا یافت نشد. لطفاً مجدداً در سایت تلاش فرمایید.")
+                        return
+
+            # 2. Check if deep link contains property code (e.g. /start code_10001 or /start 10001)
             code_candidate = param.replace('code_', '')
             fa_to_en = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
             clean_digits = ''.join(filter(str.isdigit, code_candidate.translate(fa_to_en)))
@@ -230,9 +471,24 @@ def _register_handlers(bot: telebot.TeleBot):
             "جهت مشاهده فایل‌های دسته‌بندی‌شده، گزینه‌های زیر را انتخاب نمایید:"
         )
         try:
-            bot.reply_to(message, welcome_text, reply_markup=_build_start_keyboard(), parse_mode='HTML')
+            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images', 'saghf_logo_official.jpg')
+            if os.path.exists(logo_path):
+                with open(logo_path, 'rb') as pf:
+                    bot.send_photo(
+                        message.chat.id,
+                        photo=pf,
+                        caption=welcome_text,
+                        reply_markup=_build_start_keyboard(message.from_user.id),
+                        parse_mode='HTML'
+                    )
+            else:
+                bot.reply_to(message, welcome_text, reply_markup=_build_start_keyboard(message.from_user.id), parse_mode='HTML')
         except Exception as e:
-            logger.error(f"Error handling /start message: {e}")
+            logger.error(f"Error handling /start message with photo: {e}")
+            try:
+                bot.reply_to(message, welcome_text, reply_markup=_build_start_keyboard(message.from_user.id), parse_mode='HTML')
+            except Exception:
+                pass
 
     @bot.message_handler(commands=['code'])
     def handle_code_command(message):
@@ -265,30 +521,201 @@ def _register_handlers(bot: telebot.TeleBot):
             logger.error(f"Error handling code command: {e}")
 
     # ==========================================
-    # Super Admin Commands: /admin, /stats, /crawl
+    # User ID Discovery Commands: /id, /myid, /whoami
     # ==========================================
-    @bot.message_handler(commands=['admin'])
+    @bot.message_handler(commands=['id', 'myid', 'whoami'])
+    def handle_my_id_command(message):
+        user_id = message.from_user.id
+        user_name = message.from_user.first_name or "کاربر گرامی"
+        user_handle = f"@{message.from_user.username}" if message.from_user.username else "ندارد"
+        is_admin = is_admin_telegram_user(user_id)
+        is_super = is_super_admin(user_id)
+        
+        if is_super:
+            status_badge = "👑 <b>مدیر ارشد (Super Admin)</b>"
+        elif is_admin:
+            status_badge = "🛡️ <b>مدیر تاییدشده سیستم (Admin)</b>"
+        else:
+            status_badge = "👤 <b>کاربر عادی</b>"
+
+        text = (
+            f"🆔 <b>مشخصات و شناسه کاربری شما در سامانه سقف:</b>\n\n"
+            f"🔢 <b>آیدی عددی اختصاصی شما (Telegram ID):</b>\n"
+            f"<code>{user_id}</code>  (جهت کپی لمس کنید)\n\n"
+            f"👤 <b>نام اکانت:</b> {html.escape(user_name)}\n"
+            f"🏷️ <b>شناسه کاربری:</b> {user_handle}\n"
+            f"🔰 <b>سطح دسترسی:</b> {status_badge}\n\n"
+        )
+        if not is_admin:
+            text += (
+                f"💡 <b>چگونه ادمین شوم؟</b>\n"
+                f"این شناسه عددی (<code>{user_id}</code>) را به مدیر ارشد سامانه ارائه فرمایید "
+                f"تا دسترسی مدیریت با دستور <code>/add_admin {user_id}</code> برای شما فعال گردد."
+            )
+        else:
+            text += (
+                "✨ <b>دسترسی مدیریتی:</b>\n"
+                "شما دسترسی کامل به کنسول مدیریت دارید. با ارسال دستور <code>/admin</code> می‌توانید پنل اختصاصی را باز کنید."
+            )
+            
+        bot.reply_to(message, text, parse_mode='HTML')
+
+    # ==========================================
+    # Super Admin & Admin Console: /admin
+    # ==========================================
+    @bot.message_handler(commands=['admin', 'panel'])
     def handle_admin_command(message):
         user_id = message.from_user.id
         if not is_admin_telegram_user(user_id):
             bot.reply_to(
                 message,
                 f"⛔ <b>دسترسی غیرمجاز!</b>\n\n"
-                f"این بخش صرفاً برای حساب <b>مدیر ارشد (Super Admin)</b> سامانه مجاز است.\n"
-                f"شناسه عددی شما (<code>{user_id}</code>) در لیست مدیران مجاز سامانه سقف ثبت نشده است.",
+                f"این بخش منحصراً برای <b>مدیران تاییدشده سامانه سقف</b> طراحی شده است.\n"
+                f"شناسه عددی شما (<code>{user_id}</code>) در لیست مدیران مجاز سامانه سقف ثبت نشده است.\n\n"
+                f"💡 در صورتی که همکار مجموعه هستید، شناسه عددی خود را جهت دریافت دسترسی به مدیر ارشد ارسال نمایید.",
                 parse_mode='HTML'
             )
             return
 
+        role_title = "مدیر ارشد (Super Admin) 👑" if is_super_admin(user_id) else "مدیر سیستم 🛡️"
         text = (
-            "👑 <b>کنسول مدیریت ارشد سقف (Super Admin)</b> 👑\n\n"
-            "درود بر مدیر ارشد سامانه. فرامین اختصاصی شما:\n\n"
-            "📊 <code>/stats</code> — گزارش آمار لحظه‌ای دیتابیس، فایل‌ها و متقاضیان\n"
-            "🕷️ <code>/crawl</code> — راه‌اندازی فوری تسک کراولینگ دیوار و شیپور\n\n"
-            "🌐 جهت ورود به پنل تحت وب مدیریت:\n"
-            "http://127.0.0.1:5000/admin/dashboard"
+            f"👑 <b>کنسول هوشمند مدیریت سامانه سقف</b> 👑\n\n"
+            f"درود همکار گرامی، به پنل کنترل ربات خوش آمدید.\n"
+            f"👤 <b>شناسه شما:</b> <code>{user_id}</code>\n"
+            f"🎖️ <b>سطح دسترسی:</b> {role_title}\n\n"
+            f"⚡ <b>دسترسی‌های سریع مدیریتی:</b>\n"
+            f"از دکمه‌های زیر استفاده کنید یا فرامین متنی را بفرستید:\n\n"
+            f"▫️ <code>/stats</code> — گزارش آمار لحظه‌ای دیتابیس، فایل‌ها و متقاضیان\n"
+            f"▫️ <code>/crawl</code> — راه‌اندازی فوری تسک کراولینگ دیوار و شیپور\n"
+            f"▫️ <code>/admins</code> — مشاهده و مدیریت لیست مدیران سامانه\n"
+            f"▫️ <code>/add_admin &lt;آیدی_عددی&gt; [نام]</code> — افزودن ادمین جدید\n"
+            f"▫️ <code>/del_admin &lt;آیدی_عددی&gt;</code> — لغو دسترسی ادمین"
         )
-        bot.reply_to(message, text, parse_mode='HTML')
+        bot.reply_to(message, text, reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
+
+    @bot.message_handler(commands=['admins', 'admin_list'])
+    def handle_admins_list_command(message):
+        user_id = message.from_user.id
+        if not is_admin_telegram_user(user_id):
+            bot.reply_to(message, "⛔ دسترسی غیرمجاز!", parse_mode='HTML')
+            return
+        
+        store = _load_admin_store()
+        admins = store.get("admins", [])
+        super_admins = set(store.get("super_admins", ["7495565146"]))
+        super_admins.add("7495565146")
+        metadata = store.get("admin_metadata", {})
+        
+        lines = ["👥 <b>لیست مدیران مجاز سامانه املاک سقف:</b>\n"]
+        for idx, aid in enumerate(admins, 1):
+            meta = metadata.get(aid, {})
+            title = meta.get("title") or ("مدیر ارشد" if aid in super_admins else "مدیر سیستم")
+            added_at = meta.get("added_at", "-")
+            crown = "👑" if aid in super_admins else "🛡️"
+            lines.append(f"{idx}. {crown} <code>{aid}</code> — <b>{html.escape(title)}</b>\n    └ ثبت: {added_at}")
+        
+        lines.append("\n💡 <b>فرامین سریع:</b>")
+        lines.append("▫️ افزودن مدیر: <code>/add_admin &lt;آیدی&gt; [عنوان]</code>")
+        lines.append("▫️ حذف مدیر: <code>/del_admin &lt;آیدی&gt;</code>")
+        
+        bot.reply_to(message, "\n".join(lines), reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
+
+    @bot.message_handler(commands=['add_admin', 'addadmin'])
+    def handle_add_admin_command(message):
+        user_id = message.from_user.id
+        if not is_admin_telegram_user(user_id):
+            bot.reply_to(message, "⛔ دسترسی غیرمجاز!", parse_mode='HTML')
+            return
+            
+        text_parts = message.text.split(maxsplit=2) if message.text else []
+        if len(text_parts) < 2:
+            bot.reply_to(
+                message,
+                "⚠️ <b>فرمت دستور افزودن مدیر جدید:</b>\n\n"
+                "<code>/add_admin &lt;شناسه_عددی&gt; [نام یا عنوان]</code>\n\n"
+                "📌 مثال:\n"
+                "<code>/add_admin 123456789 مهندس احمدی</code>",
+                parse_mode='HTML'
+            )
+            return
+            
+        target_id_raw = text_parts[1].strip()
+        title = text_parts[2].strip() if len(text_parts) > 2 else "مدیر سیستم"
+        
+        fa_to_en = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
+        target_id_clean = ''.join(filter(str.isdigit, target_id_raw.translate(fa_to_en)))
+        
+        if not target_id_clean or len(target_id_clean) < 5:
+            bot.reply_to(message, "❌ شناسه عددی تلگرام نامعتبر است (باید حداقل ۵ رقم و تماماً عدد باشد).", parse_mode='HTML')
+            return
+            
+        ok, msg = add_admin_telegram_user(target_id_clean, added_by=str(user_id))
+        if ok:
+            store = _load_admin_store()
+            if "admin_metadata" in store and target_id_clean in store["admin_metadata"]:
+                store["admin_metadata"][target_id_clean]["title"] = title
+                _save_admin_store(store)
+                
+            bot.reply_to(
+                message,
+                f"✅ <b>مدیر جدید با موفقیت اضافه شد!</b>\n\n"
+                f"🔢 شناسه: <code>{target_id_clean}</code>\n"
+                f"👤 عنوان/نام: <b>{html.escape(title)}</b>\n"
+                f"👑 ثبت‌کننده: <code>{user_id}</code>\n\n"
+                f"این کاربر از هم‌اکنون به پنل <code>/admin</code> و کلیه اختیارات مدیریتی سقف دسترسی دارد.",
+                reply_markup=_build_admin_panel_markup(),
+                parse_mode='HTML'
+            )
+            
+            try:
+                bot.send_message(
+                    int(target_id_clean),
+                    f"🎉 <b>تبریک! دسترسی مدیریت فعال شد</b>\n\n"
+                    f"حساب کاربری شما توسط مدیر ارشد به عنوان <b>مدیر سامانه املاک سقف</b> تایید شد.\n\n"
+                    f"از این پس می‌توانید با ارسال دستور <code>/admin</code> به کنسول مدیریت ربات دسترسی پیدا نمایید.",
+                    parse_mode='HTML'
+                )
+            except Exception:
+                pass
+        else:
+            bot.reply_to(message, f"⚠️ {msg}", parse_mode='HTML')
+
+    @bot.message_handler(commands=['del_admin', 'deladmin', 'remove_admin'])
+    def handle_del_admin_command(message):
+        user_id = message.from_user.id
+        if not is_admin_telegram_user(user_id):
+            bot.reply_to(message, "⛔ دسترسی غیرمجاز!", parse_mode='HTML')
+            return
+            
+        text_parts = message.text.split() if message.text else []
+        if len(text_parts) < 2:
+            bot.reply_to(
+                message,
+                "⚠️ <b>فرمت دستور حذف مدیر:</b>\n\n"
+                "<code>/del_admin &lt;شناسه_عددی&gt;</code>\n\n"
+                "📌 مثال:\n"
+                "<code>/del_admin 123456789</code>",
+                parse_mode='HTML'
+            )
+            return
+            
+        target_id_raw = text_parts[1].strip()
+        fa_to_en = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
+        target_id_clean = ''.join(filter(str.isdigit, target_id_raw.translate(fa_to_en)))
+        
+        ok, msg = remove_admin_telegram_user(target_id_clean)
+        if ok:
+            bot.reply_to(message, f"✅ {msg}", reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
+            try:
+                bot.send_message(
+                    int(target_id_clean),
+                    "ℹ️ دسترسی مدیریت شما در سامانه سقف لغو گردید.",
+                    parse_mode='HTML'
+                )
+            except Exception:
+                pass
+        else:
+            bot.reply_to(message, f"❌ {msg}", parse_mode='HTML')
 
     @bot.message_handler(commands=['stats'])
     def handle_stats_command(message):
@@ -297,7 +724,7 @@ def _register_handlers(bot: telebot.TeleBot):
             bot.reply_to(
                 message,
                 f"⛔ <b>دسترسی غیرمجاز!</b>\n\n"
-                f"مشاهده آمار سیستمی صرفاً برای حساب <b>مدیر ارشد (Super Admin)</b> مجاز است.\n"
+                f"مشاهده آمار سیستمی صرفاً برای حساب‌های <b>مدیران سامانه سقف</b> مجاز است.\n"
                 f"شناسه شما: <code>{user_id}</code>",
                 parse_mode='HTML'
             )
@@ -330,7 +757,7 @@ def _register_handlers(bot: telebot.TeleBot):
                     f"👥 <b>مشتریان فعال در CRM:</b> {clients_cnt} متقاضی\n"
                     f"🕷️ <b>وضعیت انجین کراولر:</b> {c_running}\n"
                 )
-                bot.reply_to(message, report, parse_mode='HTML')
+                bot.reply_to(message, report, reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
         except Exception as e:
             logger.error(f"Error serving admin /stats: {e}")
             bot.reply_to(message, f"❌ خطا در استخراج آمار: {e}")
@@ -342,7 +769,7 @@ def _register_handlers(bot: telebot.TeleBot):
             bot.reply_to(
                 message,
                 f"⛔ <b>دسترسی غیرمجاز!</b>\n\n"
-                f"اجرای تسک‌های کراولر صرفاً برای حساب <b>مدیر ارشد (Super Admin)</b> مجاز است.\n"
+                f"اجرای تسک‌های کراولر صرفاً برای حساب‌های <b>مدیران سامانه سقف</b> مجاز است.\n"
                 f"شناسه شما: <code>{user_id}</code>",
                 parse_mode='HTML'
             )
@@ -363,13 +790,128 @@ def _register_handlers(bot: telebot.TeleBot):
                         f"🕷️ <b>تسک کراولینگ فوری آغاز شد:</b>\n\n"
                         f"{msg}\n"
                         f"فایل‌های جدید پس از پردازش در سامانه و کانال قرار خواهند گرفت.",
+                        reply_markup=_build_admin_panel_markup(),
                         parse_mode='HTML'
                     )
                 else:
-                    bot.reply_to(message, f"⚠️ <b>خطا در شروع کراولینگ:</b>\n{msg}", parse_mode='HTML')
+                    bot.reply_to(message, f"⚠️ <b>خطا در شروع کراولینگ:</b>\n{msg}", reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
         except Exception as e:
             logger.error(f"Error triggering admin /crawl: {e}")
             bot.reply_to(message, f"❌ خطای اجرایی: {e}")
+
+    # ==========================================
+    # Search & User Lookup: /search, /find, /user
+    # ==========================================
+    @bot.message_handler(commands=['search', 'find', 'user', 'check_user'])
+    def handle_search_command(message):
+        text_parts = message.text.split(maxsplit=1) if message.text else []
+        if len(text_parts) < 2:
+            bot.reply_to(
+                message,
+                "🔍 <b>راهنمای جستجو و استعلام در سامانه سقف:</b>\n\n"
+                "▫️ <b>استعلام ملک با کد فایل:</b>\n"
+                "<code>/search 10001</code>\n\n"
+                "▫️ <b>استعلام کاربر یا مدیر با شناسه عددی:</b>\n"
+                "<code>/user 7495565146</code>\n\n"
+                "▫️ <b>جستجوی کاربر با نام یا شماره:</b>\n"
+                "<code>/user رضایی</code>",
+                parse_mode='HTML'
+            )
+            return
+
+        raw_query = text_parts[1].strip()
+        fa_to_en = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
+        query = raw_query.translate(fa_to_en)
+        user_id = message.from_user.id
+        is_admin = is_admin_telegram_user(user_id)
+
+        app = get_flask_app()
+        with app.app_context():
+            from database.models import Property, User
+
+            clean_digits = ''.join(filter(str.isdigit, query))
+
+            # 1. Check if it matches a Property Code (1 to 6 digits)
+            if clean_digits and (1 <= len(clean_digits) <= 6):
+                prop = Property.get_by_code(clean_digits)
+                if prop:
+                    from .notifier import send_property_media_group
+                    try:
+                        bot.send_message(message.chat.id, f"📸 در حال ارسال آلبوم فایل کد {prop.file_code} ({html.escape(prop.title)})...")
+                    except Exception:
+                        pass
+                    send_property_media_group(prop, message.chat.id)
+                    return
+
+            # 2. If caller is admin, search Users / Admins table
+            if is_admin:
+                user_match = None
+                if clean_digits:
+                    user_match = User.query.filter(
+                        (User.telegram_id == clean_digits) |
+                        (User.phone.like(f"%{clean_digits}%")) |
+                        (User.id == clean_digits)
+                    ).first()
+                if not user_match:
+                    user_match = User.query.filter(
+                        (User.username.ilike(f"%{query}%")) |
+                        (User.full_name.ilike(f"%{query}%"))
+                    ).first()
+
+                if user_match:
+                    u = user_match
+                    active_label = "فعال 🟢" if u.is_active else "غیرفعال 🔴"
+                    role_badge = u.role_title
+                    text = (
+                        f"👤 <b>اطلاعات کاربر در دیتابیس سامانه سقف:</b>\n\n"
+                        f"🆔 شناسه ردیف: <code>{u.id}</code>\n"
+                        f"👤 نام و نام‌خانوادگی: <b>{html.escape(u.full_name)}</b>\n"
+                        f"🏷️ نام کاربری: <code>{u.username}</code>\n"
+                        f"🎖️ نقش: <b>{role_badge}</b>\n"
+                        f"🔢 شناسه تلگرام: <code>{u.telegram_id or 'ثبت‌نشده'}</code>\n"
+                        f"📞 شماره همراه: <code>{u.phone or 'ثبت‌نشده'}</code>\n"
+                        f"⚡ وضعیت حساب: {active_label}\n"
+                        f"📅 تاریخ ثبت: {u.created_at.strftime('%Y/%m/%d') if u.created_at else '-'}\n"
+                    )
+                    if u.notes:
+                        text += f"📝 یادداشت: {html.escape(u.notes)}\n"
+
+                    # Web CRUD link markup
+                    web_url = Config.TELEGRAM_WEBHOOK_URL.replace('/api/telegram/webhook', '') if Config.TELEGRAM_WEBHOOK_URL else 'http://127.0.0.1:5000'
+                    if not web_url.startswith(('http://', 'https://')):
+                        web_url = f"http://{web_url}"
+                    markup = InlineKeyboardMarkup()
+                    markup.add(
+                        InlineKeyboardButton("✏️ مدیریت در پنل وب (CRUD)", url=f"{web_url}/admin/users")
+                    )
+                    bot.reply_to(message, text, reply_markup=markup, parse_mode='HTML')
+                    return
+
+                # Also check telegram_admins.json directly if not in User table yet
+                store = _load_admin_store()
+                if clean_digits in store.get("admins", []):
+                    meta = store.get("admin_metadata", {}).get(clean_digits, {})
+                    title = meta.get("title", "مدیر سیستم")
+                    added_at = meta.get("added_at", "-")
+                    text = (
+                        f"🛡️ <b>مدیر تلگرام تاییدشده:</b>\n\n"
+                        f"🔢 شناسه عددی: <code>{clean_digits}</code>\n"
+                        f"👤 عنوان: <b>{html.escape(title)}</b>\n"
+                        f"📅 ثبت در تلگرام: {added_at}\n\n"
+                        "این کاربر دارای دسترسی مجاز به ربات تلگرام است."
+                    )
+                    bot.reply_to(message, text, parse_mode='HTML')
+                    return
+
+            # 3. Not found response
+            bot.reply_to(
+                message,
+                f"❌ نتیجه‌ای برای استعلام «<code>{html.escape(raw_query)}</code>» یافت نشد.\n\n"
+                "💡 راهنما:\n"
+                "• جهت استعلام فایل ملکی: کد فایل را ارسال کنید (مثلاً <code>10001</code>)\n"
+                "• جهت استعلام کاربر یا ادمین: شناسه عددی یا نام کاربری را بفرستید.",
+                parse_mode='HTML'
+            )
 
     @bot.message_handler(func=lambda msg: _is_property_code_query(msg.text))
     def handle_numeric_code_search(message):
@@ -405,6 +947,157 @@ def _register_handlers(bot: telebot.TeleBot):
         except Exception as e:
             logger.error(f"Error handling numeric code search: {e}")
 
+    # ==========================================
+    # Admin Gold & Green Alert Handlers
+    # ==========================================
+    @bot.callback_query_handler(func=lambda call: call.data and call.data.startswith('adm_pub_'))
+    def handle_admin_publish_property_callback(call):
+        try:
+            prop_id = int(call.data.replace('adm_pub_', '').strip())
+            app = get_flask_app()
+            with app.app_context():
+                from database.models import Property
+                from database.db import db
+                prop = Property.query.get(prop_id)
+                if prop:
+                    prop.status = 'verified'
+                    prop.updated_at = datetime.utcnow()
+                    db.session.commit()
+                    bot.answer_callback_query(call.id, f"✅ ملک کد {prop.file_code} با موفقیت تایید و در سامانه منتشر شد.", show_alert=True)
+                    try:
+                        bot.send_message(call.message.chat.id, f"🎉 <b>فایل ملکی کد {prop.file_code} توسط مدیر تایید و منتشر گردید.</b>", parse_mode='HTML')
+                    except Exception:
+                        pass
+                else:
+                    bot.answer_callback_query(call.id, "❌ فایل ملکی یافت نشد.", show_alert=True)
+        except Exception as e:
+            logger.error(f"Error publishing property via callback: {e}")
+            bot.answer_callback_query(call.id, "خطا در پردازش درخواست.", show_alert=True)
+
+    @bot.callback_query_handler(func=lambda call: call.data and call.data.startswith('adm_sendmatch_'))
+    def handle_admin_send_matches_callback(call):
+        try:
+            lead_id = int(call.data.replace('adm_sendmatch_', '').strip())
+            app = get_flask_app()
+            with app.app_context():
+                from database.models import CustomerLead
+                from services.nurturing_engine import nurturing_engine
+                lead = CustomerLead.query.get(lead_id)
+                if lead:
+                    bot.answer_callback_query(call.id, "⏳ در حال تطبیق و ارسال ۳ فایل برتر...")
+                    dispatches = nurturing_engine.handle_lead_matching_and_dispatch(lead)
+                    count = len(dispatches)
+                    bot.send_message(
+                        call.message.chat.id,
+                        f"🎯 <b>تعداد {count} فایل ملکی منطبق با موفقیت به متقاضی ({lead.phone_number}) ارسال شد.</b>",
+                        parse_mode='HTML'
+                    )
+                else:
+                    bot.answer_callback_query(call.id, "❌ متقاضی یافت نشد.", show_alert=True)
+        except Exception as e:
+            logger.error(f"Error dispatching matches via callback: {e}")
+            bot.answer_callback_query(call.id, "خطا در ارسال فایل‌ها.", show_alert=True)
+
+    @bot.callback_query_handler(func=lambda call: call.data and (call.data.startswith('tg_confirm_') or call.data.startswith('confirm_')))
+    def handle_auth_confirm_callback(call):
+        try:
+            token = call.data.replace('tg_confirm_', '').replace('confirm_', '').strip()
+            app = get_flask_app()
+            with app.app_context():
+                from database.models import AuthSession, User
+                from database.db import db
+                from werkzeug.security import generate_password_hash
+                import secrets
+
+                auth_sess = AuthSession.query.filter_by(session_token=token).first()
+                if not auth_sess or auth_sess.is_expired:
+                    bot.answer_callback_query(call.id, "❌ این نشست ورود منقضی شده است.", show_alert=True)
+                    return
+
+                user_tg_id = str(call.from_user.id)
+                user_name = call.from_user.first_name or "کاربر تلگرام"
+                phone = auth_sess.phone
+
+                # Find or create user
+                user = None
+                if phone:
+                    user = User.query.filter_by(phone=phone).first()
+                if not user:
+                    user = User.query.filter_by(telegram_id=user_tg_id).first()
+
+                if not user:
+                    base_uname = f"user_{phone}" if phone else f"tg_{user_tg_id}"
+                    existing = User.query.filter_by(username=base_uname).first()
+                    if existing:
+                        base_uname = f"{base_uname}_{secrets.token_hex(2)}"
+
+                    user = User(
+                        username=base_uname,
+                        full_name=user_name,
+                        phone=phone or '',
+                        telegram_id=user_tg_id,
+                        role='user',
+                        is_active=True,
+                        notes='ثبت‌نام خودکار از طریق ربات تلگرام'
+                    )
+                    user.set_password(secrets.token_urlsafe(32))
+                    db.session.add(user)
+                    db.session.flush()
+                else:
+                    if not user.telegram_id:
+                        user.telegram_id = user_tg_id
+                    if phone and not user.phone:
+                        user.phone = phone
+
+                user.last_login = datetime.utcnow()
+                auth_sess.status = 'confirmed'
+                auth_sess.user_id = user.id
+                auth_sess.messenger_user_id = user_tg_id
+                auth_sess.messenger_user_name = user_name
+                auth_sess.confirmed_at = datetime.utcnow()
+                db.session.commit()
+
+                bot.answer_callback_query(call.id, "✅ ورود شما به سامانه سقف با موفقیت تایید شد.")
+                try:
+                    bot.edit_message_text(
+                        "⚜️ <b>سامانه هوشمند فایلینگ سقف</b> ⚜️\n\n"
+                        f"✅ <b>ورود با موفقیت تایید شد!</b>\n\n"
+                        f"همراه گرامی <b>{html.escape(user_name)}</b>، نشست شما در وب‌سایت فعال گردید.\n"
+                        "هم‌اکنون می‌توانید به مرورگر خود بازگردید.",
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,
+                        parse_mode='HTML'
+                    )
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.error(f"Error handling auth confirm callback: {e}")
+
+    @bot.callback_query_handler(func=lambda call: call.data and (call.data.startswith('tg_reject_') or call.data.startswith('reject_')))
+    def handle_auth_reject_callback(call):
+        try:
+            token = call.data.replace('tg_reject_', '').replace('reject_', '').strip()
+            app = get_flask_app()
+            with app.app_context():
+                from database.models import AuthSession
+                from database.db import db
+                auth_sess = AuthSession.query.filter_by(session_token=token).first()
+                if auth_sess:
+                    auth_sess.status = 'rejected'
+                    db.session.commit()
+            bot.answer_callback_query(call.id, "❌ درخواست ورود لغو شد.")
+            try:
+                bot.edit_message_text(
+                    "❌ <b>درخواست ورود به سامانه سقف لغو گردید.</b>",
+                    chat_id=call.message.chat.id,
+                    message_id=call.message.message_id,
+                    parse_mode='HTML'
+                )
+            except Exception:
+                pass
+        except Exception as e:
+            logger.error(f"Error handling auth reject callback: {e}")
+
     @bot.callback_query_handler(func=lambda call: call.data == 'btn_code_info')
     def handle_code_info_callback(call):
         try:
@@ -437,6 +1130,192 @@ def _register_handlers(bot: telebot.TeleBot):
                 prop = res.get('property')
                 from .notifier import send_property_media_group
                 send_property_media_group(prop, call.message.chat.id)
+
+    @bot.callback_query_handler(func=lambda call: call.data == 'btn_myid')
+    def handle_btn_myid_callback(call):
+        try:
+            bot.answer_callback_query(call.id)
+            user_id = call.from_user.id
+            user_name = call.from_user.first_name or "کاربر گرامی"
+            user_handle = f"@{call.from_user.username}" if call.from_user.username else "ندارد"
+            is_admin = is_admin_telegram_user(user_id)
+            is_super = is_super_admin(user_id)
+            
+            if is_super:
+                status_badge = "👑 <b>مدیر ارشد (Super Admin)</b>"
+            elif is_admin:
+                status_badge = "🛡️ <b>مدیر تاییدشده سیستم (Admin)</b>"
+            else:
+                status_badge = "👤 <b>کاربر عادی</b>"
+
+            text = (
+                f"🆔 <b>مشخصات و شناسه کاربری شما در سامانه سقف:</b>\n\n"
+                f"🔢 <b>آیدی عددی اختصاصی شما (Telegram ID):</b>\n"
+                f"<code>{user_id}</code>  (جهت کپی لمس کنید)\n\n"
+                f"👤 <b>نام اکانت:</b> {html.escape(user_name)}\n"
+                f"🏷️ <b>شناسه کاربری:</b> {user_handle}\n"
+                f"🔰 <b>سطح دسترسی:</b> {status_badge}\n\n"
+            )
+            if not is_admin:
+                text += (
+                    f"💡 <b>چگونه ادمین شوم؟</b>\n"
+                    f"این شناسه عددی (<code>{user_id}</code>) را به مدیر ارشد سامانه ارائه دهید "
+                    f"تا دسترسی مدیریت با دستور <code>/add_admin {user_id}</code> برای شما فعال گردد."
+                )
+            else:
+                text += (
+                    "✨ <b>دسترسی مدیریتی:</b>\n"
+                    "شما دسترسی کامل به کنسول مدیریت دارید. با ارسال دستور <code>/admin</code> یا فشردن دکمه زیر می‌توانید پنل را باز کنید."
+                )
+            markup = _build_admin_panel_markup() if is_admin else None
+            bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
+        except Exception as e:
+            logger.error(f"Error handling btn_myid callback: {e}")
+
+    @bot.callback_query_handler(func=lambda call: call.data in ['admin_cb_menu', 'admin_cb_refresh'])
+    def handle_admin_menu_callback(call):
+        try:
+            user_id = call.from_user.id
+            if not is_admin_telegram_user(user_id):
+                bot.answer_callback_query(call.id, "⛔ دسترسی غیرمجاز! شما مدیر سامانه نیستید.", show_alert=True)
+                return
+            bot.answer_callback_query(call.id, "در حال بارگذاری پنل...")
+            role_title = "مدیر ارشد (Super Admin) 👑" if is_super_admin(user_id) else "مدیر سیستم 🛡️"
+            text = (
+                f"👑 <b>کنسول هوشمند مدیریت سامانه سقف</b> 👑\n\n"
+                f"درود همکار گرامی، به پنل کنترل ربات خوش آمدید.\n"
+                f"👤 <b>شناسه شما:</b> <code>{user_id}</code>\n"
+                f"🎖️ <b>سطح دسترسی:</b> {role_title}\n\n"
+                f"⚡ <b>دسترسی‌های سریع مدیریتی:</b>\n"
+                f"از گزینه‌های زیر جهت کنترل وضعیت سامانه استفاده فرمایید:\n\n"
+                f"▫️ <code>/stats</code> — گزارش آمار فایل‌ها و مشتریان\n"
+                f"▫️ <code>/crawl</code> — اجرای فوری کراولر\n"
+                f"▫️ <code>/admins</code> — مشاهده مدیران فعال\n"
+                f"▫️ <code>/add_admin &lt;آیدی&gt; [نام]</code> — اضافه کردن ادمین\n"
+                f"▫️ <code>/del_admin &lt;آیدی&gt;</code> — حذف ادمین"
+            )
+            bot.send_message(call.message.chat.id, text, reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
+        except Exception as e:
+            logger.error(f"Error handling admin menu callback: {e}")
+
+    @bot.callback_query_handler(func=lambda call: call.data == 'admin_cb_stats')
+    def handle_admin_stats_callback(call):
+        try:
+            user_id = call.from_user.id
+            if not is_admin_telegram_user(user_id):
+                bot.answer_callback_query(call.id, "⛔ دسترسی غیرمجاز!", show_alert=True)
+                return
+            bot.answer_callback_query(call.id, "در حال استخراج آمار دیتابیس...")
+            
+            app = get_flask_app()
+            with app.app_context():
+                from database.models import Property, Client
+                from crawler.crawler_manager import crawler_manager
+                total_props = Property.query.count()
+                sales = Property.query.filter_by(deal_type='sale').count()
+                rents = Property.query.filter_by(deal_type='rent').count()
+                divar_cnt = Property.query.filter_by(source='divar').count()
+                sheypoor_cnt = Property.query.filter_by(source='sheypoor').count()
+                direct_cnt = Property.query.filter_by(source='direct_owner').count()
+                clients_cnt = Client.query.count()
+                c_status = crawler_manager.get_status()
+                c_running = "در حال کراولینگ 🟢" if c_status.get('is_running') else "آماده‌به‌کار (Idle) ⚪"
+
+                report = (
+                    "📊 <b>گزارش لحظه‌ای سامانه املاک سقف:</b>\n\n"
+                    f"🏛️ <b>کل فایل‌های دیتابیس:</b> {total_props} ملک\n"
+                    f"  ├ 🏷️ خرید و فروش: {sales}\n"
+                    f"  └ 🔑 رهن و اجاره: {rents}\n\n"
+                    f"🌐 <b>تفکیک منابع:</b>\n"
+                    f"  ├ دیوار: {divar_cnt}\n"
+                    f"  ├ شیپور: {sheypoor_cnt}\n"
+                    f"  └ فایل مستقیم دفتر: {direct_cnt}\n\n"
+                    f"👥 <b>متقاضیان فعال در CRM:</b> {clients_cnt} پرونده\n"
+                    f"🕷️ <b>وضعیت موتور کراولر:</b> {c_running}\n"
+                )
+                bot.send_message(call.message.chat.id, report, reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
+        except Exception as e:
+            logger.error(f"Error handling admin stats callback: {e}")
+
+    @bot.callback_query_handler(func=lambda call: call.data == 'admin_cb_crawl')
+    def handle_admin_crawl_callback(call):
+        try:
+            user_id = call.from_user.id
+            if not is_admin_telegram_user(user_id):
+                bot.answer_callback_query(call.id, "⛔ دسترسی غیرمجاز!", show_alert=True)
+                return
+            bot.answer_callback_query(call.id, "در حال راه‌اندازی کراولر...")
+            
+            app = get_flask_app()
+            with app.app_context():
+                from crawler.crawler_manager import crawler_manager
+                success, msg = crawler_manager.start_crawl_task(
+                    sources=['divar', 'sheypoor'],
+                    categories=['buy-apartment', 'rent-apartment'],
+                    limit_per_cat=6
+                )
+                if success:
+                    bot.send_message(
+                        call.message.chat.id,
+                        f"🕷️ <b>عملیات کراولینگ آغاز شد:</b>\n\n{msg}\n\nفایل‌های جدید پس از دریافت و پالایش در کانال و وب‌اپ منتشر می‌شوند.",
+                        reply_markup=_build_admin_panel_markup(),
+                        parse_mode='HTML'
+                    )
+                else:
+                    bot.send_message(call.message.chat.id, f"⚠️ <b>پیام سامانه:</b>\n{msg}", reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
+        except Exception as e:
+            logger.error(f"Error handling admin crawl callback: {e}")
+
+    @bot.callback_query_handler(func=lambda call: call.data == 'admin_cb_list')
+    def handle_admin_list_callback(call):
+        try:
+            user_id = call.from_user.id
+            if not is_admin_telegram_user(user_id):
+                bot.answer_callback_query(call.id, "⛔ دسترسی غیرمجاز!", show_alert=True)
+                return
+            bot.answer_callback_query(call.id)
+            
+            store = _load_admin_store()
+            admins = store.get("admins", [])
+            super_admins = set(store.get("super_admins", ["7495565146"]))
+            super_admins.add("7495565146")
+            metadata = store.get("admin_metadata", {})
+            
+            lines = ["👥 <b>لیست مدیران مجاز سامانه سقف:</b>\n"]
+            for idx, aid in enumerate(admins, 1):
+                meta = metadata.get(aid, {})
+                title = meta.get("title") or ("مدیر ارشد" if aid in super_admins else "مدیر سیستم")
+                crown = "👑" if aid in super_admins else "🛡️"
+                lines.append(f"{idx}. {crown} <code>{aid}</code> — <b>{html.escape(title)}</b>")
+            
+            lines.append("\n➕ جهت افزودن مدیر جدید از دستور زیر استفاده فرمایید:")
+            lines.append("<code>/add_admin &lt;آیدی_عددی&gt; [نام]</code>")
+            
+            bot.send_message(call.message.chat.id, "\n".join(lines), reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
+        except Exception as e:
+            logger.error(f"Error handling admin list callback: {e}")
+
+    @bot.callback_query_handler(func=lambda call: call.data == 'admin_cb_add_guide')
+    def handle_admin_add_guide_callback(call):
+        try:
+            user_id = call.from_user.id
+            if not is_admin_telegram_user(user_id):
+                bot.answer_callback_query(call.id, "⛔ دسترسی غیرمجاز!", show_alert=True)
+                return
+            bot.answer_callback_query(call.id)
+            
+            guide = (
+                "➕ <b>راهنمای افزودن مدیر جدید:</b>\n\n"
+                "۱. ابتدا از فرد مورد نظر بخواهید به این بات پیام دهد یا دستور <code>/id</code> را بفرستد تا شناسه عددی تلگرام خود را دریافت کند.\n\n"
+                "۲. سپس شناسه عددی او را با فرمت زیر در چت ارسال فرمایید:\n"
+                "<code>/add_admin &lt;آیدی_عددی&gt; [نام یا نقش]</code>\n\n"
+                "📌 <b>مثال:</b>\n"
+                "<code>/add_admin 123456789 مهندس سلیمانی</code>\n\n"
+                "به محض ارسال، دسترسی او فوراً در تمام بخش‌ها فعال شده و پیام تایید برای وی ارسال خواهد شد."
+            )
+            bot.send_message(call.message.chat.id, guide, reply_markup=_build_admin_panel_markup(), parse_mode='HTML')
+        except Exception as e:
+            logger.error(f"Error handling admin add guide callback: {e}")
 
     @bot.callback_query_handler(func=lambda call: call.data in ['btn_latest_sale', 'btn_latest_rent'])
     def handle_latest_properties_callback(call):
@@ -741,14 +1620,34 @@ def _register_handlers(bot: telebot.TeleBot):
 
         app = get_flask_app()
         with app.app_context():
-            from database.models import Property
+            from database.models import Property, Owner, db
             from crawler.crawler_manager import crawler_manager
+            from crawler.owner_filter import OwnerFilter
+            from data.tehran_districts import get_divar_slug_for_district
             from .notifier import send_property_alert
 
             # ۱. جستجو در دیتابیس
             query = Property.query.filter(Property.status.notin_(['archived', 'sold']))
+
+            # فیلتر قطعی حذف هرگونه آگهی املاکی یا واسطه
+            for forbidden in ['املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس']:
+                query = query.filter(
+                    Property.title.notilike(f'%{forbidden}%'),
+                    Property.description.notilike(f'%{forbidden}%')
+                )
+
+            # فیلتر سخت‌گیرانه حذف هرگونه آگهی همخونه، هم‌اتاقی و پانسیون
+            for sh_kw in OwnerFilter.SHARED_HOUSING_NEGATIVE_KEYWORDS:
+                query = query.filter(
+                    Property.title.notilike(f'%{sh_kw}%'),
+                    Property.description.notilike(f'%{sh_kw}%')
+                )
+
             if deal_type and deal_type != 'all':
                 query = query.filter(Property.deal_type == deal_type)
+            prop_type = session.get('prop_type')
+            if prop_type and prop_type != 'all':
+                query = query.filter(Property.property_type == prop_type)
             if district_clean:
                 query = query.filter(Property.district.contains(district_clean))
 
@@ -761,17 +1660,81 @@ def _register_handlers(bot: telebot.TeleBot):
             if session.get('min_area'): query = query.filter(Property.area >= session['min_area'])
             if session.get('max_area'): query = query.filter(Property.area <= session['max_area'])
 
-            matches = query.order_by(Property.created_at.desc()).limit(5).all()
+            matches = query.order_by(Property.created_at.desc()).limit(50).all()
 
-            # ۲. اگر تعداد فایل‌های موجود در دیتابیس کمتر از ۳ تا بود، فوراً یک کراول زنده اجرا کن
-            if len(matches) < 3:
-                cat_key = 'buy-apartment' if deal_type == 'sale' else 'rent-apartment'
+            # ۲. اگر تعداد فایل‌های موجود در دیتابیس کمتر از ۵ تا بود، استخراج عمیق زنده
+            if len(matches) < 5:
+                if deal_type == 'sale':
+                    if prop_type == 'villa':
+                        cat_key = 'buy-villa'
+                    elif prop_type == 'commercial':
+                        cat_key = 'commercial-sell'
+                    else:
+                        cat_key = 'buy-apartment'
+                else:
+                    if prop_type == 'commercial':
+                        cat_key = 'commercial-rent'
+                    else:
+                        cat_key = 'rent-apartment'
+
+                divar_slug = get_divar_slug_for_district(district_clean) if district_clean else None
+                districts_param = [divar_slug] if divar_slug else ([district_clean] if district_clean else None)
+
                 try:
+                    def _save_crawled_item(item):
+                        try:
+                            if not item.is_personal_owner:
+                                return
+                            existing = Property.query.filter_by(source_id=item.source_id).first()
+                            if existing:
+                                return
+                            owner = None
+                            if item.owner_info and item.owner_info.phone:
+                                owner = Owner.query.filter_by(phone_number=item.owner_info.phone).first()
+                                if not owner:
+                                    owner = Owner(full_name=item.owner_info.name, phone_number=item.owner_info.phone)
+                                    db.session.add(owner)
+                                    db.session.flush()
+                            prop = Property(
+                                source=item.source,
+                                source_id=item.source_id,
+                                source_url=item.source_url,
+                                title=item.title,
+                                deal_type=item.deal_type,
+                                property_type=item.property_type,
+                                city=item.city,
+                                district=item.district,
+                                address=item.address,
+                                total_price=item.total_price,
+                                meter_price=item.meter_price,
+                                deposit=item.deposit,
+                                monthly_rent=item.monthly_rent,
+                                area=item.area,
+                                rooms=item.rooms,
+                                floor=item.floor,
+                                build_year=item.build_year or 1401,
+                                has_elevator=item.has_elevator,
+                                has_parking=item.has_parking,
+                                has_warehouse=item.has_warehouse,
+                                has_balcony=item.has_balcony,
+                                description=item.description,
+                                status=item.status,
+                                score=item.score,
+                                is_personal_owner=True,
+                                owner_id=owner.id if owner else None
+                            )
+                            prop.features = item.features
+                            prop.images = item.images
+                            db.session.add(prop)
+                            db.session.commit()
+                        except Exception:
+                            db.session.rollback()
+
                     crawler_manager.divar_crawler.fetch_listings(
                         category_key=cat_key,
-                        limit=4,
+                        limit=35,
                         query=district_clean,
-                        districts=[district_clean] if district_clean else None,
+                        districts=districts_param,
                         min_price=session.get('min_price'),
                         max_price=session.get('max_price'),
                         min_deposit=session.get('min_deposit'),
@@ -779,14 +1742,34 @@ def _register_handlers(bot: telebot.TeleBot):
                         min_rent=session.get('min_rent'),
                         max_rent=session.get('max_rent'),
                         min_area=session.get('min_area'),
-                        max_area=session.get('max_area')
+                        max_area=session.get('max_area'),
+                        property_type=prop_type if prop_type != 'all' else None,
+                        max_pages=15,
+                        on_item_found=_save_crawled_item
                     )
-                    matches = query.order_by(Property.created_at.desc()).limit(5).all()
+                    matches = query.order_by(Property.created_at.desc()).limit(50).all()
                 except Exception as err:
                     logger.warning(f"Wizard live crawl error: {err}")
 
-            # ۳. ارسال نتایج به صورت تک‌به‌تک همراه با عکس، کد، قیمت و لینک مستقیم
-            if not matches:
+            # ۳. موتور رتبه‌بندی و امتیازدهی بر اساس نیاز متقاضی (مرتب‌سازی از بیشترین امتیاز به کمترین)
+            from services.scoring_service import PropertyScorer
+            scoring_criteria = {
+                'deal_type': deal_type,
+                'district': district_clean,
+                'min_price': session.get('min_price'),
+                'max_price': session.get('max_price'),
+                'min_deposit': session.get('min_deposit'),
+                'max_deposit': session.get('max_deposit'),
+                'min_rent': session.get('min_rent'),
+                'max_rent': session.get('max_rent'),
+                'min_area': session.get('min_area'),
+                'max_area': session.get('max_area')
+            }
+            ranked_matches = PropertyScorer.sort_properties(matches, scoring_criteria)
+            top_matches = ranked_matches[:8]  # نمایش گلچین برترین فایل‌های با بالاترین امتیاز
+
+            # ۴. ارسال نتایج به صورت مرتب‌شده بر اساس بیشترین امتیاز
+            if not top_matches:
                 bot.send_message(
                     chat_id,
                     f"⚠️ <b>هیچ آگهی متناظری یافت نشد</b>\n\n"
@@ -798,10 +1781,10 @@ def _register_handlers(bot: telebot.TeleBot):
             else:
                 bot.send_message(
                     chat_id,
-                    f"🎯 <b>تعداد {len(matches)} فایل منطبق با شرایط انتخابی شما در منطقه {district or 'تهران'}:</b>\n" + ("—" * 28),
+                    f"🎯 <b>تعداد {len(top_matches)} فایل برتر (رتبه‌بندی‌شده از بیشترین به کمترین امتیاز تطابق) در منطقه {district or 'تهران'}:</b>\n" + ("—" * 28),
                     parse_mode='HTML'
                 )
-                for p in matches:
+                for p in top_matches:
                     try:
                         send_property_alert(p, target_chat_id=chat_id)
                     except Exception as pe:

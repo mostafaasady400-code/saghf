@@ -189,3 +189,131 @@
     border-top-left-radius: 12px;
     border-bottom-left-radius: 12px;
 }
+
+/* ===================================================
+   ANTIGRAVITY 3D SPATIAL DESIGN SYSTEM (SKILL ENHANCEMENT)
+   Weightlessness, Spatial Depth, and 3D Perspective
+   =================================================== */
+
+:root {
+    --ag-perspective: 1200px;
+    --ag-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --ag-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --ag-glow-gold: rgba(212, 175, 55, 0.4);
+    --ag-glow-cyan: rgba(0, 242, 254, 0.4);
+    --ag-glow-amber: rgba(245, 158, 11, 0.4);
+    --ag-glow-purple: rgba(147, 51, 234, 0.4);
+}
+
+.perspective-container {
+    perspective: var(--ag-perspective);
+    transform-style: preserve-3d;
+}
+
+/* Antigravity 3D Card with Glare Reflection */
+.antigravity-card-3d {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.45s var(--ag-ease), 
+                box-shadow 0.45s var(--ag-ease), 
+                border-color 0.3s ease;
+    will-change: transform;
+}
+
+.antigravity-card-3d::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.antigravity-card-3d:hover::before {
+    opacity: 1;
+}
+
+.antigravity-card-3d:hover {
+    box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.75), 
+                0 0 30px rgba(212, 175, 55, 0.15);
+}
+
+/* Spatial Z-Layering Elements */
+.depth-surface {
+    transform: translateZ(0px);
+}
+
+.depth-subtle {
+    transform: translateZ(10px);
+}
+
+.depth-floating {
+    transform: translateZ(22px);
+    transform-style: preserve-3d;
+}
+
+.depth-elevated {
+    transform: translateZ(35px);
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5));
+}
+
+/* Quick Filter Chips (Pill Buttons) */
+.quick-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    transition: all 0.25s var(--ag-ease);
+    user-select: none;
+    text-decoration: none;
+}
+
+.quick-filter-chip:hover {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: rgba(212, 175, 55, 0.4);
+    color: #f5d77f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+}
+
+.quick-filter-chip.active {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(245, 215, 127, 0.15));
+    border-color: #d4af37;
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.3);
+}
+
+.quick-filter-chip.chip-rent:hover,
+.quick-filter-chip.chip-rent.active {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: #f59e0b;
+    color: #fbbf24;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.3);
+}
+
+/* Staggered Animations */
+@keyframes fadeInUpStagger {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stagger-in {
+    animation: fadeInUpStagger 0.4s var(--ag-ease) both;
+}
+

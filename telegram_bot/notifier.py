@@ -47,10 +47,34 @@ def format_property_telegram_message(prop) -> str:
         else:
             lines.append("💰 قیمت: <b>توافقی</b>")
     else:
-        dep = f"{prop.deposit / 1_000_000:,.0f} میلیون تومان" if prop.deposit else "توافقی"
-        rnt = f"{prop.monthly_rent / 1_000_000:,.0f} میلیون تومان" if prop.monthly_rent else "توافقی"
+        if prop.deposit:
+            if prop.deposit >= 1_000_000_000:
+                dep_b = prop.deposit / 1_000_000_000
+                dep = f"{dep_b:.2f}".rstrip('0').rstrip('.') + " میلیارد تومان"
+            else:
+                dep = f"{prop.deposit / 1_000_000:,.0f} میلیون تومان"
+        else:
+            dep = "توافقی"
+
+        if prop.monthly_rent:
+            if prop.monthly_rent >= 1_000_000_000:
+                rnt_b = prop.monthly_rent / 1_000_000_000
+                rnt = f"{rnt_b:.2f}".rstrip('0').rstrip('.') + " میلیارد تومان"
+            else:
+                rnt = f"{prop.monthly_rent / 1_000_000:,.0f} میلیون تومان"
+        else:
+            rnt = "توافقی"
+
         lines.append(f"💳 ودیعه (رهن): <b>{dep}</b>")
         lines.append(f"💵 اجاره ماهانه: <b>{rnt}</b>")
+
+    # Match score & intelligence if evaluated
+    m_score = getattr(prop, 'match_score', None)
+    if m_score is not None and m_score > 0:
+        lines.append(f"🎯 <b>درصد تطابق با نیاز شما: {m_score}٪</b>")
+        m_reasons = getattr(prop, 'match_reasons', [])
+        if m_reasons:
+            lines.append(f"💡 <i>{ ' • '.join(m_reasons[:2]) }</i>")
 
     # Amenities
     amenities = []

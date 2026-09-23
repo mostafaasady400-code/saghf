@@ -168,27 +168,34 @@ class PropertyLeadNLPExtractor:
         else:
             criteria['deal_type'] = 'rent'
 
-        # ۲. تشخیص محله‌ها و مناطق
-        detected_districts = set()
+        # ۲. تشخیص محله‌ها و مناطق با بررسی مرز کلمات (جلوگیری از انطباق ونک در پونک)
+        detected_districts = []
+        all_candidate_districts = []
         for reg_id, reg_data in TEHRAN_REGIONS.items():
             for d in reg_data['districts']:
-                keywords = d.get('keywords', [d['name']])
+                keywords = d.get('keywords', []) + [d['name']]
                 for kw in keywords:
-                    if kw in norm:
-                        detected_districts.add(d['name'])
-                        criteria['region'] = reg_id
-                        break
+                    if kw:
+                        all_candidate_districts.append((len(kw), kw, d['name'], reg_id))
 
-        # اولویت پیش‌فرض اگر محله‌ای ذکر نشد ولی کلمه پونک یا جنت آباد اشاره شد
+        all_candidate_districts.sort(key=lambda x: x[0], reverse=True)
+
+        found_names = set()
+        for _, kw, d_name, reg_id in all_candidate_districts:
+            pattern = r'(?:^|[^\w])' + re.escape(kw) + r'(?:[^\w]|$)'
+            if re.search(pattern, norm):
+                if d_name not in found_names:
+                    found_names.add(d_name)
+                    detected_districts.append(d_name)
+                    criteria['region'] = reg_id
+
+        # اولویت تشخیص محله و منطقه
         if not detected_districts:
             matched = find_matched_district(norm)
             if matched:
-                detected_districts.add(matched)
-            else:
-                # پیش‌فرض منطقه ۵ پونک و جنت‌آباد
-                detected_districts.update(['پونک', 'جنت‌آباد'])
+                detected_districts.append(matched)
 
-        criteria['districts'] = list(detected_districts)
+        criteria['districts'] = detected_districts
 
         # ۳. استخراج متراژ
         range_match = re.search(r'(\d+)\s*(?:تا|الی|-)\s*(\d+)\s*(?:متر|متری)', norm)
@@ -203,12 +210,12 @@ class PropertyLeadNLPExtractor:
             if area_match:
                 try:
                     area_val = int(area_match.group(1))
-                    criteria['min_area'] = area_val
-                    criteria['max_area'] = area_val + 30
+                    criteria['min_area'] = max(30, area_val - 15)
+                    criteria['max_area'] = area_val + 20
                 except ValueError:
                     pass
             else:
-                criteria['min_area'] = 80  # پیش‌فرض متعارف
+                criteria['min_area'] = 0  # در صورتی که کاربر متراژ خاصی نگفت، صفر باشد
 
         # ۴. استخراج امکانات الزامی
         features = []
@@ -230,25 +237,37 @@ class PropertyLeadNLPExtractor:
                     amt = amt * 1_000_000_000
                 criteria['max_budget'] = amt
             else:
-                criteria['max_budget'] = 5_000_000_000
+                criteria['max_budget'] = 0
         else:
-            # استخراج ودیعه / رهن
-            dep_amt = extract_numeric_clause_near(norm, ['میلیون تومان ودیعه', 'میلیون تومان رهن', 'ودیعه', 'رهن', 'پیش', 'میلیون تومان'])
-            if dep_amt > 0:
-                if dep_amt < 100_000:
-                    dep_amt = dep_amt * 1_000_000
-                criteria['max_deposit'] = dep_amt
+            # استخراج ساختار گفتاری «بین X میلیون تا Y میلیون» (ودیعه و اجاره)
+            between_match = re.search(r'بین\s*([\d\.\,]+)\s*(میلیارد|میلیون)\s*(?:ودیعه|رهن)?\s*تا\s*([\d\.\,]+)\s*(میلیارد|میلیون)\s*(?:اجاره)?', norm)
+            if between_match:
+                v1 = float(between_match.group(1).replace(',', ''))
+                u1 = between_match.group(2)
+                v2 = float(between_match.group(3).replace(',', ''))
+                u2 = between_match.group(4)
+                amt1 = int(v1 * (1_000_000_000 if 'میلیارد' in u1 else 1_000_000))
+                amt2 = int(v2 * (1_000_000_000 if 'میلیارد' in u2 else 1_000_000))
+                criteria['max_deposit'] = max(amt1, amt2)
+                criteria['max_rent'] = min(amt1, amt2)
             else:
-                criteria['max_deposit'] = 600_000_000
+                # استخراج ودیعه / رهن
+                dep_amt = extract_numeric_clause_near(norm, ['میلیون تومان ودیعه', 'میلیون تومان رهن', 'ودیعه', 'رهن', 'پیش', 'میلیون تومان'])
+                if dep_amt > 0:
+                    if dep_amt < 100_000:
+                        dep_amt = dep_amt * 1_000_000
+                    criteria['max_deposit'] = dep_amt
+                else:
+                    criteria['max_deposit'] = 0
 
-            # استخراج اجاره ماهانه
-            rent_amt = extract_numeric_clause_near(norm, ['میلیون اجاره', 'میلیون تومن اجاره', 'تومان اجاره', 'اجاره در ماه', 'اجاره ماهانه', 'اجاره'])
-            if rent_amt > 0:
-                if rent_amt < 100_000:
-                    rent_amt = rent_amt * 1_000_000
-                criteria['max_rent'] = rent_amt
-            else:
-                criteria['max_rent'] = 25_000_000
+                # استخراج اجاره ماهانه
+                rent_amt = extract_numeric_clause_near(norm, ['میلیون اجاره', 'میلیون تومن اجاره', 'تومان اجاره', 'اجاره در ماه', 'اجاره ماهانه', 'اجاره'])
+                if rent_amt > 0:
+                    if rent_amt < 100_000:
+                        rent_amt = rent_amt * 1_000_000
+                    criteria['max_rent'] = rent_amt
+                else:
+                    criteria['max_rent'] = 0
 
         # ۶. پیام‌رسان فعال متقاضی
         if 'ایتا' in norm:

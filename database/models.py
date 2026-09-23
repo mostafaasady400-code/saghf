@@ -1,6 +1,67 @@
 from datetime import datetime
 import json
+from werkzeug.security import generate_password_hash, check_password_hash
 from .db import db
+
+class User(db.Model):
+    """
+    جدول جامع مدیریت کاربران و ادمین‌های سامانه سقف (CRUD)
+    پشتیبانی از نقش‌های: super_admin (مدیر ارشد), admin (مدیر), agent (مشاور), user (کاربر عادی)
+    همگام‌سازی دوطرفه با شناسه تلگرام و پنل مدیریت وب
+    """
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    full_name = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(30), nullable=True, index=True)
+    telegram_id = db.Column(db.String(50), nullable=True, index=True)
+    bale_id = db.Column(db.String(50), nullable=True, index=True)
+    role = db.Column(db.String(30), default='admin', index=True)  # super_admin, admin, agent, user
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    notes = db.Column(db.Text, nullable=True)
+    last_login = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def set_password(self, password: str):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def role_title(self) -> str:
+        titles = {
+            'super_admin': 'مدیر ارشد (Super Admin)',
+            'admin': 'مدیر سیستم (Admin)',
+            'agent': 'مشاور املاک',
+            'user': 'کاربر عادی'
+        }
+        return titles.get(self.role, self.role)
+
+    @property
+    def is_super_admin(self) -> bool:
+        return self.role == 'super_admin' or str(self.telegram_id or '').strip() == '7495565146' or str(self.bale_id or '').strip() == '7495565146'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'full_name': self.full_name,
+            'phone': self.phone or '',
+            'telegram_id': self.telegram_id or '',
+            'bale_id': self.bale_id or '',
+            'role': self.role,
+            'role_title': self.role_title,
+            'is_active': self.is_active,
+            'notes': self.notes or '',
+            'last_login': self.last_login.strftime('%Y-%m-%d %H:%M') if self.last_login else '-',
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else '',
+            'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else ''
+        }
 
 class Agent(db.Model):
     __tablename__ = 'agents'
@@ -835,4 +896,46 @@ class OutreachLog(db.Model):
             'server_response': self.server_response,
             'sent_at': self.sent_at.strftime('%Y-%m-%d %H:%M') if self.sent_at else ''
         }
+
+class AuthSession(db.Model):
+    """
+    جدول مدیریت نشست‌های احراز هویت و ورود یکپارچه با پیام‌رسان‌ها (تلگرام و بله)
+    """
+    __tablename__ = 'auth_sessions'
+    id = db.Column(db.Integer, primary_key=True)
+    session_token = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    phone = db.Column(db.String(30), nullable=True, index=True)
+    platform = db.Column(db.String(20), nullable=False, index=True)  # 'telegram' or 'bale'
+    status = db.Column(db.String(20), default='pending', index=True)  # pending, confirmed, rejected, expired
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    messenger_user_id = db.Column(db.String(64), nullable=True, index=True)  # Telegram or Bale chat_id
+    messenger_user_name = db.Column(db.String(120), nullable=True)
+    ip_address = db.Column(db.String(50), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    confirmed_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('auth_sessions', lazy=True))
+
+    @property
+    def is_expired(self) -> bool:
+        return datetime.utcnow() > self.expires_at
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'session_token': self.session_token,
+            'phone': self.phone or '',
+            'platform': self.platform,
+            'status': self.status,
+            'user_id': self.user_id,
+            'messenger_user_id': self.messenger_user_id or '',
+            'messenger_user_name': self.messenger_user_name or '',
+            'is_expired': self.is_expired,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else '',
+            'expires_at': self.expires_at.strftime('%Y-%m-%d %H:%M:%S') if self.expires_at else '',
+            'confirmed_at': self.confirmed_at.strftime('%Y-%m-%d %H:%M:%S') if self.confirmed_at else ''
+        }
+
 

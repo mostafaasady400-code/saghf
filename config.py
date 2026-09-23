@@ -63,15 +63,18 @@ class Config:
 
     # Telegram Bot Configurations (Reads strictly from environment)
     TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    TELEGRAM_BOT_USERNAME = os.environ.get('TELEGRAM_BOT_USERNAME', 'saghf_bot')
     TELEGRAM_CHANNEL_ID = os.environ.get('TELEGRAM_CHANNEL_ID', '')
     TELEGRAM_WEBHOOK_URL = os.environ.get('TELEGRAM_WEBHOOK_URL', '')
     TELEGRAM_PROXY = os.environ.get('TELEGRAM_PROXY', '')
 
-    # Bale Bot Configurations (Domestic Messenger)
+    # Bale Bot Configurations (Domestic Messenger: tapi.bale.ai)
     BALE_BOT_TOKEN = os.environ.get('BALE_BOT_TOKEN', '')
+    BALE_BOT_USERNAME = os.environ.get('BALE_BOT_USERNAME', 'saghf_bot')
     BALE_CHANNEL_ID = os.environ.get('BALE_CHANNEL_ID', '')
     BALE_WEBHOOK_URL = os.environ.get('BALE_WEBHOOK_URL', '')
-    ADMIN_BALE_ID = os.environ.get('ADMIN_BALE_ID', '').strip()
+    ADMIN_BALE_ID = os.environ.get('ADMIN_BALE_ID', os.environ.get('BALE_ADMIN_ID', '')).strip()
+    BALE_ADMIN_ID = ADMIN_BALE_ID
     
     # Crawler configurations
     DIVAR_OPEN_PLATFORM_POST_URL = os.environ.get(

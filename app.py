@@ -26,6 +26,9 @@ from routes.bale_api import bale_bp
 from routes.admin import admin_bp
 from routes.telephony_api import telephony_bp
 from routes.n8n_gateway import n8n_bp
+from routes.ai_orb_api import ai_orb_bp
+from routes.auth import auth_bp
+from routes.omnichannel_api import omnichannel_bp
 from flask_wtf.csrf import CSRFProtect, CSRFError
 
 csrf = CSRFProtect()
@@ -33,18 +36,23 @@ csrf = CSRFProtect()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
 
     # Initialize extensions
     db.init_app(app)
     csrf.init_app(app)
     crawler_manager.init_app(app)
 
-    # Exempt Telegram, Bale, Telephony webhooks and AI/JSON APIs from CSRF protection
+    # Exempt Telegram, Bale webhooks, Telephony webhooks, AI Orb API, Auth, and Omnichannel from CSRF protection
     csrf.exempt(telegram_bp)
     csrf.exempt(bale_bp)
     csrf.exempt(messenger_bp)
     csrf.exempt(telephony_bp)
     csrf.exempt(n8n_bp)
+    csrf.exempt(ai_orb_bp)
+    csrf.exempt(auth_bp)
+    csrf.exempt(omnichannel_bp)
+    csrf.exempt(crawler_bp)
     from routes.properties import api_ai_voice_search, api_on_demand_search, api_voice_turn
     from routes.crm import api_sales_assistant_onboard, api_sales_assistant_turn, api_sales_assistant_feedback
     csrf.exempt(api_ai_voice_search)
@@ -57,7 +65,7 @@ def create_app(config_class=Config):
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
         from flask import jsonify, request
-        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.startswith(('/api/', '/crawler/', '/matching/', '/properties/')):
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.startswith(('/api/', '/crawler/', '/matching/', '/properties/', '/auth/')):
             return jsonify({
                 'success': False,
                 'error': 'CSRF_FAILED',
@@ -78,6 +86,9 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
     app.register_blueprint(telephony_bp)
     app.register_blueprint(n8n_bp)
+    app.register_blueprint(ai_orb_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(omnichannel_bp)
 
     @app.route('/api/health', methods=['GET'])
     @csrf.exempt
@@ -242,6 +253,15 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()
 
+    # راه‌اندازی پایش خودکار و مداوم دیوار برای منطقه ۵
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+        try:
+            from crawler.continuous_monitor import divar_monitor
+            divar_monitor.start(app=app, target_district="منطقه ۵", interval_seconds=80)
+            print("[Saghf App] 🟢 سرویس پایش مداوم و زنده دیوار برای منطقه ۵ با موفقیت آغاز به کار کرد.")
+        except Exception as e:
+            print(f"[Saghf App] هشدار در شروع پایش مداوم دیوار: {e}")
+
     return app
 
 app = create_app()
@@ -257,5 +277,4 @@ if __name__ == '__main__':
     print(f"🔑 گذرواژه:   {Config.ADMIN_PASSWORD}")
     print("🌐 ورود به پنل مدیریت: http://127.0.0.1:5000/admin/login")
     print(f"🤖 شناسه ادمین تلگرام: {Config.ADMIN_TELEGRAM_ID or 'تعریف نشده در .env'}")
-    print("==================================================")
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='127.0.0.1', port=5000, debug=False, threaded=True)

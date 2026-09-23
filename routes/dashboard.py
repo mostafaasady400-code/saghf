@@ -16,13 +16,19 @@ def index():
     # Top matching opportunities
     top_matches = MatchRecord.query.order_by(MatchRecord.match_score.desc()).limit(5).all()
 
+    # Department Counts
+    sale_count = Property.query.filter(Property.deal_type == 'sale', Property.status.notin_(['archived', 'sold'])).count()
+    rent_count = Property.query.filter(Property.deal_type == 'rent', Property.status.notin_(['archived', 'sold'])).count()
+
     return render_template(
         'dashboard.html',
         kpis=kpis,
         agents=agents,
         activities=activities,
         recent_properties=recent_properties,
-        top_matches=top_matches
+        top_matches=top_matches,
+        sale_count=sale_count,
+        rent_count=rent_count
     )
 
 @dashboard_bp.route('/api/dashboard/stats')

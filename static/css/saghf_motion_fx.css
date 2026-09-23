@@ -1,0 +1,176 @@
+/* ==========================================================================
+   SAGHF ANTIGRAVITY 3D MOTION & LUXURY VISUAL SUITE (سیستم موشن ۳ بعدی سقف)
+   - ذرات کوانتومی پس‌زمینه (Quantum Cosmic Particles Canvas)
+   - نور محیطی نشانگر ماوس (Ambient Torchlight Glow)
+   - ژیروسکوپ سه‌بعدی و بازتاب هولوگرافیک کارت‌ها (3D Spatial Tilt & Specular Sheen)
+   - دکمه‌های مغناطیسی نئونی (Magnetic Interactive Controls)
+   - گرادیان‌های متالیک طلایی، فیروزه‌ای و پرستیژ تاریک
+   ========================================================================== */
+
+/* ۱. لایه ذرات کوانتومی کیهانی پس‌زمینه */
+#saghf-ambient-particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.65;
+    mix-blend-mode: screen;
+    will-change: transform;
+}
+
+/* ۲. هاله نور محیطی نشانگر ماوس (Torchlight Glare) */
+#ambient-cursor-glow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 500px;
+    height: 500px;
+    margin-top: -250px;
+    margin-left: -250px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 242, 254, 0.07) 0%, rgba(212, 175, 55, 0.04) 35%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    mix-blend-mode: screen;
+    will-change: transform;
+}
+
+body:hover #ambient-cursor-glow {
+    opacity: 1;
+}
+
+/* ۳. تایپوگرافی لوکس با براقیت متالیک */
+.metallic-gold-text {
+    background: linear-gradient(135deg, #fff7d6 0%, #d4af37 50%, #aa820a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 24px rgba(212, 175, 55, 0.35);
+}
+
+.metallic-cyan-text {
+    background: linear-gradient(135deg, #ffffff 0%, #00f2fe 50%, #0284c7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 24px rgba(0, 242, 254, 0.35);
+}
+
+/* ۴. فیزیک سه‌بعدی و بازتاب هولوگرافیک کارت‌ها */
+.antigravity-card-3d,
+.property-card,
+.divar-style-card,
+.kpi-card,
+.luxury-dept-card {
+    position: relative;
+    transform-style: preserve-3d;
+    perspective: 1200px;
+    transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1), 
+                box-shadow 0.35s ease,
+                border-color 0.3s ease;
+    will-change: transform;
+}
+
+/* لایه بازتاب صیقلی نور روی کارت (Specular Sheen) */
+.card-specular-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle 300px at var(--glare-x, 50%) var(--glare-y, 50%), rgba(255, 255, 255, 0.14) 0%, rgba(0, 242, 254, 0.05) 30%, transparent 65%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+    transition: opacity 0.3s ease;
+    mix-blend-mode: overlay;
+}
+
+.antigravity-card-3d:hover .card-specular-glare,
+.property-card:hover .card-specular-glare,
+.divar-style-card:hover .card-specular-glare,
+.luxury-dept-card:hover .card-specular-glare {
+    opacity: 1;
+}
+
+/* ۵. کادر نورانی جاری دور کارت‌های ویژه دپارتمان */
+.shimmer-border-glow {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.shimmer-border-glow::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(120deg, transparent 20%, rgba(0, 242, 254, 0.6) 45%, rgba(212, 175, 55, 0.8) 55%, transparent 80%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    animation: borderRotate 6s linear infinite;
+    opacity: 0.7;
+}
+
+@keyframes borderRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ۶. دکمه‌های مغناطیسی با استایل لوکس سقف */
+.magnetic-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+                box-shadow 0.25s ease,
+                background 0.25s ease;
+    will-change: transform;
+}
+
+.magnetic-btn:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 242, 254, 0.35), 0 0 15px rgba(212, 175, 55, 0.2);
+}
+
+/* ۷. پویانمایی نرم ورود المان‌ها (Scroll Reveal 3D) */
+.stagger-reveal {
+    opacity: 0;
+    transform: perspective(1000px) translateY(28px) rotateX(6deg) scale(0.97);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), 
+                transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.stagger-reveal.revealed {
+    opacity: 1;
+    transform: perspective(1000px) translateY(0) rotateX(0) scale(1);
+}
+
+/* ۸. نشانگر پالس زنده وضعیت در هدر و دپارتمان‌ها */
+.luxury-pulse-ring {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00f2fe;
+    box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7);
+    animation: luxuryPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes luxuryPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(0, 242, 254, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 242, 254, 0);
+    }
+}

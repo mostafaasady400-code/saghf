@@ -205,18 +205,19 @@
         const localZoneProgress = (progress - activeZone.range[0]) / (activeZone.range[1] - activeZone.range[0] || 1);
         const clampedLocal = Math.min(Math.max(localZoneProgress, 0), 1);
 
-        // Smooth spatial 3D transformation
+        // Smooth spatial 3D transformation with Antigravity depth
         frames.forEach((frame, idx) => {
             if (idx === activeZone.frameIndex) {
                 frame.classList.add('active');
-                // 3D perspective camera dolly in and gentle pan
-                const scale = 1 + (clampedLocal * 0.08);
-                const translateY = (clampedLocal * -22);
-                const rotateY = (clampedLocal * 2) - 1;
-                frame.style.transform = `scale(${scale}) translateY(${translateY}px) rotateY(${rotateY}deg) translateZ(0)`;
+                // 3D perspective camera dolly in and gentle pan with smooth cubic ease
+                const scale = 1 + (clampedLocal * 0.09);
+                const translateY = (clampedLocal * -26);
+                const rotateY = (clampedLocal * 2.8) - 1.4;
+                const rotateX = (clampedLocal * 1.5);
+                frame.style.transform = `perspective(1000px) scale(${scale}) translateY(${translateY}px) rotateY(${rotateY.toFixed(2)}deg) rotateX(${rotateX.toFixed(2)}deg) translateZ(0)`;
             } else {
                 frame.classList.remove('active');
-                frame.style.transform = `scale(1.08) translateZ(0)`;
+                frame.style.transform = `perspective(1000px) scale(1.08) translateZ(-40px)`;
             }
         });
 

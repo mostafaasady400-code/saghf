@@ -4,6 +4,8 @@ from database.db import db
 from database.models import Property, Owner, Agent, Client, MatchRecord, Interaction
 from services.matching_service import MatchingEngine
 from services.scoring_service import PropertyScorer
+from data.tehran_districts import get_all_tehran_regions, get_divar_slug_for_district
+from crawler.owner_filter import OwnerFilter
 
 properties_bp = Blueprint('properties', __name__, url_prefix='/properties')
 
@@ -14,6 +16,7 @@ def list_properties():
 
     # Basic query params
     deal_type = request.args.get('deal_type')
+    property_type = request.args.get('property_type')
     district = request.args.get('district')
     status = request.args.get('status')
     source = request.args.get('source')
@@ -29,6 +32,11 @@ def list_properties():
     min_rent = request.args.get('min_rent', type=int)
     max_rent = request.args.get('max_rent', type=int)
     min_area = request.args.get('min_area', type=int)
+    max_area = request.args.get('max_area', type=int)
+    min_year = request.args.get('min_year', type=int)
+    max_year = request.args.get('max_year', type=int)
+    min_age = request.args.get('min_age', type=int)
+    max_age = request.args.get('max_age', type=int)
     rooms = request.args.get('rooms', type=int)
     has_parking = request.args.get('has_parking')
     has_elevator = request.args.get('has_elevator')
@@ -61,9 +69,18 @@ def list_properties():
             Property.description.notilike(f'%{forbidden}%')
         )
 
+    # 0.1 فیلتر سخت‌گیرانه حذف هرگونه آگهی همخونه، هم‌اتاقی و پانسیون
+    for sh_kw in OwnerFilter.SHARED_HOUSING_NEGATIVE_KEYWORDS:
+        query = query.filter(
+            Property.title.notilike(f'%{sh_kw}%'),
+            Property.description.notilike(f'%{sh_kw}%')
+        )
+
     # 2. Filters
     if deal_type and deal_type != 'all':
         query = query.filter(Property.deal_type == deal_type)
+    if property_type and property_type != 'all':
+        query = query.filter(Property.property_type == property_type)
     if district and district != 'all':
         query = query.filter(Property.district.contains(district))
     if status and status != 'all':
@@ -90,6 +107,16 @@ def list_properties():
     # 4. Physical & amenities filters
     if min_area:
         query = query.filter(Property.area >= min_area)
+    if max_area:
+        query = query.filter(Property.area <= max_area)
+    if min_age is not None:
+        query = query.filter(Property.build_year <= (1403 - min_age))
+    if max_age is not None:
+        query = query.filter(Property.build_year >= (1403 - max_age))
+    if min_year:
+        query = query.filter(Property.build_year >= min_year)
+    if max_year:
+        query = query.filter(Property.build_year <= max_year)
     if rooms:
         query = query.filter(Property.rooms >= rooms)
     if has_parking == '1':
@@ -107,17 +134,46 @@ def list_properties():
     active_clients = Client.query.filter(Client.lead_status.notin_(['contract_won', 'lost'])).order_by(Client.created_at.desc()).all()
     selected_client = Client.query.get(client_id) if client_id else None
 
-    # Calculate client match scores if a client is selected
+    # Calculate match scores
     client_match_scores = {}
     if selected_client:
         for p in properties:
             score, reasons = MatchingEngine.calculate_match(p, selected_client)
             client_match_scores[p.id] = {'score': score, 'reasons': reasons}
-        # Sort by match score descending
         properties.sort(key=lambda x: client_match_scores.get(x.id, {}).get('score', 0), reverse=True)
+    else:
+        # مرتب‌سازی هوشمند بر اساس نیاز متقاضی (فیلترهای انتخابی کاربر در صفحه)
+        filter_criteria = {
+            'deal_type': deal_type,
+            'property_type': property_type,
+            'district': district,
+            'min_price': min_price,
+            'max_price': max_price,
+            'min_deposit': min_deposit,
+            'max_deposit': max_deposit,
+            'min_rent': min_rent,
+            'max_rent': max_rent,
+            'min_area': min_area,
+            'max_area': max_area,
+            'min_year': min_year,
+            'rooms': rooms,
+            'has_parking': has_parking,
+            'has_elevator': has_elevator,
+            'has_warehouse': has_warehouse,
+            'has_balcony': has_balcony
+        }
+        properties = PropertyScorer.sort_properties(properties, filter_criteria)
+        for p in properties:
+            client_match_scores[p.id] = {
+                'score': getattr(p, 'match_score', 75),
+                'reasons': getattr(p, 'match_reasons', [])
+            }
 
     districts = db.session.query(Property.district).distinct().all()
     districts = [d[0] for d in districts if d[0]]
+
+    # All Tehran municipal regions and sub-districts from master reference
+    all_regions = get_all_tehran_regions()
 
     # Count expired for quick tab badge
     expired_count = Property.query.filter(
@@ -137,6 +193,7 @@ def list_properties():
         'properties/list.html',
         properties=properties,
         districts=districts,
+        all_regions=all_regions,
         active_clients=active_clients,
         selected_client=selected_client,
         client_match_scores=client_match_scores,
@@ -144,6 +201,7 @@ def list_properties():
         sale_count=sale_count,
         rent_count=rent_count,
         selected_deal_type=deal_type or 'all',
+        selected_property_type=property_type or 'all',
         selected_district=district or 'all',
         selected_status=status or 'all',
         selected_source=source or 'all',
@@ -156,6 +214,11 @@ def list_properties():
         min_rent=min_rent,
         max_rent=max_rent,
         min_area=min_area,
+        max_area=max_area,
+        min_year=min_year,
+        max_year=max_year,
+        min_age=min_age,
+        max_age=max_age,
         rooms=rooms,
         has_parking=has_parking,
         has_elevator=has_elevator,
@@ -447,6 +510,7 @@ def _property_to_json(prop):
         'source': prop.source or 'divar',
         'source_url': prop.source_url or f"/properties/{prop.id}",
         'images': prop.images or [],
+        'property_type': prop.property_type or 'apartment',
         'area': prop.area or 0,
         'rooms': prop.rooms or 0,
         'floor': prop.floor,
@@ -460,7 +524,9 @@ def _property_to_json(prop):
         'has_warehouse': bool(prop.has_warehouse),
         'has_balcony': bool(prop.has_balcony),
         'created_at': prop.created_at.strftime('%Y-%m-%d %H:%M') if prop.created_at else '',
-        'phone_number': owner_phone
+        'phone_number': owner_phone,
+        'match_score': getattr(prop, 'match_score', getattr(prop, 'score', 75)),
+        'match_reasons': getattr(prop, 'match_reasons', [])
     }
 
 def _apply_property_filters(query, params):
@@ -471,6 +537,7 @@ def _apply_property_filters(query, params):
     cutoff_7days = now - timedelta(days=7)
 
     deal_type = params.get('deal_type')
+    property_type = params.get('property_type')
     district = params.get('district')
     status = params.get('status')
     source = params.get('source')
@@ -490,6 +557,8 @@ def _apply_property_filters(query, params):
     min_rent = _parse_int(params.get('min_rent'))
     max_rent = _parse_int(params.get('max_rent'))
     min_area = _parse_int(params.get('min_area'))
+    max_area = _parse_int(params.get('max_area'))
+    min_year = _parse_int(params.get('min_year'))
     rooms = _parse_int(params.get('rooms'))
     has_parking = params.get('has_parking')
     has_elevator = params.get('has_elevator')
@@ -517,8 +586,17 @@ def _apply_property_filters(query, params):
             Property.description.notilike(f'%{forbidden}%')
         )
 
+    # فیلتر سخت‌گیرانه حذف هرگونه آگهی همخونه و اسکان اشتراکی
+    for sh_kw in OwnerFilter.SHARED_HOUSING_NEGATIVE_KEYWORDS:
+        query = query.filter(
+            Property.title.notilike(f'%{sh_kw}%'),
+            Property.description.notilike(f'%{sh_kw}%')
+        )
+
     if deal_type and deal_type != 'all':
         query = query.filter(Property.deal_type == deal_type)
+    if property_type and property_type != 'all':
+        query = query.filter(Property.property_type == property_type)
     if district and district != 'all':
         query = query.filter(Property.district.contains(district))
     if status and status != 'all':
@@ -542,6 +620,22 @@ def _apply_property_filters(query, params):
         query = query.filter(Property.monthly_rent <= max_rent)
     if min_area:
         query = query.filter(Property.area >= min_area)
+    if max_area:
+        query = query.filter(Property.area <= max_area)
+
+    min_y = params.get('min_year')
+    max_y = params.get('max_year')
+    min_a = params.get('min_age')
+    max_a = params.get('max_age')
+    if min_a not in [None, '', 'null']:
+        query = query.filter(Property.build_year <= (1403 - int(min_a)))
+    if max_a not in [None, '', 'null']:
+        query = query.filter(Property.build_year >= (1403 - int(max_a)))
+    if min_y not in [None, '', 'null']:
+        query = query.filter(Property.build_year >= int(min_y))
+    if max_y not in [None, '', 'null']:
+        query = query.filter(Property.build_year <= int(max_y))
+
     if rooms:
         query = query.filter(Property.rooms >= rooms)
     if str(has_parking) == '1':
@@ -561,7 +655,10 @@ def api_on_demand_search():
     استخراج درجا (On-Demand Scrape):
     ابتدا در دیتابیس لوکال سرچ می‌کند؛ اگر موردی نبود (یا force_crawl باشد)، بلافاصله
     کراولر هدفمند را با پارامترهای همان فیلتر فعال می‌کند.
+    نتایج اولیه (۵ تا ۱۰ آگهی اول) ظرف حداکثر ۲ ثانیه به فرانت‌اند تحویل داده می‌شوند
+    و سایر نتایج در پس‌زمینه استریم می‌گردند.
     """
+    import time
     from crawler.crawler_manager import crawler_manager
 
     data = request.get_json(silent=True) if request.is_json else request.args.to_dict()
@@ -570,10 +667,11 @@ def api_on_demand_search():
 
     query = Property.query
     query = _apply_property_filters(query, data)
-    properties = query.order_by(Property.created_at.desc()).limit(30).all()
+    properties = query.order_by(Property.created_at.desc()).limit(50).all()
 
     force_crawl = str(data.get('force_crawl', '0')).lower() in ['1', 'true', 'yes']
     deal_type = data.get('deal_type', 'all')
+    property_type = data.get('property_type', 'apartment')
     district = data.get('district')
     district_clean = district if (district and district != 'all') else None
 
@@ -584,9 +682,17 @@ def api_on_demand_search():
     if (len(properties) == 0 or force_crawl) and not crawler_running:
         categories = []
         if deal_type == 'sale':
-            categories = ['buy-apartment']
+            if property_type == 'villa':
+                categories = ['buy-villa']
+            elif property_type == 'commercial':
+                categories = ['commercial-sell']
+            else:
+                categories = ['buy-apartment']
         elif deal_type == 'rent':
-            categories = ['rent-apartment']
+            if property_type == 'commercial':
+                categories = ['commercial-rent']
+            else:
+                categories = ['rent-apartment']
         else:
             categories = ['buy-apartment', 'rent-apartment']
 
@@ -596,29 +702,58 @@ def api_on_demand_search():
             except Exception:
                 return None
 
+        # تبدیل نام محله به اسلاگ استاندارد دیوار در صورت وجود
+        divar_slug = get_divar_slug_for_district(district_clean) if district_clean else None
+        districts_param = [divar_slug] if divar_slug else ([district_clean] if district_clean else None)
+
         crawler_manager.start_crawl_task(
             sources=['divar', 'sheypoor'],
             categories=categories,
-            limit_per_cat=6,
+            limit_per_cat=30,
             city='tehran',
             district=district_clean,
-            districts=[district_clean] if district_clean else None,
+            districts=districts_param,
             min_price=_p_int('min_price'),
             max_price=_p_int('max_price'),
             min_deposit=_p_int('min_deposit'),
             max_deposit=_p_int('max_deposit'),
             min_rent=_p_int('min_rent'),
             max_rent=_p_int('max_rent'),
-            min_area=_p_int('min_area')
+            min_area=_p_int('min_area'),
+            max_area=_p_int('max_area'),
+            min_year=_p_int('min_year'),
+            max_year=_p_int('max_year'),
+            min_age=_p_int('min_age'),
+            max_age=_p_int('max_age'),
+            rooms=_p_int('rooms'),
+            has_parking=True if str(data.get('has_parking')) == '1' else None,
+            has_elevator=True if str(data.get('has_elevator')) == '1' else None,
+            has_warehouse=True if str(data.get('has_warehouse')) == '1' else None,
+            has_balcony=True if str(data.get('has_balcony')) == '1' else None,
+            property_type=property_type if property_type != 'all' else None
         )
         crawler_running = True
+
+        # تحویل سریع ۵ تا ۱۰ آگهی اول به فرانت‌اند بدون معطلی (سقف انتظار ۲.۲ ثانیه)
+        wait_start = time.time()
+        while time.time() - wait_start < 2.2:
+            time.sleep(0.3)
+            fresh_items = _apply_property_filters(Property.query, data).order_by(Property.created_at.desc()).limit(50).all()
+            if len(fresh_items) >= 5:
+                properties = fresh_items
+                break
+            elif len(fresh_items) > len(properties):
+                properties = fresh_items
+
+    # سورت نتایج بر اساس Match Score از بیشترین به کمترین
+    ranked_properties = PropertyScorer.sort_properties(properties, data)
 
     return jsonify({
         'status': 'crawling' if (len(properties) == 0 or crawler_running) else 'found',
         'crawler_running': crawler_running,
-        'count': len(properties),
-        'items': [_property_to_json(p) for p in properties],
-        'message': 'در حال استخراج جدیدترین آگهی‌ها از دیوار و شیپور با فیلترهای انتخابی...' if (len(properties) == 0 or crawler_running) else 'فایل‌های منطبق یافت شد.'
+        'count': len(ranked_properties),
+        'items': [_property_to_json(p) for p in ranked_properties],
+        'message': 'در حال استخراج عمیق جدیدترین آگهی‌ها از دیوار و شیپور با فیلترهای انتخابی...' if (len(properties) == 0 or crawler_running) else 'فایل‌های منطبق یافت شد.'
     })
 
 @properties_bp.route('/api/poll-live', methods=['GET'])
@@ -631,16 +766,18 @@ def api_poll_live():
     data = request.args.to_dict()
     query = Property.query
     query = _apply_property_filters(query, data)
-    properties = query.order_by(Property.created_at.desc()).limit(30).all()
+    properties = query.order_by(Property.created_at.desc()).limit(50).all()
 
     crawler_status = crawler_manager.get_status()
     crawler_running = crawler_status.get('is_running', False)
 
+    ranked_properties = PropertyScorer.sort_properties(properties, data)
+
     return jsonify({
         'status': 'ok',
         'crawler_running': crawler_running,
-        'count': len(properties),
-        'items': [_property_to_json(p) for p in properties]
+        'count': len(ranked_properties),
+        'items': [_property_to_json(p) for p in ranked_properties]
     })
 
 @properties_bp.route('/api/ai-voice-search', methods=['GET', 'POST'])

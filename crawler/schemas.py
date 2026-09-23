@@ -1,10 +1,11 @@
 import re
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, field_validator
+from typing import List, Optional, Dict, Any, Tuple
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹'
 ENGLISH_DIGITS = '0123456789'
-DIGIT_TRANS = str.maketrans(PERSIAN_DIGITS, ENGLISH_DIGITS)
+ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩'
+DIGIT_TRANS = str.maketrans(PERSIAN_DIGITS + ARABIC_DIGITS, ENGLISH_DIGITS * 2)
 
 def persian_to_english_numbers(text: Any) -> str:
     if not text:
@@ -12,41 +13,130 @@ def persian_to_english_numbers(text: Any) -> str:
     return str(text).translate(DIGIT_TRANS)
 
 def parse_price(val: Any) -> int:
-    if not val:
+    """
+    پارس دقیق و هوشمند انواع مبالغ متنی و عددی فارسی، ریال و تومان
+    پشتیبانی از مبالغ ترکیبی مانند: «۵ میلیارد و ۳۰۰ میلیون تومان»، «۵.۵ میلیارد» و تبدیل به عدد صحیح تمیز (Clean Integer)
+    """
+    if val is None or val == '':
         return 0
     if isinstance(val, (int, float)):
-        return min(int(val), 500_000_000_000)
+        return min(int(round(float(val))), 500_000_000_000)
 
-    # استانداردسازی تمامی جداکننده‌ها و ارقام فارسی/عربی
-    text = (
-        persian_to_english_numbers(str(val))
-        .replace('٬', ',')
-        .replace('،', ',')
-        .replace('٫', '.')
-    )
+    text = persian_to_english_numbers(str(val)).lower()
+    text = text.replace('\u200c', ' ').replace('/', '.').replace('،', ',').strip()
 
-    # ۱. مبالغ با جداکننده کاما یا ارقام پیوسته (مانند 22,000,000,000 یا ۹٬۵۰۰٬۰۰۰٬۰۰۰)
-    m = re.search(r'(\d{1,3}(?:,\d{3})+)', text)
-    if m:
-        cleaned = m.group(1).replace(',', '')
-        return min(int(cleaned), 500_000_000_000)
+    # عبارات بدون قیمت عددی
+    if any(k in text for k in ['توافقی', 'رایگان', 'معاوضه', 'نیاز به هماهنگی', 'تماس بگیرید']):
+        return 0
 
-    # ۲. مبالغ کلامی اعشاری یا صحیح با کلمات کلیدی میلیارد یا همت (مانند ۱۲.۵ میلیارد یا ۵۰ همت)
-    m2 = re.search(r'(\d+(?:\.\d+)?)\s*(?:میلیارد|همت)', text)
-    if m2:
-        return min(int(float(m2.group(1)) * 1_000_000_000), 500_000_000_000)
+    is_rial = 'ریال' in text
 
-    # ۳. مبالغ کلامی میلیون (مانند ۸۵۰ میلیون)
-    m3 = re.search(r'(\d+(?:\.\d+)?)\s*(?:میلیون)', text)
-    if m3:
-        return min(int(float(m3.group(1)) * 1_000_000), 500_000_000_000)
+    # ۱. استخراج عبارات ترکیبی میلیارد/همت و میلیون (مانند ۵ میلیارد و ۵۰۰ میلیون)
+    billions = 0.0
+    millions = 0.0
+    thousands = 0.0
 
-    # ۴. ارقام عددی پیوسته
-    digits = re.findall(r'\b\d{5,13}\b', text.replace(',', ''))
-    if digits:
-        return min(int(digits[0]), 500_000_000_000)
+    m_b = re.search(r'(\d+(?:\.\d+)?)\s*(?:میلیارد|همت)', text)
+    if m_b:
+        try:
+            billions = float(m_b.group(1))
+        except ValueError:
+            pass
 
+    m_m = re.search(r'(\d+(?:\.\d+)?)\s*(?:میلیون)', text)
+    if m_m:
+        try:
+            millions = float(m_m.group(1))
+        except ValueError:
+            pass
+
+    m_k = re.search(r'(\d+(?:\.\d+)?)\s*(?:هزار)', text)
+    if m_k:
+        try:
+            thousands = float(m_k.group(1))
+        except ValueError:
+            pass
+
+    if billions > 0 or millions > 0 or thousands > 0:
+        total = int(round(billions * 1_000_000_000 + millions * 1_000_000 + thousands * 1_000))
+        return min(int(total // 10 if is_rial else total), 500_000_000_000)
+
+    # ۲. استخراج اعداد با جداکننده کاما یا خط تیره (مانند ۲۲,۰۰۰,۰۰۰,۰۰۰)
+    m_comma = re.search(r'(\d{1,3}(?:,\d{3})+)', text)
+    if m_comma:
+        digits_val = int(m_comma.group(1).replace(',', ''))
+        return min(int(digits_val // 10 if is_rial else digits_val), 500_000_000_000)
+
+    # ۳. استخراج سایر اعداد پیوسته (مثلاً 5000000)
+    raw_digits = re.findall(r'\b\d{4,14}\b', text.replace(',', ''))
+    if raw_digits:
+        v = int(raw_digits[0])
+        return min(int(v // 10 if is_rial else v), 500_000_000_000)
     return 0
+
+def sanitize_property_financials(
+    deal_type: str,
+    total_price: int = 0,
+    deposit: int = 0,
+    monthly_rent: int = 0,
+    property_type: str = 'apartment'
+) -> Tuple[int, int, int]:
+    """
+    اعمال قوانین اعتبارسنجی (Sanity Check) روی ارقام مالی املاک مسکونی:
+    - رفع باگ ضرب اضافه در ۱,۰۰۰,۰۰۰ و ارقام نجومی
+    - تفکیک نوع معامله (در رهن/اجاره total_price=0 و در فروش deposit=monthly_rent=0)
+    - اعتبارسنجی نسبت ودیعه و اجاره (اجاره معمولاً کمتر از ودیعه است؛ تصحیح جابجایی احتمالی)
+    - اعمال سقف منطقی اجاره ماهانه (حداکثر ۳۰۰ میلیون مسکونی) و ودیعه (حداکثر ۵۰ میلیارد)
+    - حذف اعداد ساختگی و کم‌ارزش (زیر ۱۰۰ هزار تومان مانند ۱، ۱۰۰۰ و ...)
+    """
+    total_price = int(total_price or 0)
+    deposit = int(deposit or 0)
+    monthly_rent = int(monthly_rent or 0)
+    deal_type = (deal_type or 'sale').lower().strip()
+
+    if deal_type == 'sale':
+        deposit = 0
+        monthly_rent = 0
+        # حذف ارقام ساختگی/پلیس‌هولدر
+        if 0 < total_price < 50_000_000:
+            total_price = 0
+        # تصحیح ارقام نجومی ضرب‌شده در یک میلیون
+        elif total_price > 1_000_000_000_000:
+            total_price //= 1_000_000
+        total_price = min(total_price, 500_000_000_000)
+    else:
+        # رهن و اجاره
+        total_price = 0
+
+        # ۱. تصحیح ارقام نجومی ناشی از ضرب قبلی در یک میلیون
+        if deposit > 100_000_000_000:
+            deposit //= 1_000_000
+        if monthly_rent > 10_000_000_000:
+            monthly_rent //= 1_000_000
+
+        # ۲. بررسی جابجایی احتمالی ودیعه و اجاره توسط آگهی‌دهنده:
+        # در رهن و اجاره، مبلغ اجاره ماهانه معمولاً کمتر از مبلغ ودیعه است.
+        if deposit > 0 and monthly_rent > deposit and monthly_rent >= 100_000_000 and deposit <= 50_000_000:
+            deposit, monthly_rent = monthly_rent, deposit
+
+        # ۳. اعتبارسنجی سقف اجاره مسکونی و تصحیح ضرب مضاعف
+        if monthly_rent > 300_000_000:
+            if monthly_rent % 1_000_000 == 0 and (monthly_rent // 1_000_000) <= 300_000_000:
+                monthly_rent //= 1_000_000
+            else:
+                monthly_rent = min(monthly_rent, 300_000_000)
+
+        # ۴. حذف ارقام صوری یا ناچیز (مانند ۱ تومان یا ۱۰۰۰ تومان)
+        if 0 < deposit < 100_000:
+            deposit = 0
+        if 0 < monthly_rent < 100_000:
+            monthly_rent = 0
+
+        # ۵. سقف منطقی ودیعه مسکونی (حداکثر ۵۰ میلیارد تومان)
+        if deposit > 50_000_000_000:
+            deposit = 50_000_000_000
+
+    return int(total_price), int(deposit), int(monthly_rent)
 
 class OwnerSchema(BaseModel):
     name: str = Field(default="مالک آگهی", min_length=1)
@@ -76,7 +166,7 @@ class NormalizedPropertySchema(BaseModel):
     district: str = Field(default="نامشخص")
     address: Optional[str] = None
     
-    # Financials
+    # Financials (Clean Integers)
     total_price: int = Field(default=0, ge=0)
     meter_price: int = Field(default=0, ge=0)
     deposit: int = Field(default=0, ge=0)
@@ -107,6 +197,31 @@ class NormalizedPropertySchema(BaseModel):
     filter_log: Optional[str] = Field(default="", description="علت و توضیحات نتیجه فیلتر")
     
     owner_info: Optional[OwnerSchema] = None
+
+    @field_validator('total_price', 'meter_price', 'deposit', 'monthly_rent', mode='before')
+    @classmethod
+    def clean_integer_price(cls, v: Any) -> int:
+        if v is None or v == '':
+            return 0
+        if isinstance(v, (int, float)):
+            return int(round(float(v)))
+        return parse_price(v)
+
+    @model_validator(mode='after')
+    def validate_and_sanitize_financials(self) -> 'NormalizedPropertySchema':
+        s_price, s_dep, s_rent = sanitize_property_financials(
+            deal_type=self.deal_type,
+            total_price=self.total_price,
+            deposit=self.deposit,
+            monthly_rent=self.monthly_rent,
+            property_type=self.property_type
+        )
+        self.total_price = s_price
+        self.deposit = s_dep
+        self.monthly_rent = s_rent
+        if self.area > 0 and self.total_price > 0 and self.meter_price == 0:
+            self.meter_price = int(self.total_price // self.area)
+        return self
 
     @field_validator('district')
     @classmethod

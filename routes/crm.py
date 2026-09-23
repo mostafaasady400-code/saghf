@@ -5,6 +5,10 @@ from database.models import Client, Property, Interaction, Visit, Agent
 
 crm_bp = Blueprint('crm', __name__, url_prefix='/crm')
 
+@crm_bp.route('/')
+def index():
+    return redirect(url_for('crm.pipeline'))
+
 @crm_bp.route('/pipeline')
 def pipeline():
     clients = Client.query.all()

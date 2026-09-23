@@ -46,4 +46,3 @@ if __name__ == '__main__':
         print("\n🛑 درخواست توقف ربات‌ها دریافت شد...", flush=True)
         stop_dual_polling()
         print("✅ ربات‌ها متوقف شدند.", flush=True)
-

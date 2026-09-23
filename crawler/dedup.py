@@ -26,17 +26,23 @@ class DeduplicationEngine:
             except Exception as e:
                 print(f"[DeduplicationEngine] خطا در بارگذاری اولیه از دیتابیس: {e}")
 
-    def is_duplicate(self, token: str) -> bool:
-        if not token:
-            return True
+    def is_duplicate(self, token: Optional[str] = None, *args, **kwargs) -> bool:
+        t = token or kwargs.get('source_id') or kwargs.get('token') or (args[0] if args else None)
+        if not t:
+            return False
         with self.lock:
-            return token in self._seen_tokens
+            return t in self._seen_tokens
 
-    def mark_seen(self, token: str):
-        if not token:
+    def mark_seen(self, token: Optional[str] = None, *args, **kwargs):
+        t = token or kwargs.get('source_id') or kwargs.get('token') or (args[0] if args else None)
+        if not t:
             return
         with self.lock:
-            self._seen_tokens.add(token)
+            self._seen_tokens.add(t)
+
+    def add_item(self, token: Optional[str] = None, *args, **kwargs):
+        """نام مستعار سازگار برای mark_seen"""
+        self.mark_seen(token, *args, **kwargs)
 
     def clear(self):
         with self.lock:

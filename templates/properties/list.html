@@ -14,41 +14,6 @@
             <div class="tour-scene-overlay"></div>
         </div>
 
-        <!-- Tour Quick Zone Selection Pills (Top Center-Left) -->
-        <div class="tour-zone-pills-bar" aria-label="انتخاب مستقیم فضاهای عمارت">
-            <button type="button" class="tour-zone-pill-btn active" data-zone-index="0">
-                <span>🏰</span> <span>سالن پذیرایی</span>
-            </button>
-            <button type="button" class="tour-zone-pill-btn" data-zone-index="1">
-                <span>🍳</span> <span>آشپزخانه و لانژ</span>
-            </button>
-            <button type="button" class="tour-zone-pill-btn" data-zone-index="2">
-                <span>🛏️</span> <span>سوئیت مستر</span>
-            </button>
-            <button type="button" class="tour-zone-pill-btn" data-zone-index="3">
-                <span>🏊</span> <span>روف‌گاردن و استخر</span>
-            </button>
-        </div>
-
-        <!-- Tour Floating HUD (Top Right) -->
-        <div class="tour-hud-header">
-            <div class="tour-hud-room-badge" id="tourRoomBadge">
-                🏰 بخش ۱ از ۴: سالن پذیرایی پانوراما
-            </div>
-            <h2 class="tour-hud-title" id="tourRoomTitle">
-                سالن پذیرایی باشکوه با چشم‌انداز ۳۶۰ درجه
-            </h2>
-            <p class="tour-hud-desc" id="tourRoomDesc">
-                طراحی نئوکلاسیک با پنجره‌های قدی ضد انعکاس، سنگ‌های اسلب بوک‌مچ ایتالیایی و سیستم روشنایی هوشمند داینامیک.
-            </p>
-            <div class="tour-hud-specs" id="tourRoomSpecs">
-                <div class="tour-hud-spec-chip">📐 ۲۵۰ متر مربع</div>
-                <div class="tour-hud-spec-chip">🪟 نورگیر جنوبی</div>
-                <div class="tour-hud-spec-chip">✨ ارتفاع سقف ۴.۲ متر</div>
-                <div class="tour-hud-spec-chip">🛋️ مبلمان ایتالیایی</div>
-            </div>
-        </div>
-
         <!-- Tour Navigation Arrows (Sides) -->
         <button type="button" id="tourPrevBtn" class="tour-nav-arrow-btn right" title="اتاق قبلی (کلید ❮)" aria-label="اتاق قبلی">
             <span>‹</span>
@@ -56,7 +21,6 @@
         <button type="button" id="tourNextBtn" class="tour-nav-arrow-btn left" title="اتاق بعدی (کلید ❯)" aria-label="اتاق بعدی">
             <span>›</span>
         </button>
-
         <!-- Tour Progress & Skip Bar (Bottom Center) -->
         <div class="tour-hud-footer">
             <span style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem;">
@@ -72,6 +36,9 @@
         </div>
     </div>
 </div>
+
+<!-- ایستگاه اختصاصی دستیار هوشمند (دقیقاً زیر بخش تور مجازی ۳۶۰ درجه) -->
+{% include "components/ai_station.html" %}
 {% endblock %}
 
 {% block content %}
@@ -93,47 +60,47 @@
             </p>
         </div>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <a href="{{ url_for('properties.followup') }}" class="glass-btn" style="border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.1); color: #f59e0b; text-decoration: none;">
+            <a href="{{ url_for('properties.followup') }}" class="glass-btn magnetic-btn" style="border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.1); color: #f59e0b; text-decoration: none;">
                 <span>⏰</span> یادآوری پیگیری مجدد ({{ expired_count | pnum }})
             </a>
-            <a href="{{ url_for('properties.create') }}" class="btn-neon-cyan" style="text-decoration: none;">
+            <a href="{{ url_for('properties.create') }}" class="btn-neon-cyan magnetic-btn" style="text-decoration: none;">
                 <span>➕</span> ثبت فایل جدید با مشخصات مالک
             </a>
         </div>
     </div>
 
-    <!-- Distinct 3D Glass Deal Tabs (خرید و فروش / رهن و اجاره) -->
+    <!-- Distinct 3D Glass Deal Tabs (همه آگهی‌ها / خرید و فروش / رهن و اجاره) -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
-        <div class="deal-tabs-container">
+        <div class="deal-tabs-container" id="mainDealTabsContainer">
+            <button type="button" 
+                    id="deal-tab-all"
+                    onclick="switchDealTab('all')"
+                    class="deal-tab-item magnetic-btn {% if selected_deal_type == 'all' or not request.args.get('deal_type') %}active-all{% endif %}">
+                <span>🌐</span>
+                <span>همه آگهی‌ها</span>
+                <span class="deal-tab-count-pill">{{ (sale_count + rent_count) | pnum }} فایل</span>
+            </button>
             <button type="button" 
                     id="deal-tab-sale"
                     onclick="switchDealTab('sale')"
-                    class="deal-tab-item {% if selected_deal_type == 'sale' or (selected_deal_type == 'all' and not request.args.get('deal_type')) %}active-sale{% endif %}">
-                <span>🏷️</span>
+                    class="deal-tab-item magnetic-btn {% if selected_deal_type == 'sale' %}active-sale{% endif %}">
+                <span>🏢</span>
                 <span>خرید و فروش</span>
                 <span class="deal-tab-count-pill">{{ sale_count | pnum }} فایل</span>
             </button>
             <button type="button" 
                     id="deal-tab-rent"
                     onclick="switchDealTab('rent')"
-                    class="deal-tab-item {% if selected_deal_type == 'rent' %}active-rent{% endif %}">
+                    class="deal-tab-item magnetic-btn {% if selected_deal_type == 'rent' %}active-rent{% endif %}">
                 <span>🔑</span>
                 <span>رهن و اجاره</span>
-                <span class="deal-tab-count-pill">{{ rent_count | pnum }} فایل</span>
-            </button>
-            <button type="button" 
-                    id="deal-tab-all"
-                    onclick="switchDealTab('all')"
-                    class="deal-tab-item {% if selected_deal_type == 'all' and request.args.get('deal_type') == 'all' %}active-all{% endif %}">
-                <span>🏢</span>
-                <span>همه آگهی‌ها</span>
-                <span class="deal-tab-count-pill">{{ (sale_count + rent_count) | pnum }}</span>
+                <span class="deal-tab-count-pill" style="background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">{{ rent_count | pnum }} فایل</span>
             </button>
         </div>
 
         <div style="color: #94a3b8; font-size: 0.84rem; display: flex; align-items: center; gap: 0.4rem;">
-            <span>⚡ مرتب‌سازی خودکار:</span>
-            <span class="badge-neon badge-neon-cyan" style="font-size: 0.76rem;">جدیدترین به قدیمی‌ترین</span>
+            <span>⚡ مرتب‌سازی هوشمند:</span>
+            <span class="badge-neon badge-neon-cyan" style="font-size: 0.76rem;">جدیدترین فایل‌های بازار</span>
         </div>
     </div>
 </div>
@@ -179,24 +146,60 @@
 {% endif %}
 
 <!-- Advanced Multi-Variable Filters Bar -->
-<div class="glass-panel" style="padding: 1.25rem; margin-bottom: 2rem;">
-    <form method="GET" action="{{ url_for('properties.list_properties') }}" id="propertyFilterForm" style="display: flex; flex-direction: column; gap: 1rem;">
-        <input type="hidden" name="deal_type" value="{{ selected_deal_type }}" id="formDealType">
-        {% if selected_client %}<input type="hidden" name="client_id" value="{{ selected_client.id }}">{% endif %}
-
-        <!-- Row 1: Search, District, Source, Lifecycle -->
-        <div style="display: grid; grid-template-columns: 2fr 1.2fr 1fr 1fr auto; gap: 0.85rem; align-items: flex-end;">
+<div class="glass-card" style="padding: 1.25rem; margin-bottom: 1.75rem;">
+    <form method="GET" action="{{ url_for('properties.list_properties') }}" id="propertiesFilterForm">
+        <input type="hidden" name="deal_type" id="formDealType" value="{{ selected_deal_type or 'all' }}">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.85rem; margin-bottom: 0.85rem;">
             <div>
-                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">جستجو در عنوان، محله یا متن</label>
-                <input type="text" name="q" id="filterQuery" value="{{ search_query }}" placeholder="مثلاً: ۳ خوابه سعادت آباد..." class="glass-input">
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">نوع معامله (دپارتمان)</label>
+                <select name="deal_type_select" id="filterDealTypeSelect" class="glass-select" onchange="onDealTypeSelectChange(this.value)">
+                    <option value="all" {% if selected_deal_type == 'all' or not selected_deal_type %}selected{% endif %}>🌐 همه آگهی‌ها (فروش و رهن)</option>
+                    <option value="sale" {% if selected_deal_type == 'sale' %}selected{% endif %}>🏢 فقط خرید و فروش</option>
+                    <option value="rent" {% if selected_deal_type == 'rent' %}selected{% endif %}>🔑 فقط رهن و اجاره</option>
+                </select>
+            </div>
+            <div style="position: relative;">
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">منطقه / محله (جستجوی زنده)</label>
+                <input type="hidden" name="district" id="filterDistrict" value="{{ selected_district or 'all' }}">
+                
+                <!-- District Picker Trigger Button -->
+                <div id="districtPickerTrigger" class="glass-select" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; height: 42px; user-select: none;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span>📍</span>
+                        <span id="districtPickerSelectedLabel" style="font-weight: 600;">
+                            {% if selected_district and selected_district != 'all' %}
+                                {{ selected_district }}
+                            {% else %}
+                                همه مناطق و محله‌ها
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                        <span id="districtPickerClearBtn" style="font-size: 0.72rem; color: #ef4444; padding: 0.1rem 0.3rem; border-radius: 4px; background: rgba(239, 68, 68, 0.12); display: {% if selected_district and selected_district != 'all' %}inline-flex{% else %}none{% endif %};" title="حذف فیلتر محله">✕</span>
+                        <span style="font-size: 0.75rem; color: #64748b;">▼</span>
+                    </div>
+                </div>
+
+                <!-- District Picker Popover Panel -->
+                <div id="districtPickerDropdown" class="glass-card" style="display: none; position: absolute; top: 100%; right: 0; left: 0; min-width: 280px; z-index: 100; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(16px); border: 1px solid rgba(0, 242, 254, 0.35); border-radius: 12px; padding: 0.75rem; margin-top: 0.35rem; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.65);">
+                    <div style="margin-bottom: 0.6rem;">
+                        <input type="text" id="districtPickerSearch" class="glass-input" placeholder="🔍 جستجوی سریع محله (پونک، سعادت آباد...)" style="font-size: 0.8rem; padding: 0.45rem 0.75rem;">
+                    </div>
+                    <div id="districtPickerAllOption" style="padding: 0.5rem 0.75rem; border-radius: 8px; margin-bottom: 0.4rem; background: rgba(255,255,255,0.04); cursor: pointer; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; color: #00f2fe; font-weight: 600;">
+                        <span>🏙️ همه مناطق تهران (کل شهر)</span>
+                        <span style="font-size: 0.7rem; opacity: 0.7;">انتخاب همه</span>
+                    </div>
+                    <div id="districtPickerList" style="max-height: 230px; overflow-y: auto; scroll-behavior: smooth; padding-right: 0.2rem;">
+                    </div>
+                </div>
             </div>
             <div>
-                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">منطقه / محله</label>
-                <select name="district" id="filterDistrict" class="glass-select">
-                    <option value="all">همه مناطق</option>
-                    {% for d in districts %}
-                        <option value="{{ d }}" {% if selected_district == d %}selected{% endif %}>{{ d }}</option>
-                    {% endfor %}
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">نوع ملک / کاربری</label>
+                <select name="property_type" id="filterPropertyType" class="glass-select">
+                    <option value="all">همه کاربری‌ها</option>
+                    <option value="apartment" {% if selected_property_type == 'apartment' %}selected{% endif %}>آپارتمان مسکونی</option>
+                    <option value="villa" {% if selected_property_type == 'villa' %}selected{% endif %}>خانه و ویلایی</option>
+                    <option value="commercial" {% if selected_property_type == 'commercial' %}selected{% endif %}>اداری و تجاری</option>
                 </select>
             </div>
             <div>
@@ -217,39 +220,91 @@
                 </select>
             </div>
             <div>
-                <button type="submit" id="btnApplyFilter" class="glass-btn btn-neon-cyan" style="height: 44px; padding: 0 1.25rem; display: flex; align-items: center; gap: 0.4rem;">
+                <button type="submit" id="btnApplyFilter" class="glass-btn btn-neon-cyan" style="height: 44px; padding: 0 1.25rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%;">
                     <span id="btnFilterIcon">🔍</span> <span id="btnFilterText">اعمال فیلتر</span>
                 </button>
             </div>
         </div>
 
         <!-- Row 2: Budget & Physical Variable Inputs -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.85rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.06); align-items: flex-end;">
-            {% if selected_deal_type == 'sale' or selected_deal_type == 'all' %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 0.85rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.06); align-items: flex-start;">
+            <!-- Sale Financial Inputs -->
+            <div id="budgetInputsSale" style="display: {% if selected_deal_type == 'rent' %}none{% else %}contents{% endif %};">
                 <div>
                     <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداقل قیمت کل (تومان)</label>
-                    <input type="number" name="min_price" id="filterMinPrice" value="{{ min_price or '' }}" placeholder="مثلاً: 5000000000" class="glass-input" style="font-size: 0.82rem;">
+                    <input type="number" name="min_price" id="filterMinPrice" value="{{ min_price or '' }}" placeholder="مثلاً: ۳ میلیارد" class="glass-input" style="font-size: 0.82rem;">
                 </div>
                 <div>
                     <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداکثر قیمت کل (تومان)</label>
-                    <input type="number" name="max_price" id="filterMaxPrice" value="{{ max_price or '' }}" placeholder="مثلاً: 12000000000" class="glass-input" style="font-size: 0.82rem;">
+                    <input type="number" name="max_price" id="filterMaxPrice" value="{{ max_price or '' }}" placeholder="مثلاً: ۱۲ میلیارد" class="glass-input" style="font-size: 0.82rem;">
                 </div>
-            {% endif %}
+            </div>
 
-            {% if selected_deal_type == 'rent' or selected_deal_type == 'all' %}
+            <!-- Rent Financial Inputs -->
+            <div id="budgetInputsRent" style="display: {% if selected_deal_type == 'sale' %}none{% else %}contents{% endif %};">
                 <div>
-                    <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداکثر ودیعه (رهن)</label>
-                    <input type="number" name="max_deposit" id="filterMaxDeposit" value="{{ max_deposit or '' }}" placeholder="مثلاً: 1000000000" class="glass-input" style="font-size: 0.82rem;">
+                    <label style="display: block; font-size: 0.75rem; color: #fbbf24; margin-bottom: 0.3rem;">حداقل ودیعه (رهن)</label>
+                    <input type="number" name="min_deposit" id="filterMinDeposit" value="{{ min_deposit or '' }}" placeholder="مثلاً: ۱۰۰ میلیون" class="glass-input" style="font-size: 0.82rem; border-color: rgba(245, 158, 11, 0.3);">
                 </div>
                 <div>
-                    <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداکثر اجاره ماهانه</label>
-                    <input type="number" name="max_rent" id="filterMaxRent" value="{{ max_rent or '' }}" placeholder="مثلاً: 25000000" class="glass-input" style="font-size: 0.82rem;">
+                    <label style="display: block; font-size: 0.75rem; color: #fbbf24; margin-bottom: 0.3rem;">حداکثر ودیعه (رهن)</label>
+                    <input type="number" name="max_deposit" id="filterMaxDeposit" value="{{ max_deposit or '' }}" placeholder="مثلاً: ۱ میلیارد" class="glass-input" style="font-size: 0.82rem; border-color: rgba(245, 158, 11, 0.3);">
                 </div>
-            {% endif %}
+                <div>
+                    <label style="display: block; font-size: 0.75rem; color: #fbbf24; margin-bottom: 0.3rem;">حداقل اجاره ماهانه</label>
+                    <input type="number" name="min_rent" id="filterMinRent" value="{{ min_rent or '' }}" placeholder="مثلاً: ۵ میلیون" class="glass-input" style="font-size: 0.82rem; border-color: rgba(245, 158, 11, 0.3);">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.75rem; color: #fbbf24; margin-bottom: 0.3rem;">حداکثر اجاره ماهانه</label>
+                    <input type="number" name="max_rent" id="filterMaxRent" value="{{ max_rent or '' }}" placeholder="مثلاً: ۲۵ میلیون" class="glass-input" style="font-size: 0.82rem; border-color: rgba(245, 158, 11, 0.3);">
+                </div>
+            </div>
 
             <div>
                 <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداقل متراژ (متر)</label>
                 <input type="number" name="min_area" id="filterMinArea" value="{{ min_area or '' }}" placeholder="مثلاً: 80" class="glass-input" style="font-size: 0.82rem;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداکثر متراژ (متر)</label>
+                <input type="number" name="max_area" id="filterMaxArea" value="{{ max_area or '' }}" placeholder="مثلاً: 160" class="glass-input" style="font-size: 0.82rem;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">سن بنا (از)</label>
+                <select name="min_age" id="filterMinAge" class="glass-select" style="font-size: 0.82rem;">
+                    <option value="">از هر سنی</option>
+                    <option value="0" {% if min_age == 0 %}selected{% endif %}>نوساز / کلید نخورده</option>
+                    <option value="1" {% if min_age == 1 %}selected{% endif %}>از ۱ سال ساخت</option>
+                    <option value="2" {% if min_age == 2 %}selected{% endif %}>از ۲ سال ساخت</option>
+                    <option value="3" {% if min_age == 3 %}selected{% endif %}>از ۳ سال ساخت</option>
+                    <option value="5" {% if min_age == 5 %}selected{% endif %}>از ۵ سال ساخت</option>
+                    <option value="10" {% if min_age == 10 %}selected{% endif %}>از ۱۰ سال ساخت</option>
+                    <option value="15" {% if min_age == 15 %}selected{% endif %}>از ۱۵ سال ساخت</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">سن بنا (تا)</label>
+                <select name="max_age" id="filterMaxAge" class="glass-select" style="font-size: 0.82rem;">
+                    <option value="">تا هر سنی</option>
+                    <option value="0" {% if max_age == 0 %}selected{% endif %}>فقط نوساز / ۰ سال</option>
+                    <option value="2" {% if max_age == 2 %}selected{% endif %}>تا ۲ سال ساخت</option>
+                    <option value="5" {% if max_age == 5 %}selected{% endif %}>تا ۵ سال ساخت</option>
+                    <option value="10" {% if max_age == 10 %}selected{% endif %}>تا ۱۰ سال ساخت</option>
+                    <option value="15" {% if max_age == 15 %}selected{% endif %}>تا ۱۵ سال ساخت</option>
+                    <option value="20" {% if max_age == 20 %}selected{% endif %}>تا ۲۰ سال ساخت</option>
+                    <option value="30" {% if max_age == 30 %}selected{% endif %}>بالای ۲۰ سال (قدیمی)</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداقل متراژ (متر)</label>
+                <input type="number" name="min_area" id="filterMinArea" value="{{ min_area or '' }}" placeholder="مثلاً: 80" class="glass-input" style="font-size: 0.82rem;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداکثر متراژ (متر)</label>
+                <input type="number" name="max_area" id="filterMaxArea" value="{{ max_area or '' }}" placeholder="مثلاً: 160" class="glass-input" style="font-size: 0.82rem;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداقل سال ساخت</label>
+                <input type="number" name="min_year" id="filterMinYear" value="{{ min_year or '' }}" placeholder="مثلاً: 1398" class="glass-input" style="font-size: 0.82rem;">
             </div>
             <div>
                 <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;">حداقل تعداد خواب</label>
@@ -274,6 +329,29 @@
                     <input type="checkbox" name="has_balcony" id="filterHasBalcony" value="1" {% if has_balcony == '1' %}checked{% endif %}>
                     <span>دارای بالکن</span>
                 </label>
+            </div>
+
+            <!-- Quick Preset Discovery Chips -->
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding-top: 0.85rem; border-top: 1px dashed rgba(255,255,255,0.08);">
+                <span style="font-size: 0.76rem; color: #94a3b8; font-weight: 700;">⚡ دسترسی سریع:</span>
+                <a href="{{ url_for('properties.list_properties', deal_type='rent') }}" class="quick-filter-chip chip-rent {% if selected_deal_type == 'rent' %}active{% endif %}">
+                    <span>🔑 تمام فایل‌های رهن و اجاره</span>
+                </a>
+                <a href="{{ url_for('properties.list_properties', deal_type='rent', max_rent=0) }}" class="quick-filter-chip chip-rent">
+                    <span>💎 فقط رهن کامل (بدون اجاره)</span>
+                </a>
+                <a href="{{ url_for('properties.list_properties', deal_type='sale') }}" class="quick-filter-chip {% if selected_deal_type == 'sale' %}active{% endif %}">
+                    <span>🏢 تمام فایل‌های خرید و فروش</span>
+                </a>
+                <a href="{{ url_for('properties.list_properties', max_age=2) }}" class="quick-filter-chip">
+                    <span>✨ کلید نخورده و نوساز</span>
+                </a>
+                <a href="{{ url_for('properties.list_properties', has_parking='1', has_elevator='1') }}" class="quick-filter-chip">
+                    <span>🚗 فول امکانات (پارکینگ + آسانسور)</span>
+                </a>
+                <a href="{{ url_for('properties.list_properties') }}" class="quick-filter-chip" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.25);">
+                    <span>🔄 پاکسازی همه فیلترها</span>
+                </a>
             </div>
         </div>
     </form>
@@ -344,7 +422,7 @@
 <!-- Compact Real Estate Cards Stack (Modern, Horizontal & Dense) -->
 <div class="compact-cards-stack" id="propertiesCardsContainer">
     {% for p in properties %}
-        <div class="compact-property-card property-card" 
+        <div class="compact-property-card property-card antigravity-card-3d stagger-in" 
              data-deal-type="{{ p.deal_type }}" 
              id="prop-card-{{ p.id }}"
              data-prop-id="{{ p.id }}"
@@ -352,7 +430,7 @@
              data-title="{{ p.title | forceescape }}"
              data-images='{{ p.images | tojson }}'>
             <!-- 1. Right Column: Thumbnail & Gallery Click -->
-            <div class="compact-thumb-wrap" 
+            <div class="compact-thumb-wrap depth-subtle" 
                  onclick="openGalleryFromCard(this)"
                  title="کلیک برای باز شدن گالری تمام‌صفحه و بررسی نقشه و نورگیر">
                 {% if p.images and p.images[0] %}
@@ -375,7 +453,7 @@
                 </div>
 
                 <!-- Source Badge -->
-                <div class="compact-thumb-badge-top">
+                <div class="compact-thumb-badge-top depth-floating">
                     {% if p.source == 'divar' %}
                         <span class="badge-neon badge-neon-cyan" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">دیوار</span>
                     {% elif p.source == 'sheypoor' %}
@@ -1007,13 +1085,33 @@ function switchDealTab(dealType) {
     const formDealType = document.getElementById('formDealType');
     if (formDealType) formDealType.value = dealType;
 
+    const selectEl = document.getElementById('filterDealTypeSelect');
+    if (selectEl && selectEl.value !== dealType) {
+        selectEl.value = dealType;
+    }
+
+    // Dynamic Financial Input Display
+    const saleInputs = document.getElementById('budgetInputsSale');
+    const rentInputs = document.getElementById('budgetInputsRent');
+    if (saleInputs && rentInputs) {
+        if (dealType === 'sale') {
+            saleInputs.style.display = 'contents';
+            rentInputs.style.display = 'none';
+        } else if (dealType === 'rent') {
+            saleInputs.style.display = 'none';
+            rentInputs.style.display = 'contents';
+        } else {
+            saleInputs.style.display = 'contents';
+            rentInputs.style.display = 'contents';
+        }
+    }
+
     const cards = document.querySelectorAll('.property-card');
     let visibleCount = 0;
     cards.forEach(card => {
         const cardDeal = card.getAttribute('data-deal-type');
         if (dealType === 'all' || cardDeal === dealType) {
             card.style.display = 'flex';
-            card.style.animation = 'fadeIn 0.25s ease';
             visibleCount++;
         } else {
             card.style.display = 'none';
@@ -1026,6 +1124,31 @@ function switchDealTab(dealType) {
     }
 }
 
+window.onDealTypeSelectChange = function(val) {
+    switchDealTab(val);
+};
+
+// 3D Card Physics Engine with Specular Glare
+function initCard3DPhysics() {
+    const cards = document.querySelectorAll('.property-card');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            if (window.innerWidth <= 768) return;
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            card.style.setProperty('--mouse-x', `${(x / rect.width) * 100}%`);
+            card.style.setProperty('--mouse-y', `${(y / rect.height) * 100}%`);
+            const rotateX = ((y - rect.height / 2) / (rect.height / 2)) * -4.5;
+            const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 4.5;
+            card.style.transform = `perspective(1200px) translateY(-6px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg)`;
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = '';
+        });
+    });
+}
+
 // Attach listeners on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('propertyFilterForm');
@@ -1036,17 +1159,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const isRentParam = window.location.search.includes('deal_type=rent');
-    const isSaleParam = window.location.search.includes('deal_type=sale');
-    if (isRentParam) {
-        switchDealTab('rent');
-    } else if (isSaleParam) {
-        switchDealTab('sale');
-    } else {
-        const initialTab = document.querySelector('.deal-tab-item.active-sale') ? 'sale' :
-                           document.querySelector('.deal-tab-item.active-rent') ? 'rent' : 'all';
-        switchDealTab(initialTab);
-    }
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentDeal = urlParams.get('deal_type') || 'all';
+    switchDealTab(currentDeal);
+    initCard3DPhysics();
 
     // If initially no cards exist on page (e.g. strict filter applied in URL), kick off on-demand crawl!
     const existingCards = document.querySelectorAll('.compact-property-card');
@@ -1055,6 +1171,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
+
+<script>
+    window.__TEHRAN_DISTRICTS_DATA__ = {{ all_regions | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/district_picker.js') }}"></script>
+<script src="{{ url_for('static', filename='js/filter_inputs.js') }}"></script>
 
 {% endblock %}
 

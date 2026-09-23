@@ -1,0 +1,127 @@
+{
+  "name": "Saghf Tri-Platform Synchronization & Broadcast (Web - Telegram - Bale)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-sync",
+        "options": {}
+      },
+      "name": "Webhook - Web Event Ingestion",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "id": "node-sync-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Saghf Tri-Platform Parity Engine\n// Normalizes web events to broadcast symmetrically across Telegram and Bale\nconst input = $input.first().json.body || $input.first().json;\n\nconst event_type = input.event || 'property_created';\nconst property_id = input.property_id || null;\nconst lead_id = input.lead_id || null;\nconst title = input.title || 'فایل ملکی جدید در سقف';\nconst district = input.district || 'تهران';\nconst price_str = input.price || 'توافقی';\nconst file_code = input.file_code || '10000';\nconst direct_url = input.direct_url || `http://127.0.0.1:5000/properties/${property_id}`;\n\nreturn [{\n  json: {\n    event_type,\n    property_id,\n    lead_id,\n    file_code,\n    title,\n    district,\n    price_str,\n    direct_url,\n    timestamp: new Date().toISOString(),\n    parity: ['web', 'telegram', 'bale']\n  }\n}];"
+      },
+      "name": "Parity Normalizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "id": "node-parity-code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/omnichannel/broadcast/telegram",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"{{ $json.event_type }}\",\n  \"property_id\": {{ $json.property_id }},\n  \"file_code\": \"{{ $json.file_code }}\",\n  \"title\": \"{{ $json.title }}\",\n  \"url\": \"{{ $json.direct_url }}\"\n}",
+        "options": {}
+      },
+      "name": "Sync to Telegram Bot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        200
+      ],
+      "id": "node-sync-telegram"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/omnichannel/broadcast/bale",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"{{ $json.event_type }}\",\n  \"property_id\": {{ $json.property_id }},\n  \"file_code\": \"{{ $json.file_code }}\",\n  \"title\": \"{{ $json.title }}\",\n  \"url\": \"{{ $json.direct_url }}\"\n}",
+        "options": {}
+      },
+      "name": "Sync to Bale Bot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        400
+      ],
+      "id": "node-sync-bale"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Tri-Platform synchronization executed across Web, Telegram and Bale.\",\n  \"synced_at\": \"{{ $json.timestamp }}\"\n}",
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        300
+      ],
+      "id": "node-sync-respond"
+    }
+  ],
+  "connections": {
+    "Webhook - Web Event Ingestion": {
+      "main": [
+        [
+          {
+            "node": "Parity Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parity Normalizer": {
+      "main": [
+        [
+          {
+            "node": "Sync to Telegram Bot",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sync to Bale Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync to Telegram Bot": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

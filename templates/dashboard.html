@@ -3,7 +3,7 @@
 {% block title %}داشبورد مدیریتی سقف | مانیتورینگ جامع املاک و تطبیق هوشمند{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+<div class="dashboard-header-block" style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
     <div>
         <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
             میزکار مدیریتی و هوش مصنوعی املاک <span class="text-neon-cyan">«سقف»</span>
@@ -12,19 +12,66 @@
             مانیتورینگ لحظه‌ای فایل‌های کراول شده، تحلیل تقاضای مشتریان و پیشنهاد فرصت‌های طلایی معامله
         </p>
     </div>
-    <div style="display: flex; gap: 0.75rem;">
-        <form action="{{ url_for('matching.refresh_all') }}" method="POST">
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <!-- دکمه دستیار هوشمند داخل داشبورد -->
+        <button type="button" onclick="scrollToAssistant()" class="nav-ai-assistant-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+            <span class="neon-pulse-dot cyan"></span>
+            <span>✨ دستیار هوشمند سقف</span>
+        </button>
+        <form action="{{ url_for('matching.refresh_all') }}" method="POST" style="margin: 0;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="glass-btn" style="border-color: rgba(139, 92, 246, 0.4); color: #c084fc;">
+            <button type="submit" class="glass-btn" style="border-color: rgba(139, 92, 246, 0.4); color: #c084fc; padding: 0.5rem 1rem;">
                 <span>⚡</span> بروزرسانی تطبیق هوشمند سراسری
             </button>
         </form>
     </div>
 </div>
 
+<!-- Dedicated Luxury Department Gateway Cards (خرید و فروش & رهن و اجاره) -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+    <!-- Sale Department Gateway -->
+    <div class="glass-card antigravity-card-3d luxury-dept-card shimmer-border-glow stagger-in" style="border: 1px solid rgba(0, 242, 254, 0.35); background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.85)); padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; border-radius: 18px;">
+        <div style="display: flex; align-items: center; gap: 1.1rem;">
+            <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(0, 242, 254, 0.15); border: 1px solid rgba(0, 242, 254, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);">
+                🏢
+            </div>
+            <div>
+                <div class="metallic-cyan-text" style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.25rem;">دپارتمان خرید و فروش</div>
+                <div style="font-size: 0.85rem; color: #94a3b8;">
+                    <span style="font-weight: 800; color: #00f2fe;">{{ sale_count | default(kpis.total_properties) | pnum }}</span> فایل اختصاصی فروش در مناطق لوکس تهران
+                </div>
+            </div>
+        </div>
+        <a href="{{ url_for('properties.list_properties', deal_type='sale') }}" class="glass-btn btn-neon-cyan magnetic-btn depth-floating" style="padding: 0.65rem 1.25rem; font-size: 0.88rem; font-weight: 800; text-decoration: none; border-radius: 12px;">
+            <span>ورود به دپارتمان</span> <span>↵</span>
+        </a>
+    </div>
+
+    <!-- Rental Department Gateway -->
+    <div class="glass-card antigravity-card-3d luxury-dept-card shimmer-border-glow stagger-in" style="border: 1px solid rgba(245, 158, 11, 0.4); background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(15, 23, 42, 0.85)); padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; border-radius: 18px;">
+        <div style="display: flex; align-items: center; gap: 1.1rem;">
+            <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(245, 158, 11, 0.16); border: 1px solid rgba(245, 158, 11, 0.45); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);">
+                🔑
+            </div>
+            <div>
+                <div class="metallic-gold-text" style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.25rem;">دپارتمان رهن و اجاره</div>
+                <div style="font-size: 0.85rem; color: #94a3b8;">
+                    <span style="font-weight: 800; color: #fbbf24;">{{ rent_count | default(0) | pnum }}</span> فایل فعال رهن و اجاره مستقیم و کارشناسی‌شده
+                </div>
+            </div>
+        </div>
+        <a href="{{ url_for('properties.list_properties', deal_type='rent') }}" class="glass-btn magnetic-btn depth-floating" style="padding: 0.65rem 1.25rem; font-size: 0.88rem; font-weight: 800; text-decoration: none; border-color: rgba(245, 158, 11, 0.6); color: #fce79f; background: rgba(245, 158, 11, 0.2); border-radius: 12px;">
+            <span>ورود به دپارتمان</span> <span>↵</span>
+        </a>
+    </div>
+</div>
+
+<!-- ایستگاه هوش مصنوعی و گوی ۳ بعدی مشاور سقف -->
+{% include "components/ai_station.html" %}
+
 <!-- 4 Luxury KPI Cards -->
 <div class="kpi-grid">
-    <div class="glass-panel kpi-card" style="--accent-color: #d4af37;">
+    <div class="glass-panel kpi-card antigravity-card-3d" style="--accent-color: #d4af37;">
         <div class="kpi-header">
             <span class="kpi-title">موجودی فایلینگ و کراولینگ</span>
             <div class="kpi-icon text-gold">🏢</div>

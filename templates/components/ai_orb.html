@@ -1,0 +1,250 @@
+<!-- ==========================================================================
+     SAGHF SMART 3D AI SPHERE (گوی هوشمند اختصاصی هوش مصنوعی سقف)
+     طراحی شده به صورت کد خالص (بدون هیچ تصویر استاتیک یا کلاژ تداخلی)
+     هویت بصری: مشکی آبسیدین عمیق با پرتوهای طلایی متالیک و انعکاس اسپکولار
+     تعامل‌پذیر، همراه با انیمیشن‌های تنفس، معلق بودن (Levitation) و پالس صوتی
+     ========================================================================== -->
+
+<!-- ۱. المان شناور مدرن گوی هوشمند (Floating Smart AI Sphere) -->
+<div id="saghfSmartSphereFloating" class="saghf-smart-sphere-floating" role="button" aria-label="دستیار صوتی و هوش مصنوعی سقف" title="کلیک کنید: دستیار صوتی و هوش مصنوعی سقف">
+    <!-- هاله نورانی و امواج انرژی پس‌زمینه (Ambient Energy Halo) -->
+    <div class="saghf-sphere-halo"></div>
+
+    <!-- حلقه‌های ژیروسکوپ سه‌بعدی متحرک (3D Gyroscopic Orbit Rings) -->
+    <div class="saghf-sphere-ring ring-primary"></div>
+    <div class="saghf-sphere-ring ring-secondary"></div>
+
+    <!-- هسته شیشه‌ای گوی (Glass Obsidian Core) -->
+    <div class="saghf-sphere-core" id="saghfSphereCore">
+        <!-- بوم رندر دینامیک ذرات و امواج هوش مصنوعی (Dynamic Canvas Energy Vortex) -->
+        <canvas id="saghfSphereCanvas" class="saghf-sphere-canvas" width="140" height="140"></canvas>
+        
+        <!-- انعکاس نور اسپکولار کریستالی (Specular Highlight & Rim Reflection) -->
+        <div class="saghf-sphere-specular-highlight"></div>
+        <div class="saghf-sphere-rim-light"></div>
+        
+        <!-- آیکون وضعیت و میکروفون (Voice / Activity Indicator) -->
+        <div class="saghf-sphere-icon-wrap" id="saghfSphereIconWrap">
+            <svg class="saghf-mic-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- نشانگر وضعیت هوشمند (Micro Status Badge) -->
+    <div class="saghf-sphere-badge" id="saghfSphereBadge">
+        <span class="saghf-badge-dot"></span>
+        <span class="saghf-badge-title" id="saghfSphereBadgeText">هوش مصنوعی سقف</span>
+    </div>
+
+    <!-- امواج صوتی در حالت فعال یا شنود (Sound Wave Ripple Rings) -->
+    <div class="saghf-sphere-pulse-wave wave-1"></div>
+    <div class="saghf-sphere-pulse-wave wave-2"></div>
+    <div class="saghf-sphere-pulse-wave wave-3"></div>
+</div>
+
+<!-- ۲. پنل شیشه‌ای دستیار هوشمند و کنسول تعاملی (AI HUD Assistant Modal) -->
+<div class="ai-orb-hud-backdrop" id="aiOrbHudModal">
+    <div class="ai-orb-hud-panel" dir="rtl">
+        
+        <!-- سربرگ پنل -->
+        <div class="ai-hud-header">
+            <div class="ai-hud-title-wrap">
+                <div class="ai-hud-mini-sphere"></div>
+                <div>
+                    <div class="ai-hud-title">دستیار هوشمند <span>سقف</span></div>
+                    <div style="font-size: 0.72rem; color: #a1a1aa;">هوش مصنوعی پردازش گفتار، تحلیل نیاز مشتری و کنترل صوتی</div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <div class="ai-hud-state-pill" id="aiVoiceStatePill">
+                    <span class="ai-state-dot" id="aiVoiceStateDot"></span>
+                    <span id="aiVoiceStateLabel">آماده به کار</span>
+                </div>
+                <button type="button" class="ai-hud-close-btn" id="aiHudCloseBtn" title="قطع مکالمه و بستن پنل" aria-label="بستن">✕</button>
+            </div>
+        </div>
+
+        <!-- تب‌های کارکرد دستیار -->
+        <div class="ai-hud-tabs">
+            <button type="button" class="ai-hud-tab active" data-tab="voice">
+                <span>🎙️</span> گفتگوی صوتی و جستجوی فایل
+            </button>
+            <button type="button" class="ai-hud-tab" data-tab="lead">
+                <span>👥</span> تحلیل زنده مذاکره
+            </button>
+            <button type="button" class="ai-hud-tab" data-tab="ops">
+                <span>⚡</span> فرامین عملیاتی سریع
+            </button>
+        </div>
+
+        <!-- محتوای تب‌ها -->
+        <div class="ai-hud-body">
+
+            <!-- تب ۱: کنترل صوتی اپ و جستجوی هوشمند -->
+            <div class="ai-hud-view active" id="aiViewVoice">
+                <div class="ai-voice-center">
+                    <div class="ai-voice-interactive-orb" id="aiInteractiveMicOrb" role="button" title="برای شروع یا توقف صحبت کلیک فرمایید">
+                        <div class="ai-voice-orb-glow"></div>
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fce79f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="22"/>
+                        </svg>
+                    </div>
+                    
+                    <div class="ai-soundwave-bars-container" id="aiSoundwaves">
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                    </div>
+
+                    <div id="aiVoiceStatusText" style="font-size: 0.82rem; color: #d4af37; margin-top: 0.4rem; font-weight: 600;">
+                        روی گوی کلیک کنید و نیاز ملکی خود را بگویید...
+                    </div>
+                </div>
+
+                <!-- نمایش ترنسکریپت صوتی زنده -->
+                <div class="ai-transcript-box" id="aiTranscriptBox">
+                    <span style="color: #fce79f;">
+                        «سلام! من دستیار هوشمند شما در سامانه سقف هستم. چطور می‌تونم کمکتون کنم؟ به دنبال خرید هستید یا اجاره؟ در چه منطقه و با چه بودجه‌ای ملکی مد نظرتونه؟»
+                    </span>
+                </div>
+
+                <!-- باکس پاسخ هوش مصنوعی -->
+                <div class="ai-voice-reply-box" id="aiVoiceReplyBox"></div>
+
+                <!-- کانتینر کارت‌های استخراج‌شده لحظه‌ای از دیتابیس / کراولر آنلاین -->
+                <div id="aiVoiceItemsContainer" class="ai-voice-items-container" style="display: none; margin-bottom: 1rem;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: #d4af37; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span>🏛️ فایل‌های ملکی منطبق پیدا شده:</span>
+                        <span id="aiVoiceItemsCount" style="color: #fce79f; font-size: 0.74rem;"></span>
+                    </div>
+                    <div id="aiVoiceItemsList" class="ai-voice-items-list" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                </div>
+
+                <!-- چیپ‌های پیشنهادی گفتار -->
+                <div class="ai-voice-chips-title">💡 نمونه فرامین و نیازهای متداول:</div>
+                <div class="ai-voice-chips-wrap">
+                    <button type="button" class="ai-voice-chip" onclick="executeVoiceCommandDirect('رهن و اجاره آپارتمان در پونک تا ۵۰۰ میلیون ودیعه و ۱۵ میلیون اجاره')">
+                        🔑 رهن پونک (۵۰۰ م + ۱۵ م)
+                    </button>
+                    <button type="button" class="ai-voice-chip" onclick="executeVoiceCommandDirect('خرید آپارتمان ۱۰۰ متری در سعادت آباد نوساز دو خواب')">
+                        🏢 خرید سعادت‌آباد ۱۰۰ متر
+                    </button>
+                    <button type="button" class="ai-voice-chip" onclick="executeVoiceCommandDirect('آپارتمان در جنت آباد با پارکینگ و آسانسور')">
+                        🚗 جنت‌آباد با پارکینگ
+                    </button>
+                    <button type="button" class="ai-voice-chip" onclick="executeVoiceCommandDirect('هماهنگی قرار بازدید حضوری')">
+                        📅 هماهنگی قرار بازدید
+                    </button>
+                </div>
+
+                <!-- فیلد ورودی متنی برای حالت بدون صدا -->
+                <div class="ai-text-input-wrap">
+                    <input type="text" id="aiVoiceTextInput" class="ai-text-input" placeholder="یا نیاز ملکی خود را اینجا بنویسید..." autocomplete="off">
+                    <button type="button" id="aiVoiceTextSendBtn" class="ai-text-send-btn">ارسال ↵</button>
+                </div>
+
+                <!-- دکمه قطع مکالمه صوتی و بستن کامل -->
+                <div style="margin-top: 0.9rem; text-align: center;">
+                    <button type="button" class="ai-disconnect-call-btn" id="aiDisconnectCallBtn" onclick="cleanupAndCloseVoiceAgent()">
+                        🔴 قطع مکالمه صوتی و خروج
+                    </button>
+                </div>
+            </div>
+
+            <!-- تب ۲: شنود زنده و کشف نیاز در جلسه با مشتری -->
+            <div class="ai-hud-view" id="aiViewLead">
+                <div class="ai-lead-session-banner">
+                    <div>
+                        <div style="font-size: 0.88rem; font-weight: 700; color: #ffffff; margin-bottom: 0.2rem;">
+                            دستیار هوشمند جلسه و مذاکره حضوری
+                        </div>
+                        <div id="aiLeadStatusDesc" style="font-size: 0.74rem; color: #a1a1aa;">
+                            شنود مداوم مکالمه، استخراج زنده شروط معامله و پیشنهاد بلادرنگ فایل
+                        </div>
+                    </div>
+                    <button type="button" class="ai-lead-toggle-btn" id="aiLeadToggleBtn">
+                        <span id="aiLeadBtnIcon">▶️</span> <span id="aiLeadBtnText">شروع شنود جلسه</span>
+                    </button>
+                </div>
+
+                <div class="ai-lead-tags-section">
+                    <div class="ai-lead-tags-title">
+                        <span>🎯</span> مشخصات استخراج‌شده از کلام مشتری:
+                    </div>
+                    <div class="ai-lead-tags-cloud" id="aiLeadTagsCloud">
+                        <span style="font-size: 0.76rem; color: #71717a; font-style: italic;">
+                            با فعال‌سازی شنود جلسه، منطقه، بودجه و ویژگی‌های درخواستی مشتری به صورت خودکار اینجا تحلیل و دسته‌بندی می‌شوند.
+                        </span>
+                    </div>
+                </div>
+
+                <div style="font-size: 0.78rem; font-weight: 700; color: #d4af37; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span>🏛️ فایل‌های ملکی منطبق جهت پرزنت آنی به مشتری:</span>
+                    <span id="aiLeadMatchesCount" style="color: #fce79f; font-size: 0.74rem;"></span>
+                </div>
+
+                <div class="ai-lead-matches-container" id="aiLeadMatchesContainer">
+                    <div style="text-align: center; color: #71717a; padding: 2rem; font-size: 0.82rem; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px dashed rgba(212, 175, 55, 0.2);">
+                        کارت‌های املاک متناسب با کلام مشتری، همزمان با صحبت او در این بخش ظاهر می‌شوند.
+                    </div>
+                </div>
+            </div>
+
+            <!-- تب ۳: فرامین عملیاتی سریع مشاور -->
+            <div class="ai-hud-view" id="aiViewOps">
+                <div style="font-size: 0.8rem; color: #a1a1aa; margin-bottom: 0.9rem;">
+                    دسترسی سریع به ابزارهای پرکاربرد مشاوران و دپارتمان‌های سقف:
+                </div>
+
+                <div class="ai-op-grid">
+                    <div class="ai-op-btn" onclick="executeVoiceCommandDirect('ارسال فایل به تلگرام')">
+                        <span class="ai-op-icon">📸</span>
+                        <div class="ai-op-name">ارسال آلبوم به تلگرام</div>
+                        <div class="ai-op-desc">ارسال تصاویر و مشخصات فایل به کانال یا مشتری</div>
+                    </div>
+
+                    <div class="ai-op-btn" onclick="executeVoiceCommandDirect('شروع کراولینگ')">
+                        <span class="ai-op-icon">📡</span>
+                        <div class="ai-op-name">استخراج فوری فایل‌ها</div>
+                        <div class="ai-op-desc">راه‌اندازی کراولر هوشمند دیوار و شیپور</div>
+                    </div>
+
+                    <div class="ai-op-btn" onclick="executeVoiceCommandDirect('برو به مانیتورینگ کراولر')">
+                        <span class="ai-op-icon">📟</span>
+                        <div class="ai-op-name">اتاق مانیتورینگ زنده</div>
+                        <div class="ai-op-desc">مشاهده پیشرفت استخراج و فایل‌های جدید</div>
+                    </div>
+
+                    <div class="ai-op-btn" onclick="executeVoiceCommandDirect('ثبت ملک جدید')">
+                        <span class="ai-op-icon">➕</span>
+                        <div class="ai-op-name">ثبت فایل جدید مالک</div>
+                        <div class="ai-op-desc">فرم سریع ثبت و کارشناسی فایل شخصی</div>
+                    </div>
+
+                    <div class="ai-op-btn" onclick="executeVoiceCommandDirect('مشتریان')">
+                        <span class="ai-op-icon">👥</span>
+                        <div class="ai-op-name">پایپ‌لاین متقاضیان</div>
+                        <div class="ai-op-desc">فهرست خریداران و مستأجران در انتظار ملک</div>
+                    </div>
+
+                    <div class="ai-op-btn" onclick="executeVoiceCommandDirect('فالوآپ و پیگیری')">
+                        <span class="ai-op-icon">⏰</span>
+                        <div class="ai-op-name">کران پیگیری ۲۴ ساعته</div>
+                        <div class="ai-op-desc">بررسی و ارسال خودکار پیام‌های پیگیری متقاضیان</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>

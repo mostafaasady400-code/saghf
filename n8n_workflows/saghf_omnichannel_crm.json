@@ -1,0 +1,242 @@
+{
+  "name": "Saghf Omni-Channel CRM & Nurturing Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "saghf-omni",
+        "options": {}
+      },
+      "name": "Webhook - OmniChannel Ingestion",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "id": "node-webhook-omni"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalization of multi-channel payload (VoIP, SMS, Telegram, WhatsApp, Bale, Eitaa, Rubika, Instagram)\nconst input = $input.first().json.body || $input.first().json;\n\nconst channel = (input.channel || 'telegram').toLowerCase();\nconst sender_id = (input.phone || input.sender_phone || input.from || input.chat_id || input.caller_phone || '09120000000').toString().trim();\nconst text = (input.text || input.message || input.content || input.caption || '').trim();\nconst audio_url = input.audio_url || input.recording_url || null;\n\nreturn [{\n  json: {\n    channel,\n    sender_id,\n    text,\n    audio_url,\n    metadata: {\n      call_id: input.call_id || null,\n      duration_seconds: input.duration_seconds || 0,\n      sender_name: input.sender_name || input.name || null,\n      source: 'n8n_pipeline'\n    }\n  }\n}];"
+      },
+      "name": "Normalize Multi-Channel Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ],
+      "id": "node-normalize"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/omnichannel/webhook/={{ $json.channel }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"sender_phone\": \"{{ $json.sender_id }}\",\n  \"text\": \"{{ $json.text }}\",\n  \"audio_url\": {{ $json.audio_url ? '\"' + $json.audio_url + '\"' : 'null' }},\n  \"metadata\": {{ JSON.stringify($json.metadata) }}\n}",
+        "options": {}
+      },
+      "name": "Saghf Local Dual-Engine Core",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        300
+      ],
+      "id": "node-saghf-engine"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.role }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "owner"
+            },
+            {
+              "value2": "lead"
+            }
+          ]
+        }
+      },
+      "name": "Switch - Role Classifier",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        960,
+        300
+      ],
+      "id": "node-switch-role"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/omnichannel/owner/create",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.classification.owner_payload || {}) }}",
+        "options": {}
+      },
+      "name": "CRM 1: Register Property & Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1220,
+        200
+      ],
+      "id": "node-owner-crm"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/omnichannel/lead/create",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.classification.lead_payload || {}) }}",
+        "options": {}
+      },
+      "name": "CRM 2: Register Buyer / Tenant Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1220,
+        420
+      ],
+      "id": "node-lead-crm"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/omnichannel/match-and-dispatch",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lead_id\": {{ $json.lead_id }}\n}",
+        "options": {}
+      },
+      "name": "Nurturing: Match & Dispatch 3 Cards",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1460,
+        420
+      ],
+      "id": "node-match-dispatch"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "name": "Cron Trigger: 24h Follow-up Job",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        640
+      ],
+      "id": "node-schedule-followup"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/api/omnichannel/followup/check",
+        "options": {}
+      },
+      "name": "Execute 24h Followup Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        640
+      ],
+      "id": "node-exec-followup"
+    }
+  ],
+  "connections": {
+    "Webhook - OmniChannel Ingestion": {
+      "main": [
+        [
+          {
+            "node": "Normalize Multi-Channel Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Multi-Channel Payload": {
+      "main": [
+        [
+          {
+            "node": "Saghf Local Dual-Engine Core",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Saghf Local Dual-Engine Core": {
+      "main": [
+        [
+          {
+            "node": "Switch - Role Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Role Classifier": {
+      "main": [
+        [
+          {
+            "node": "CRM 1: Register Property & Owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM 2: Register Buyer / Tenant Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM 2: Register Buyer / Tenant Lead": {
+      "main": [
+        [
+          {
+            "node": "Nurturing: Match & Dispatch 3 Cards",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron Trigger: 24h Follow-up Job": {
+      "main": [
+        [
+          {
+            "node": "Execute 24h Followup Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

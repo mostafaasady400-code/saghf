@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+
+{% block title %}مدیریت کاربران و ادمین‌های سامانه (CRUD) - سقف{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem 0 3.5rem;">
+
+    <!-- Top Admin Header -->
+    <div class="glass-panel" style="padding: 1.5rem 2rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; border: 1px solid rgba(212, 175, 55, 0.4);">
+        <div style="display: flex; align-items: center; gap: 1.2rem;">
+            <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0.08)); border: 1px solid var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; box-shadow: 0 0 15px rgba(212, 175, 55, 0.25);">
+                👥
+            </div>
+            <div>
+                <h1 style="font-size: 1.35rem; font-weight: 900; color: #f8fafc; margin-bottom: 0.3rem;">
+                    مدیریت کاربران و ادمین‌های سامانه <span class="gold-gradient-text">(CRUD Console)</span>
+                </h1>
+                <div style="font-size: 0.82rem; color: #94a3b8; display: flex; align-items: center; gap: 0.6rem;">
+                    <a href="{{ url_for('admin.dashboard') }}" style="color: var(--gold-light); text-decoration: none;">داشبورد ارشد</a>
+                    <span>/</span>
+                    <span>عملیات چهارگانه: ایجاد (Create)، بازخوانی (Read)، ویرایش (Update)، حذف (Delete)</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+            <button type="button" onclick="openCreateUserModal()" class="btn-luxury-gold" style="padding: 0.55rem 1.2rem; font-size: 0.86rem; border-radius: 10px; cursor: pointer;">
+                <span>➕</span> ایجاد کاربر یا ادمین جدید
+            </button>
+            <a href="{{ url_for('admin.dashboard') }}" class="glass-btn" style="padding: 0.55rem 1rem; font-size: 0.82rem;">
+                <span>🔙</span> بازگشت به داشبورد
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Metrics Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+        
+        <!-- Metric 1: Total Users -->
+        <div class="glass-card" style="padding: 1.3rem; border-top: 3px solid var(--gold-light);">
+            <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.4rem;">کل کاربران ثبت‌شده (Total)</div>
+            <div style="font-size: 2rem; font-weight: 900; color: #fce79f;">{{ total_users | pnum }}</div>
+            <div style="font-size: 0.74rem; color: #64748b; margin-top: 0.3rem;">حساب‌های دارای رکورد در دیتابیس</div>
+        </div>
+
+        <!-- Metric 2: Total Admins -->
+        <div class="glass-card" style="padding: 1.3rem; border-top: 3px solid #38bdf8;">
+            <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.4rem;">مدیران سامانه (Admins)</div>
+            <div style="font-size: 2rem; font-weight: 900; color: #38bdf8;">{{ admin_users | pnum }}</div>
+            <div style="font-size: 0.74rem; color: #64748b; margin-top: 0.3rem;">دارای دسترسی به پنل و تلگرام</div>
+        </div>
+
+        <!-- Metric 3: Agents -->
+        <div class="glass-card" style="padding: 1.3rem; border-top: 3px solid #a855f7;">
+            <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.4rem;">مشاوران املاک (Agents)</div>
+            <div style="font-size: 2rem; font-weight: 900; color: #c084fc;">{{ agent_users | pnum }}</div>
+            <div style="font-size: 0.74rem; color: #64748b; margin-top: 0.3rem;">کارشناسان فروش و فایلینگ</div>
+        </div>
+
+        <!-- Metric 4: Active Users -->
+        <div class="glass-card" style="padding: 1.3rem; border-top: 3px solid #34d399;">
+            <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.4rem;">حساب‌های فعال (Active)</div>
+            <div style="font-size: 2rem; font-weight: 900; color: #34d399;">{{ active_users | pnum }}</div>
+            <div style="font-size: 0.74rem; color: #64748b; margin-top: 0.3rem;">آماده احراز هویت و ورود</div>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="glass-panel" style="padding: 1.25rem 1.5rem; margin-bottom: 1.75rem;">
+        <form method="GET" action="{{ url_for('admin.users_list') }}" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            
+            <!-- Search Box -->
+            <div style="flex: 1; min-width: 240px; position: relative;">
+                <input type="text" name="q" value="{{ query_str }}" placeholder="🔍 جستجو بر اساس نام، نام کاربری، موبایل یا شناسه تلگرام..." 
+                       style="width: 100%; padding: 0.65rem 1rem; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #f8fafc; font-size: 0.84rem; outline: none;">
+            </div>
+
+            <!-- Role Filter -->
+            <div style="min-width: 160px;">
+                <select name="role" style="width: 100%; padding: 0.65rem 0.8rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #f8fafc; font-size: 0.84rem; outline: none;">
+                    <option value="">⚜️ همه نقش‌ها</option>
+                    <option value="super_admin" {% if role_filter == 'super_admin' %}selected{% endif %}>👑 مدیر ارشد (Super Admin)</option>
+                    <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>🛡️ مدیر سیستم (Admin)</option>
+                    <option value="agent" {% if role_filter == 'agent' %}selected{% endif %}>🏢 مشاور املاک</option>
+                    <option value="user" {% if role_filter == 'user' %}selected{% endif %}>👤 کاربر عادی</option>
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div style="min-width: 140px;">
+                <select name="status" style="width: 100%; padding: 0.65rem 0.8rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #f8fafc; font-size: 0.84rem; outline: none;">
+                    <option value="">⚡ همه وضعیت‌ها</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>🟢 حساب‌های فعال</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>🔴 حساب‌های غیرفعال</option>
+                </select>
+            </div>
+
+            <button type="submit" class="glass-btn" style="padding: 0.65rem 1.25rem; font-size: 0.84rem; border-color: var(--gold-light); color: var(--gold-light);">
+                اعمال فیلتر
+            </button>
+
+            {% if query_str or role_filter or status_filter %}
+                <a href="{{ url_for('admin.users_list') }}" style="color: #94a3b8; font-size: 0.8rem; text-decoration: none; padding: 0.5rem;">
+                    ✕ پاکسازی فیلترها
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Users Table Panel (READ) -->
+    <div class="glass-panel" style="padding: 1.5rem; overflow: hidden;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: #f8fafc; display: flex; align-items: center; gap: 0.5rem;">
+                <span>📋</span> فهرست کاربران و مدیران ثبت‌شده در دیتابیس
+                <span class="badge-neon badge-neon-purple" style="font-size: 0.72rem;">{{ users|length }} رکورد</span>
+            </h3>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: right;">
+                <thead>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: #94a3b8;">
+                        <th style="padding: 0.85rem 0.6rem;">#</th>
+                        <th style="padding: 0.85rem 0.6rem;">مشخصات کاربر</th>
+                        <th style="padding: 0.85rem 0.6rem;">نام کاربری (Login)</th>
+                        <th style="padding: 0.85rem 0.6rem;">نقش سازمانی</th>
+                        <th style="padding: 0.85rem 0.6rem;">شماره تماس</th>
+                        <th style="padding: 0.85rem 0.6rem;">شناسه تلگرام</th>
+                        <th style="padding: 0.85rem 0.6rem;">وضعیت</th>
+                        <th style="padding: 0.85rem 0.6rem;">آخرین ورود / ثبت</th>
+                        <th style="padding: 0.85rem 0.6rem; text-align: center;">عملیات (CRUD)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04); color: #cbd5e1; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                            <td style="padding: 0.85rem 0.6rem; font-family: monospace; color: #64748b;">
+                                {{ u.id }}
+                            </td>
+                            <td style="padding: 0.85rem 0.6rem;">
+                                <div style="font-weight: 800; color: #f8fafc; font-size: 0.88rem;">{{ u.full_name }}</div>
+                                {% if u.notes %}
+                                    <div style="font-size: 0.72rem; color: #94a3b8; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ u.notes }}</div>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 0.85rem 0.6rem;">
+                                <code style="color: #fce79f; background: rgba(212, 175, 55, 0.1); padding: 0.2rem 0.5rem; border-radius: 6px;">{{ u.username }}</code>
+                            </td>
+                            <td style="padding: 0.85rem 0.6rem;">
+                                {% if u.role == 'super_admin' %}
+                                    <span class="badge-neon badge-neon-emerald" style="font-size: 0.7rem;">👑 مدیر ارشد (Super)</span>
+                                {% elif u.role == 'admin' %}
+                                    <span class="badge-neon badge-neon-cyan" style="font-size: 0.7rem;">🛡️ مدیر سیستم</span>
+                                {% elif u.role == 'agent' %}
+                                    <span class="badge-neon badge-neon-purple" style="font-size: 0.7rem;">🏢 مشاور املاک</span>
+                                {% else %}
+                                    <span class="badge-neon badge-neon-amber" style="font-size: 0.7rem;">👤 کاربر عادی</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 0.85rem 0.6rem;">
+                                {% if u.phone %}
+                                    <span style="direction: ltr; display: inline-block;">{{ u.phone }}</span>
+                                {% else %}
+                                    <span style="color: #64748b;">-</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 0.85rem 0.6rem;">
+                                {% if u.telegram_id %}
+                                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                        <code style="color: #38bdf8; font-size: 0.8rem; background: rgba(56, 189, 248, 0.1); padding: 0.15rem 0.4rem; border-radius: 4px;">{{ u.telegram_id }}</code>
+                                        <button type="button" onclick="navigator.clipboard.writeText('{{ u.telegram_id }}'); alert('شناسه تلگرام کپی شد: {{ u.telegram_id }}');" title="کپی شناسه" style="background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 0.8rem;">📋</button>
+                                    </div>
+                                {% else %}
+                                    <span style="color: #64748b; font-size: 0.74rem;">ثبت‌نشده</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 0.85rem 0.6rem;">
+                                {% if u.is_active %}
+                                    <span style="color: #34d399; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #34d399; box-shadow: 0 0 6px #34d399;"></span> فعال
+                                    </span>
+                                {% else %}
+                                    <span style="color: #f43f5e; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #f43f5e;"></span> غیرفعال
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 0.85rem 0.6rem; color: #94a3b8; font-size: 0.75rem;">
+                                <div>ورود: {{ u.last_login.strftime('%m/%d %H:%M') if u.last_login else '-' }}</div>
+                                <div style="color: #64748b;">ثبت: {{ u.created_at.strftime('%Y/%m/%d') if u.created_at else '-' }}</div>
+                            </td>
+                            <td style="padding: 0.85rem 0.6rem; text-align: center;">
+                                <div style="display: inline-flex; align-items: center; gap: 0.45rem;">
+                                    
+                                    <!-- Edit Button (U - Update) -->
+                                    <button type="button" onclick="openEditUserModal({{ u.id }})" class="glass-btn" style="padding: 0.3rem 0.65rem; font-size: 0.74rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" title="ویرایش اطلاعات">
+                                        ✏️ ویرایش
+                                    </button>
+
+                                    <!-- Toggle Status Button -->
+                                    {% if not u.is_super_admin %}
+                                        <form method="POST" action="{{ url_for('admin.users_toggle_status', user_id=u.id) }}" style="display: inline;" onsubmit="return confirm('آیا وضعیت این کاربر را تغییر می‌دهید؟');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.74rem; color: {% if u.is_active %}#f59e0b{% else %}#34d399{% endif %};" title="تغییر وضعیت حساب">
+                                                {% if u.is_active %}غیرفعال‌سازی{% else %}فعال‌سازی{% endif %}
+                                            </button>
+                                        </form>
+
+                                        <!-- Delete Button (D - Delete) -->
+                                        <form method="POST" action="{{ url_for('admin.users_delete', user_id=u.id) }}" style="display: inline;" onsubmit="return confirm('⚠️ اخطار: آیا از حذف دائمی کاربر «{{ u.full_name }}» از دیتابیس اطمینان دارید؟');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.74rem; color: #f43f5e; border-color: rgba(244, 63, 94, 0.3);" title="حذف کاربر">
+                                                🗑️ حذف
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span style="font-size: 0.7rem; color: #fce79f; padding: 0.3rem 0.5rem; background: rgba(212, 175, 55, 0.08); border-radius: 6px;">
+                                            🛡️ مصون از حذف
+                                        </span>
+                                    {% endif %}
+
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="9" style="text-align: center; color: #64748b; padding: 3rem 1rem;">
+                                هیچ کاربری با مشخصات جستجوشده یافت نشد.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- Modal 1: Create New User (CREATE) -->
+<!-- ========================================================================= -->
+<div id="createUserModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1rem;">
+    <div class="glass-panel" style="width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; padding: 2rem; border: 1px solid var(--gold-light); position: relative; border-radius: 16px;">
+        
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.85rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; display: flex; align-items: center; gap: 0.5rem;">
+                <span>➕</span> ایجاد کاربر یا مدیر جدید در دیتابیس (Create)
+            </h3>
+            <button type="button" onclick="closeCreateUserModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">✕</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin.users_create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">نام و نام‌خانوادگی *</label>
+                    <input type="text" name="full_name" required placeholder="مثال: مهندس علی رضایی" 
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">نام کاربری (Username انگلیسی) *</label>
+                    <input type="text" name="username" required placeholder="مثال: a_rezaei" dir="ltr"
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">کلمه عبور ورود (Password) *</label>
+                    <input type="password" name="password" required placeholder="حداقل ۴ کاراکتر" dir="ltr"
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">نقش سازمانی *</label>
+                    <select name="role" required style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                        <option value="admin">🛡️ مدیر سیستم (Admin)</option>
+                        <option value="agent">🏢 مشاور املاک (Agent)</option>
+                        <option value="user">👤 کاربر عادی (User)</option>
+                        <option value="super_admin">👑 مدیر ارشد (Super Admin)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">شناسه عددی تلگرام (اختیاری جهت همگام‌سازی ربات)</label>
+                    <input type="text" name="telegram_id" placeholder="مثال: 7495565146" dir="ltr"
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #38bdf8; font-size: 0.85rem;">
+                    <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem;">در صورت انتخاب نقش ادمین، دسترسی ربات تلگرام خودکار فعال می‌شود.</div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">شماره همراه</label>
+                    <input type="text" name="phone" placeholder="مثال: 09121234567" dir="ltr"
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">یادداشت‌ها و توضیحات تکمیلی</label>
+                <textarea name="notes" rows="2" placeholder="توضیحات اختیاری درباره پرسنل، سطح دسترسی یا وظایف..."
+                          style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.84rem; resize: vertical;"></textarea>
+            </div>
+
+            <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.6rem;">
+                <input type="checkbox" name="is_active" id="create_is_active" checked style="width: 18px; height: 18px; accent-color: var(--gold-light); cursor: pointer;">
+                <label for="create_is_active" style="font-size: 0.84rem; color: #f8fafc; cursor: pointer;">حساب کاربری فعال باشد و امکان ورود داشته باشد</label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.85rem;">
+                <button type="button" onclick="closeCreateUserModal()" class="glass-btn" style="padding: 0.65rem 1.25rem; font-size: 0.85rem;">
+                    انصراف
+                </button>
+                <button type="submit" class="btn-luxury-gold" style="padding: 0.65rem 1.5rem; font-size: 0.85rem; border-radius: 8px;">
+                    ✓ ذخیره و ایجاد کاربر
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- Modal 2: Edit Existing User (UPDATE) -->
+<!-- ========================================================================= -->
+<div id="editUserModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1rem;">
+    <div class="glass-panel" style="width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; padding: 2rem; border: 1px solid #38bdf8; position: relative; border-radius: 16px;">
+        
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.85rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; display: flex; align-items: center; gap: 0.5rem;">
+                <span>✏️</span> ویرایش مشخصات کاربر در دیتابیس (Update)
+            </h3>
+            <button type="button" onclick="closeEditUserModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">✕</button>
+        </div>
+
+        <form id="editUserForm" method="POST" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">نام و نام‌خانوادگی *</label>
+                    <input type="text" id="edit_full_name" name="full_name" required
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">نام کاربری (غیرقابل تغییر)</label>
+                    <input type="text" id="edit_username" disabled dir="ltr"
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #94a3b8; font-size: 0.85rem; cursor: not-allowed;">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">کلمه عبور جدید (تنها در صورت نیاز به تغییر پر شود)</label>
+                    <input type="password" name="password" placeholder="بدون تغییر رها کنید" dir="ltr"
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">نقش سازمانی *</label>
+                    <select id="edit_role" name="role" required style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                        <option value="admin">🛡️ مدیر سیستم (Admin)</option>
+                        <option value="agent">🏢 مشاور املاک (Agent)</option>
+                        <option value="user">👤 کاربر عادی (User)</option>
+                        <option value="super_admin">👑 مدیر ارشد (Super Admin)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">شناسه عددی تلگرام</label>
+                    <input type="text" id="edit_telegram_id" name="telegram_id" dir="ltr" placeholder="مثال: 7495565146"
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #38bdf8; font-size: 0.85rem;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">شماره همراه</label>
+                    <input type="text" id="edit_phone" name="phone" dir="ltr"
+                           style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.35rem;">یادداشت‌ها</label>
+                <textarea id="edit_notes" name="notes" rows="2"
+                          style="width: 100%; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.84rem; resize: vertical;"></textarea>
+            </div>
+
+            <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.6rem;">
+                <input type="checkbox" name="is_active" id="edit_is_active" style="width: 18px; height: 18px; accent-color: var(--gold-light); cursor: pointer;">
+                <label for="edit_is_active" style="font-size: 0.84rem; color: #f8fafc; cursor: pointer;">حساب کاربری فعال باشد</label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.85rem;">
+                <button type="button" onclick="closeEditUserModal()" class="glass-btn" style="padding: 0.65rem 1.25rem; font-size: 0.85rem;">
+                    انصراف
+                </button>
+                <button type="submit" class="glass-btn" style="padding: 0.65rem 1.5rem; font-size: 0.85rem; border-color: #38bdf8; color: #38bdf8;">
+                    ✓ ذخیره تغییرات
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openCreateUserModal() {
+    const modal = document.getElementById('createUserModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeCreateUserModal() {
+    const modal = document.getElementById('createUserModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+async function openEditUserModal(userId) {
+    const modal = document.getElementById('editUserModal');
+    const form = document.getElementById('editUserForm');
+    if (!modal || !form) return;
+
+    form.action = `/admin/users/${userId}/edit`;
+
+    try {
+        const resp = await fetch(`/admin/users/${userId}`);
+        const data = await resp.json();
+        if (data.success && data.user) {
+            const u = data.user;
+            document.getElementById('edit_full_name').value = u.full_name || '';
+            document.getElementById('edit_username').value = u.username || '';
+            document.getElementById('edit_role').value = u.role || 'user';
+            document.getElementById('edit_telegram_id').value = u.telegram_id || '';
+            document.getElementById('edit_phone').value = u.phone || '';
+            document.getElementById('edit_notes').value = u.notes || '';
+            document.getElementById('edit_is_active').checked = !!u.is_active;
+
+            modal.style.display = 'flex';
+        } else {
+            alert('خطا در دریافت اطلاعات کاربر.');
+        }
+    } catch (e) {
+        console.error('Error fetching user detail:', e);
+        alert('خطا در ارتباط با سرور.');
+    }
+}
+
+function closeEditUserModal() {
+    const modal = document.getElementById('editUserModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Close on clicking outside modal
+window.addEventListener('click', function(e) {
+    const createModal = document.getElementById('createUserModal');
+    const editModal = document.getElementById('editUserModal');
+    if (e.target === createModal) closeCreateUserModal();
+    if (e.target === editModal) closeEditUserModal();
+});
+</script>
+{% endblock %}

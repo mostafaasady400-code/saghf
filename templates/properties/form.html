@@ -203,5 +203,18 @@
             rentBox.style.display = 'grid';
         }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const dt = urlParams.get('deal_type');
+        if (dt && (dt === 'rent' || dt === 'sale')) {
+            const sel = document.getElementById('deal_type_select');
+            if (sel) {
+                sel.value = dt;
+                togglePriceFields();
+            }
+        }
+    });
 </script>
 {% endblock %}
+

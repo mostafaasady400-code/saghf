@@ -4,6 +4,10 @@ from database.models import Property
 
 crawler_bp = Blueprint('crawler', __name__, url_prefix='/crawler')
 
+@crawler_bp.route('/')
+def index():
+    return redirect(url_for('crawler.live_monitor'))
+
 @crawler_bp.route('/live')
 def live_monitor():
     sale_properties = Property.query.filter(
@@ -289,4 +293,40 @@ def run_profile_crawl(profile_id):
     return jsonify({'success': success, 'message': msg, 'profile': profile.name})
 
 
+# =========================================================================
+# پایش زنده و خودکار دیوار (Real-Time Continuous Divar Monitor)
+# =========================================================================
 
+@crawler_bp.route('/realtime-monitor/status', methods=['GET'])
+def get_realtime_monitor_status():
+    from crawler.continuous_monitor import divar_monitor
+    status = divar_monitor.get_status()
+    return jsonify(status)
+
+@crawler_bp.route('/realtime-monitor/start', methods=['POST'])
+def start_realtime_monitor():
+    from crawler.continuous_monitor import divar_monitor
+    from flask import current_app
+    data = request.get_json(silent=True) or {}
+    target_district = data.get('district', 'منطقه ۵')
+    interval = int(data.get('interval', 75))
+    success = divar_monitor.start(
+        app=current_app._get_current_object(),
+        target_district=target_district,
+        interval_seconds=interval
+    )
+    return jsonify({
+        'success': success,
+        'message': f"پایش زنده دیوار برای {target_district} با موفقیت فعال شد." if success else "خطا در فعال‌سازی پایش زنده.",
+        'status': divar_monitor.get_status()
+    })
+
+@crawler_bp.route('/realtime-monitor/stop', methods=['POST'])
+def stop_realtime_monitor():
+    from crawler.continuous_monitor import divar_monitor
+    success = divar_monitor.stop()
+    return jsonify({
+        'success': success,
+        'message': "پایش زنده دیوار متوقف شد.",
+        'status': divar_monitor.get_status()
+    })
