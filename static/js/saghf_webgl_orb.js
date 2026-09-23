@@ -471,24 +471,36 @@
 
     window.Saghf3DOrb = Saghf3DOrb;
 
-    window.initSaghf3DOrb = function(canvasId = 'saghf3DOrbCanvas') {
-        if (!window.__saghfOrbInstance) {
+    // initSaghf3DOrb: راه‌اندازی یک canvas به صورت singleton
+    window.initSaghf3DOrb = function(canvasId) {
+        canvasId = canvasId || 'saghf3DOrbCanvas';
+        const key = '__saghfOrb_' + canvasId;
+        if (!window[key]) {
             const canvasEl = typeof canvasId === 'string' ? document.getElementById(canvasId) : canvasId;
             if (canvasEl) {
-                window.__saghfOrbInstance = new Saghf3DOrb(canvasEl);
+                window[key] = new Saghf3DOrb(canvasEl);
             }
         }
-        return window.__saghfOrbInstance;
+        return window[key];
     };
 
-    window.initWebGlOrbs = window.initSaghf3DOrb;
+    // initWebGlOrbs: راه‌اندازی هر دو canvas (standby + active) - مدیریت شده توسط ai_orb.js
+    window.initWebGlOrbs = function() {
+        const instances = {};
+        const standbyCanvas = document.getElementById('saghf3DOrbCanvas');
+        if (standbyCanvas && !window.__saghfOrb_standby) {
+            window.__saghfOrb_standby = new Saghf3DOrb(standbyCanvas);
+        }
+        instances.standby = window.__saghfOrb_standby || null;
 
-    // راه‌اندازی خودکار مستقل
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            window.initSaghf3DOrb();
-        });
-    } else {
-        window.initSaghf3DOrb();
-    }
+        const activeCanvas = document.getElementById('saghf3DOrbCanvasActive');
+        if (activeCanvas && !window.__saghfOrb_active) {
+            window.__saghfOrb_active = new Saghf3DOrb(activeCanvas);
+        }
+        instances.active = window.__saghfOrb_active || null;
+
+        return instances;
+    };
+
+    // بدون راه‌اندازی خودکار - مدیریت توسط ai_orb.js
 })();

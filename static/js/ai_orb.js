@@ -90,24 +90,44 @@
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const width = canvas.width || 140;
-        const height = canvas.height || 140;
-        const centerX = width / 2;
-        const centerY = height / 2;
-        const radiusLimit = width * 0.44;
+        const W = canvas.width  || 140;
+        const H = canvas.height || 140;
+        const cx = W / 2, cy = H / 2;
+        const R  = W * 0.43; // radius limit
 
-        // ۳۶ ذره معلق با فیزیک گردابی در پالت لوکس مشکی-طلایی
-        sphereParticles = [];
-        const particleColors = ['#ffffff', '#fce79f', '#d4af37', '#fef08a', '#aa771c'];
-        for (let i = 0; i < 36; i++) {
-            sphereParticles.push({
-                angle: Math.random() * Math.PI * 2,
-                dist: 8 + Math.random() * (radiusLimit - 12),
-                speed: 0.012 + Math.random() * 0.024,
-                size: 0.9 + Math.random() * 2.2,
-                alpha: 0.3 + Math.random() * 0.65,
-                color: particleColors[Math.floor(Math.random() * particleColors.length)],
-                pulseOffset: Math.random() * Math.PI * 2
+        // --- شبکه نورونی: گره‌ها (Neural Nodes) ---
+        const NODE_COUNT = 14;
+        const nodes = [];
+        for (let i = 0; i < NODE_COUNT; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const d = 6 + Math.random() * (R - 14);
+            nodes.push({
+                x: cx + Math.cos(a) * d,
+                y: cy + Math.sin(a) * (d * 0.72),
+                baseX: cx + Math.cos(a) * d,
+                baseY: cy + Math.sin(a) * (d * 0.72),
+                vx: (Math.random() - 0.5) * 0.38,
+                vy: (Math.random() - 0.5) * 0.28,
+                r:  1.0 + Math.random() * 1.8,
+                pulseOff: Math.random() * Math.PI * 2,
+                color: ['#bae6fd', '#a78bfa', '#38bdf8', '#818cf8', '#e879f9'][Math.floor(Math.random() * 5)]
+            });
+        }
+
+        // --- ذرات پلازما (Plasma Particles) ---
+        const PART_COUNT = 28;
+        const parts = [];
+        for (let i = 0; i < PART_COUNT; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const d = 4 + Math.random() * (R - 10);
+            parts.push({
+                angle: a,
+                dist:  d,
+                speed: 0.008 + Math.random() * 0.018,
+                size:  0.6 + Math.random() * 1.6,
+                alpha: 0.25 + Math.random() * 0.55,
+                color: ['#bae6fd', '#a78bfa', '#7dd3fc', '#c084fc', '#f0abfc'][Math.floor(Math.random() * 5)],
+                pulseOff: Math.random() * Math.PI * 2
             });
         }
 
@@ -119,74 +139,136 @@
 
         let time = 0;
 
-        function renderSphereVortex() {
-            ctx.clearRect(0, 0, width, height);
-            time += 0.035;
+        function renderNeuralPlasma() {
+            ctx.clearRect(0, 0, W, H);
+            time += 0.028;
 
-            const isListeningNow = isVoiceListening || isLeadListening;
-            const speedMultiplier = isListeningNow ? 2.6 : (sphereIsHovered ? 1.9 : 1.0);
+            const listening = isVoiceListening || isLeadListening;
+            const speed = listening ? 2.8 : (sphereIsHovered ? 1.8 : 1.0);
 
-            // ۱. تابش هسته مرکزی طلایی-آبسیدین
-            const coreGrad = ctx.createRadialGradient(
-                centerX, centerY, 2,
-                centerX, centerY, radiusLimit
-            );
-            if (isListeningNow) {
-                coreGrad.addColorStop(0, 'rgba(252, 231, 159, 0.48)');
-                coreGrad.addColorStop(0.35, 'rgba(245, 158, 11, 0.3)');
-                coreGrad.addColorStop(0.75, 'rgba(212, 175, 55, 0.12)');
-                coreGrad.addColorStop(1, 'transparent');
+            // ── 1. هسته تابشی پلازما (Plasma Glow Core) ──
+            const coreGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
+            if (listening) {
+                coreGrad.addColorStop(0,    'rgba(139, 92, 246, 0.55)');
+                coreGrad.addColorStop(0.3,  'rgba(99, 102, 241, 0.3)');
+                coreGrad.addColorStop(0.65, 'rgba(56, 189, 248, 0.12)');
+                coreGrad.addColorStop(1,    'transparent');
             } else {
-                coreGrad.addColorStop(0, 'rgba(252, 231, 159, 0.28)');
-                coreGrad.addColorStop(0.4, 'rgba(212, 175, 55, 0.14)');
-                coreGrad.addColorStop(0.8, 'rgba(5, 6, 8, 0.05)');
-                coreGrad.addColorStop(1, 'transparent');
+                coreGrad.addColorStop(0,    'rgba(99, 102, 241, 0.38)');
+                coreGrad.addColorStop(0.38, 'rgba(56, 189, 248, 0.18)');
+                coreGrad.addColorStop(0.72, 'rgba(168, 85, 247, 0.07)');
+                coreGrad.addColorStop(1,    'transparent');
             }
             ctx.fillStyle = coreGrad;
             ctx.beginPath();
-            ctx.arc(centerX, centerY, radiusLimit, 0, Math.PI * 2);
+            ctx.arc(cx, cy, R, 0, Math.PI * 2);
             ctx.fill();
 
-            // ۲. امواج و ذرات چرخشی گرداب طلایی
-            for (let i = 0; i < sphereParticles.length; i++) {
-                const p = sphereParticles[i];
-                p.angle += p.speed * speedMultiplier;
+            // ── 2. حرکت گره‌های نورونی (Move Neural Nodes) ──
+            nodes.forEach(n => {
+                n.x += n.vx * speed;
+                n.y += n.vy * speed;
+                // برگشت به محدوده کره
+                const dx = n.x - cx, dy = (n.y - cy) / 0.72;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > R - 8) {
+                    n.vx *= -1;
+                    n.vy *= -1;
+                    n.x = cx + (dx / dist) * (R - 10);
+                    n.y = cy + ((dy / dist) * (R - 10)) * 0.72;
+                }
+            });
 
-                // انحراف شعاعی تنفسی
-                const pulse = Math.sin(time + p.pulseOffset) * 3.5;
-                const r = Math.max(5, Math.min(radiusLimit - 3, p.dist + pulse));
-                const x = centerX + Math.cos(p.angle) * r;
-                const y = centerY + Math.sin(p.angle) * (r * 0.74); // نمای بیضوی سه‌بعدی
+            // ── 3. اتصالات شبکه‌ای نورون‌ها (Neural Connections) ──
+            const connThreshold = 38;
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const d  = Math.sqrt(dx * dx + dy * dy);
+                    if (d < connThreshold) {
+                        const a = (1 - d / connThreshold) * (listening ? 0.7 : 0.38);
+                        const pulse = 0.5 + 0.5 * Math.sin(time * 2 + i + j);
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.strokeStyle = listening
+                            ? `rgba(167, 139, 250, ${a * pulse})`
+                            : `rgba(99, 102, 241, ${a * pulse})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.shadowColor = listening ? '#a78bfa' : '#6366f1';
+                        ctx.shadowBlur  = 4;
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            }
 
+            // ── 4. رندر گره‌های نورونی (Render Neural Nodes) ──
+            nodes.forEach((n, i) => {
+                const pulse = 0.75 + 0.25 * Math.sin(time * 1.8 + n.pulseOff);
+                const nr = n.r * pulse * (listening ? 1.5 : 1);
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, nr, 0, Math.PI * 2);
+                ctx.fillStyle = n.color;
+                ctx.globalAlpha = listening ? 0.95 : 0.75;
+                ctx.shadowColor = n.color;
+                ctx.shadowBlur  = nr * 5;
+                ctx.fill();
+                // هسته سفید روشن
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, nr * 0.38, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.globalAlpha = 0.9;
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // ── 5. ذرات پلازما در مدار (Orbiting Plasma Particles) ──
+            parts.forEach(p => {
+                p.angle += p.speed * speed;
+                const pulse = Math.sin(time + p.pulseOff) * 4;
+                const pr = Math.max(4, Math.min(R - 4, p.dist + pulse));
+                const x  = cx + Math.cos(p.angle) * pr;
+                const y  = cy + Math.sin(p.angle) * (pr * 0.70);
                 ctx.save();
                 ctx.beginPath();
                 ctx.arc(x, y, p.size, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = Math.min(1, Math.max(0.15, p.alpha + (isListeningNow ? 0.35 : 0)));
-                ctx.shadowColor = '#d4af37';
-                ctx.shadowBlur = p.size * 3;
+                ctx.fillStyle   = p.color;
+                ctx.globalAlpha = Math.min(1, p.alpha + (listening ? 0.3 : 0));
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur  = p.size * 4;
                 ctx.fill();
                 ctx.restore();
-            }
+            });
 
-            // ۳. حلقه‌های درخشان مداری داخلی (Inner Energy Rings)
+            // ── 6. حلقه‌های انرژی داخلی (Inner Energy Ellipses) ──
             ctx.save();
-            ctx.strokeStyle = isListeningNow ? 'rgba(252, 231, 159, 0.45)' : 'rgba(212, 175, 55, 0.2)';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = listening
+                ? `rgba(167, 139, 250, 0.5)`
+                : `rgba(99, 102, 241, 0.22)`;
+            ctx.lineWidth = 0.9;
+            ctx.shadowColor = '#6366f1';
+            ctx.shadowBlur  = 6;
             ctx.beginPath();
-            ctx.ellipse(centerX, centerY, radiusLimit * 0.65, radiusLimit * 0.35, time * 0.4, 0, Math.PI * 2);
+            ctx.ellipse(cx, cy, R * 0.62, R * 0.32, time * 0.38, 0, Math.PI * 2);
             ctx.stroke();
 
+            ctx.strokeStyle = listening
+                ? `rgba(56, 189, 248, 0.42)`
+                : `rgba(56, 189, 248, 0.16)`;
             ctx.beginPath();
-            ctx.ellipse(centerX, centerY, radiusLimit * 0.85, radiusLimit * 0.45, -time * 0.25, 0, Math.PI * 2);
+            ctx.ellipse(cx, cy, R * 0.82, R * 0.42, -time * 0.22, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
 
-            sphereCanvasAnimId = requestAnimationFrame(renderSphereVortex);
+            sphereCanvasAnimId = requestAnimationFrame(renderNeuralPlasma);
         }
 
         if (sphereCanvasAnimId) cancelAnimationFrame(sphereCanvasAnimId);
-        renderSphereVortex();
+        renderNeuralPlasma();
     }
 
     function initAIOrb() {
@@ -1325,18 +1407,27 @@
     let orbActiveInstance = null;
     let activeScenarioMode = 'discovery'; // 'discovery' | 'intake'
 
-    // راه‌اندازی گوی‌های سه‌بعدی WebGL
+    // راه‌اندازی گوی‌های سه‌بعدی WebGL - هر دو canvas
     function initWebGlOrbs() {
-        if (typeof window.Saghf3DOrb !== 'function') return;
+        if (typeof window.Saghf3DOrb !== 'function') {
+            console.warn('[AI Orb] Saghf3DOrb class not ready - deferring...');
+            return;
+        }
 
         const standbyCanvas = document.getElementById('saghf3DOrbCanvas');
         if (standbyCanvas && !orbStandbyInstance) {
             orbStandbyInstance = new window.Saghf3DOrb(standbyCanvas);
+            window.__saghfOrb_standby = orbStandbyInstance;
+        } else if (window.__saghfOrb_standby && !orbStandbyInstance) {
+            orbStandbyInstance = window.__saghfOrb_standby;
         }
 
         const activeCanvas = document.getElementById('saghf3DOrbCanvasActive');
         if (activeCanvas && !orbActiveInstance) {
             orbActiveInstance = new window.Saghf3DOrb(activeCanvas);
+            window.__saghfOrb_active = orbActiveInstance;
+        } else if (window.__saghfOrb_active && !orbActiveInstance) {
+            orbActiveInstance = window.__saghfOrb_active;
         }
     }
 
@@ -1824,13 +1915,13 @@
     // راه‌اندازی پس از بارگذاری سند
     document.addEventListener('DOMContentLoaded', () => {
         initAIOrb();
-        if (typeof window.initWebGlOrbs === 'function') {
-            window.initWebGlOrbs();
-        } else if (typeof window.initSaghf3DOrb === 'function') {
-            window.initSaghf3DOrb();
-        }
+        // تاخیر کوتاه تا فایل saghf_webgl_orb.js کاملاً لود شود
+        setTimeout(() => {
+            initWebGlOrbs();
+        }, 100);
         startRealtimeMonitorPolling();
     });
+
 
 })();
 
