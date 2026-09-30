@@ -82,22 +82,6 @@
         tourDesc = document.getElementById('tourRoomDesc');
         tourSpecs = document.getElementById('tourRoomSpecs');
 
-        // Skip to listings button handler
-        const skipBtn = document.getElementById('tourSkipToListings');
-        if (skipBtn) {
-            skipBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                const listingsSection = document.getElementById('properties-catalog-section');
-                if (listingsSection) {
-                    listingsSection.scrollIntoView({ behavior: 'smooth' });
-                } else {
-                    const rect = tourContainer.getBoundingClientRect();
-                    const targetY = window.scrollY + rect.bottom;
-                    window.scrollTo({ top: targetY, behavior: 'smooth' });
-                }
-            });
-        }
-
         // Zone selection pill buttons
         document.querySelectorAll('.tour-zone-pill-btn').forEach(btn => {
             btn.addEventListener('click', function () {
@@ -206,20 +190,46 @@
         const clampedLocal = Math.min(Math.max(localZoneProgress, 0), 1);
 
         // Smooth spatial 3D transformation with Antigravity depth
+        let activeRotateY = 0;
+        let activeRotateX = 0;
         frames.forEach((frame, idx) => {
             if (idx === activeZone.frameIndex) {
                 frame.classList.add('active');
                 // 3D perspective camera dolly in and gentle pan with smooth cubic ease
                 const scale = 1 + (clampedLocal * 0.09);
                 const translateY = (clampedLocal * -26);
-                const rotateY = (clampedLocal * 2.8) - 1.4;
-                const rotateX = (clampedLocal * 1.5);
-                frame.style.transform = `perspective(1000px) scale(${scale}) translateY(${translateY}px) rotateY(${rotateY.toFixed(2)}deg) rotateX(${rotateX.toFixed(2)}deg) translateZ(0)`;
+                activeRotateY = (clampedLocal * 2.8) - 1.4;
+                activeRotateX = (clampedLocal * 1.5);
+                frame.style.transform = `perspective(1000px) scale(${scale}) translateY(${translateY}px) rotateY(${activeRotateY.toFixed(2)}deg) rotateX(${activeRotateX.toFixed(2)}deg) translateZ(0)`;
             } else {
                 frame.classList.remove('active');
                 frame.style.transform = `perspective(1000px) scale(1.08) translateZ(-40px)`;
             }
         });
+
+        // Dynamic lighting & shadow transition on scene overlay
+        const sceneOverlay = document.querySelector('.tour-scene-overlay');
+        if (sceneOverlay) {
+            const lightX = 50 + (activeRotateY * 14);
+            const lightY = 35 + (activeRotateX * 10);
+            sceneOverlay.style.background = `radial-gradient(circle at ${lightX.toFixed(1)}% ${lightY.toFixed(1)}%, rgba(6, 9, 19, 0.12) 0%, rgba(6, 9, 19, 0.62) 65%, rgba(6, 9, 19, 0.96) 100%)`;
+        }
+
+        // Promotional Value Messages with Modern Fade Transition
+        const phrase1 = document.getElementById('tourPhrase1');
+        const phrase2 = document.getElementById('tourPhrase2');
+        const phrase3 = document.getElementById('tourPhrase3');
+        if (phrase1 && phrase2 && phrase3) {
+            let activePhrase = 1;
+            if (progress >= 0.66) {
+                activePhrase = 3;
+            } else if (progress >= 0.33) {
+                activePhrase = 2;
+            }
+            phrase1.classList.toggle('active', activePhrase === 1);
+            phrase2.classList.toggle('active', activePhrase === 2);
+            phrase3.classList.toggle('active', activePhrase === 3);
+        }
 
         // Update HUD text if zone changed
         if (activeIndex !== currentZoneIndex) {

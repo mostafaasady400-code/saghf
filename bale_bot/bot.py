@@ -77,6 +77,32 @@ def get_bale_bot():
         _register_bale_handlers(_bot_instance)
     return _bot_instance
 
+def _normalize_bale_update_dict(d: dict) -> dict:
+    if not isinstance(d, dict):
+        return d
+    import time
+    d = dict(d)
+    for key in ['message', 'edited_message']:
+        if key in d and isinstance(d[key], dict):
+            msg = dict(d[key])
+            if 'date' not in msg:
+                msg['date'] = int(time.time())
+            if 'from' in msg and isinstance(msg['from'], dict):
+                sender = dict(msg['from'])
+                if 'is_bot' not in sender:
+                    sender['is_bot'] = False
+                msg['from'] = sender
+            d[key] = msg
+    if 'callback_query' in d and isinstance(d['callback_query'], dict):
+        cb = dict(d['callback_query'])
+        if 'from' in cb and isinstance(cb['from'], dict):
+            sender = dict(cb['from'])
+            if 'is_bot' not in sender:
+                sender['is_bot'] = False
+            cb['from'] = sender
+        d['callback_query'] = cb
+    return d
+
 def process_bale_update(update_dict):
     """
     پردازش یک رویداد دریافتی از وب‌هوک بله (سازگار با telebot و JSON خام)
@@ -86,9 +112,13 @@ def process_bale_update(update_dict):
         return False
     try:
         if isinstance(update_dict, dict):
-            update = telebot.types.Update.de_json(update_dict)
+            norm_dict = _normalize_bale_update_dict(update_dict)
+            update = telebot.types.Update.de_json(norm_dict)
             if update:
-                bot.process_new_updates([update])
+                try:
+                    bot.process_new_updates([update])
+                except telebot.apihelper.ApiException as api_err:
+                    logger.warning(f"Bale bot API call warning (simulation/unconfigured token): {api_err}")
                 return True
     except Exception as e:
         logger.error(f"Error in process_bale_update: {e}")
@@ -829,7 +859,7 @@ def _register_bale_handlers(bot: telebot.TeleBot):
             with app.app_context():
                 from crawler.crawler_manager import crawler_manager
                 success, msg = crawler_manager.start_crawl_task(
-                    sources=['divar', 'sheypoor'],
+                    sources=['divar'],
                     categories=['buy-apartment', 'rent-apartment'],
                     limit_per_cat=6
                 )
@@ -1555,13 +1585,36 @@ def _register_bale_handlers(bot: telebot.TeleBot):
 
         searching_msg = bot.send_message(
             chat_id,
-            f"⏳ <b>در حال استخراج و تحلیل فایل‌های متناظر از دیوار و شیپور...</b>\n\n"
+            f"⏳ <b>در حال پیمایش محدود و قابل‌دسترسی دیوار در ۲۴ ساعت گذشته...</b>\n\n"
             f"📍 منطقه: <b>{district or 'تهران'}</b> | معامله: <b>{'خرید و فروش' if deal_type == 'sale' else 'رهن و اجاره'}</b>\n"
-            f"ربات در حال اتصال به سرورهای مبدأ با فینگرپرینت امن است. لطفاً چند لحظه شکیبا باشید...",
+            f"بدون دورزدن ورود، کپچا یا محدودیت منبع؛ لطفاً چند لحظه شکیبا باشید...",
             parse_mode='HTML'
         )
 
         app = get_flask_app()
+        # مسیر مشترک وب/تلگرام/بله: بدون سقف استخراج، مرورگر یا دریافت انبوه تماس.
+        with app.app_context():
+            try:
+                from services.messenger_search_run import execute_wizard_search, format_summary
+                accessible_result = execute_wizard_search(session)
+                for message_text in accessible_result['messages']:
+                    bot.send_message(chat_id, message_text, parse_mode='HTML')
+                bot.send_message(
+                    chat_id,
+                    format_summary(accessible_result),
+                    reply_markup=_build_start_keyboard(),
+                    parse_mode='HTML',
+                )
+            except Exception as err:
+                logger.exception("Accessible Bale wizard search failed: %s", err)
+                bot.send_message(
+                    chat_id,
+                    "⚠️ پیمایش متوقف شد و وضعیت قابل ادامه ذخیره گردید. هیچ نتیجهٔ ساختگی اضافه نشد.",
+                    reply_markup=_build_start_keyboard(),
+                )
+        wizard_sessions.pop(chat_id, None)
+        return
+
         with app.app_context():
             from database.models import Property, Owner, db
             from crawler.crawler_manager import crawler_manager
@@ -1862,7 +1915,18 @@ def start_bale_polling(app=None):
         print("❌ خطای عدم تنظیم BALE_BOT_TOKEN: توکن ربات بله تعریف نشده است.", flush=True)
         return
 
-    logger.info("🤖 Starting Bale Bot polling...")
-    print(f"🚀 ربات بله سقف با موفقیت متصل شد و آماده دریافت پیام‌ها در پیام‌رسان بله است...", flush=True)
     telebot.apihelper.API_URL = "https://tapi.bale.ai/bot{0}/{1}"
     bot.infinity_polling(timeout=15, long_polling_timeout=15, skip_pending=True)
+
+def stop_bale_polling():
+    """
+    توقف ایمن فرآیند Polling ربات بله
+    """
+    try:
+        bot = get_bale_bot()
+        if bot:
+            bot.stop_polling()
+            logger.info("Bale Bot polling successfully stopped.")
+    except Exception as e:
+        logger.error(f"Error stopping Bale polling: {e}")
+

@@ -231,38 +231,67 @@ document.addEventListener('DOMContentLoaded', () => {
     let audioContext = null;
     let currentSessionId = 'saghf_sess_' + Math.random().toString(36).substr(2, 9);
 
-    // 2. TTS (Text to Speech Synthesis) Engine
-    function speakPersian(text) {
-        if (!ttsEnabled || !window.speechSynthesis || !text) return;
-        
+    // 2. High-Fidelity Persian Neural TTS Engine (Microsoft Farid Voice)
+    let currentAudioPlayer = null;
+
+    function stopPersianAudio() {
+        if (currentAudioPlayer) {
+            try {
+                currentAudioPlayer.pause();
+                currentAudioPlayer.currentTime = 0;
+            } catch (e) {}
+            currentAudioPlayer = null;
+        }
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (orb && orb.state === 'speaking') orb.setState('standby');
+    }
+
+    function playPersianAudio(audioUrl, text) {
+        if (!ttsEnabled) return;
+        stopPersianAudio();
+
+        const streamUrl = audioUrl || ('/properties/api/tts-audio?text=' + encodeURIComponent(text || ''));
         try {
-            window.speechSynthesis.cancel(); // Stop any pending speech
+            const audio = new Audio(streamUrl);
+            currentAudioPlayer = audio;
 
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'fa-IR';
-            utterance.rate = 1.0;
-            utterance.pitch = 1.05;
-
-            // Attempt to choose Persian voice if available on system
-            const voices = window.speechSynthesis.getVoices();
-            const faVoice = voices.find(v => v.lang.includes('fa') || v.lang.includes('IR') || v.name.includes('Persian'));
-            if (faVoice) utterance.voice = faVoice;
-
-            utterance.onstart = () => {
+            audio.addEventListener('play', () => {
                 if (orb) orb.setState('speaking');
-            };
+            });
 
-            utterance.onend = () => {
+            audio.addEventListener('ended', () => {
+                currentAudioPlayer = null;
                 if (orb && orb.state === 'speaking') orb.setState('standby');
-            };
+            });
 
-            utterance.onerror = () => {
-                if (orb && orb.state === 'speaking') orb.setState('standby');
-            };
+            audio.addEventListener('error', (err) => {
+                console.warn('[Neural TTS] Server audio stream failed, checking fallback:', err);
+                currentAudioPlayer = null;
+                // Fallback to browser SpeechSynthesis only if audio network fails
+                if (window.speechSynthesis && text) {
+                    try {
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        utterance.lang = 'fa-IR';
+                        utterance.onstart = () => { if (orb) orb.setState('speaking'); };
+                        utterance.onend = () => { if (orb && orb.state === 'speaking') orb.setState('standby'); };
+                        utterance.onerror = () => { if (orb && orb.state === 'speaking') orb.setState('standby'); };
+                        window.speechSynthesis.speak(utterance);
+                    } catch (e) {}
+                } else {
+                    if (orb && orb.state === 'speaking') orb.setState('standby');
+                }
+            });
 
-            window.speechSynthesis.speak(utterance);
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch((e) => {
+                    // Browser autoplay policy might need first click
+                    console.log('[Neural TTS] Audio play deferred until user gesture:', e);
+                    if (orb && orb.state === 'speaking') orb.setState('standby');
+                });
+            }
         } catch (e) {
-            console.warn('[TTS] Synthesis error:', e);
+            console.warn('[Neural TTS] Player init exception:', e);
         }
     }
 
@@ -276,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 ttsIcon.textContent = '🔇';
                 ttsToggleBtn.style.color = '#64748b';
-                if (window.speechSynthesis) window.speechSynthesis.cancel();
+                stopPersianAudio();
             }
         });
     }
@@ -287,14 +316,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isExpanded) {
             widgetCard.classList.add('expanded');
             if (orb) orb.setState('standby');
-            // Play initial Senior Consultant welcome greeting
-            const initialGreeting = "سلام، خوش آمدید به سقف. برای خرید یا اجاره چه متراژ و در چه منطقه‌ای مد نظرتونه؟";
+            // Play initial Senior Consultant welcome greeting with Microsoft Farid Neural voice
+            const initialGreeting = "سلام، خوش آمدید به سقف. من مشاور ارشد فایلینگ هستم. برای خرید یا اجاره چه متراژ و در چه منطقه‌ای مد نظرتونه؟";
             dialogueBubble.textContent = `«${initialGreeting}»`;
-            speakPersian(initialGreeting);
+            playPersianAudio('/static/audio/welcome_greeting.mp3', initialGreeting);
         } else {
             widgetCard.classList.remove('expanded');
             if (isRecording) stopRecording();
-            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            stopPersianAudio();
         }
     }
 
@@ -504,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // AI Response Text & TTS Voice Output
                 dialogueBubble.textContent = data.ai_response_text;
-                speakPersian(data.ai_response_text);
+                playPersianAudio(data.audio_url, data.ai_response_text);
 
                 // Show extracted criteria tags
                 renderCriteriaTags(data.extracted_entities, data.matched_properties.length, data.intent);
@@ -647,9 +676,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
 
                         <div class="ai-card-actions">
-                            <a href="/properties/${item.id}" class="ai-card-btn ai-card-btn-primary">
-                                مشاهده جزئیات فایل
+                            <a href="/properties/${item.id}" class="ai-card-btn ai-card-btn-primary" title="مشاهده پرونده در سامانه سقف">
+                                جزئیات پرونده
                             </a>
+                            ${item.source_url ? `
+                            <a href="${item.source_url}" target="_blank" rel="noopener noreferrer" class="ai-card-btn ai-card-btn-source" title="مشاهده آگهی زنده در دیوار">
+                                🔗 لینک آگهی ↗
+                            </a>
+                            ` : ''}
                             <button type="button" 
                                     class="ai-card-btn ai-card-btn-ghost" 
                                     onclick="openContactModal('${item.id}', '${item.phone_number || ''}')"

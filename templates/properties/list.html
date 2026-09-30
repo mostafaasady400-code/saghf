@@ -7,10 +7,10 @@
 <div id="mansion-3d-tour-container" aria-label="تور مجازی سه بعدی عمارت لوکس با اسکرول">
     <div class="tour-sticky-stage">
         <div class="tour-canvas-layer">
-            <div class="tour-scene-frame active" style="background-image: url('{{ url_for('static', filename='images/luxury/living_room.jpg') }}');"></div>
-            <div class="tour-scene-frame" style="background-image: url('{{ url_for('static', filename='images/luxury/kitchen_dining.jpg') }}');"></div>
-            <div class="tour-scene-frame" style="background-image: url('{{ url_for('static', filename='images/luxury/master_bedroom.jpg') }}');"></div>
-            <div class="tour-scene-frame" style="background-image: url('{{ url_for('static', filename='images/luxury/terrace_pool.jpg') }}');"></div>
+            <div class="tour-scene-frame active" style="background-image: url('{{ url_for('static', filename='images/luxury/living_room.webp') }}');"></div>
+            <div class="tour-scene-frame" style="background-image: url('{{ url_for('static', filename='images/luxury/kitchen_dining.webp') }}');"></div>
+            <div class="tour-scene-frame" style="background-image: url('{{ url_for('static', filename='images/luxury/master_bedroom.webp') }}');"></div>
+            <div class="tour-scene-frame" style="background-image: url('{{ url_for('static', filename='images/luxury/terrace_pool.webp') }}');"></div>
             <div class="tour-scene-overlay"></div>
         </div>
 
@@ -21,18 +21,26 @@
         <button type="button" id="tourNextBtn" class="tour-nav-arrow-btn left" title="اتاق بعدی (کلید ❯)" aria-label="اتاق بعدی">
             <span>›</span>
         </button>
-        <!-- Tour Progress & Skip Bar (Bottom Center) -->
-        <div class="tour-hud-footer">
-            <span style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem;">
-                <span style="color: #00f2fe; animation: bounce 2s infinite;">🖱️</span> با اسکرول تور را ورق بزنید
-            </span>
-            <div class="tour-progress-track">
-                <div class="tour-progress-fill" id="tourProgressFill"></div>
+        <!-- Modern Scroll-Synced 3D Value Banner with Fade Transition -->
+        <div class="tour-brand-motion-banner" id="tourBrandMotionBanner" aria-live="polite">
+            <div class="tour-brand-phrase active" id="tourPhrase1">
+                <span class="tour-brand-badge">معامله مستقیم</span>
+                <span class="tour-brand-text">سقف؛ معامله مستقیم با مالکین واقعی، بدون واسطه و بدون کمیسیون اضافی</span>
             </div>
-            <span id="tourProgressPercent" style="font-size: 0.82rem; font-weight: 800; color: #00f2fe; min-width: 38px;">۰٪</span>
-            <a href="#saghf-ai-assistant-widget" id="tourSkipToListings" class="tour-skip-btn">
-                <span>دستیار هوش مصنوعی و آگهی‌ها</span> <span>⬇</span>
-            </a>
+            <div class="tour-brand-phrase" id="tourPhrase2">
+                <span class="tour-brand-badge">پایش هوشمند</span>
+                <span class="tour-brand-text">پایش و کرال لحظه‌ای تمام آگهی‌های معتبر کشور با فیلتر هوشمند فایل شخصی</span>
+            </div>
+            <div class="tour-brand-phrase" id="tourPhrase3">
+                <span class="tour-brand-badge">دستیار تحلیلی</span>
+                <span class="tour-brand-text">دستیار هوشمند تحلیلی؛ یافتن سریع ملک متناسب با بودجه و نیاز دقیق شما</span>
+            </div>
+            <div class="tour-progress-bar-wrap">
+                <div class="tour-progress-track">
+                    <div class="tour-progress-fill" id="tourProgressFill"></div>
+                </div>
+                <span id="tourProgressPercent" class="tour-progress-digit">۰٪</span>
+            </div>
         </div>
     </div>
 </div>
@@ -42,11 +50,6 @@
 {% endblock %}
 
 {% block content %}
-<!-- ==========================================================================
-     IN-LINE LUXURY AI VOICE & PROPERTY ASSISTANT WIDGET
-     Strictly In-Line / Static component positioned directly under 3D Mansion Tour
-     ========================================================================== -->
-{% include "properties/ai_assistant_widget.html" %}
 
 <!-- Catalog Section -->
 <div id="properties-catalog-section" style="padding-top: 0.5rem;">
@@ -614,6 +617,115 @@
     {% endfor %}
 </div>
 
+<!-- Smart Luxury Pagination Bar -->
+{% macro page_url(p) %}
+{{ url_for('properties.list_properties',
+    page=p,
+    per_page=pagination.per_page,
+    deal_type=request.args.get('deal_type') if request.args.get('deal_type') != 'all' else None,
+    property_type=request.args.get('property_type') if request.args.get('property_type') != 'all' else None,
+    district=request.args.get('district') if request.args.get('district') != 'all' else None,
+    status=request.args.get('status') if request.args.get('status') != 'all' else None,
+    source=request.args.get('source') if request.args.get('source') != 'all' else None,
+    lifecycle=request.args.get('lifecycle'),
+    q=request.args.get('q'),
+    min_price=request.args.get('min_price'),
+    max_price=request.args.get('max_price'),
+    min_deposit=request.args.get('min_deposit'),
+    max_deposit=request.args.get('max_deposit'),
+    min_rent=request.args.get('min_rent'),
+    max_rent=request.args.get('max_rent'),
+    min_area=request.args.get('min_area'),
+    max_area=request.args.get('max_area'),
+    min_year=request.args.get('min_year'),
+    max_year=request.args.get('max_year'),
+    min_age=request.args.get('min_age'),
+    max_age=request.args.get('max_age'),
+    rooms=request.args.get('rooms'),
+    has_parking=request.args.get('has_parking'),
+    has_elevator=request.args.get('has_elevator'),
+    has_warehouse=request.args.get('has_warehouse'),
+    has_balcony=request.args.get('has_balcony')
+) }}
+{% endmacro %}
+
+{% if pagination and pagination.total > 0 %}
+<div class="saghf-pagination-wrapper glass-panel" style="margin-top: 2rem; margin-bottom: 2rem; padding: 1.15rem 1.6rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.35); background: rgba(13, 17, 23, 0.9);">
+    
+    <!-- Range & Count Meta -->
+    <div style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.86rem; color: #94a3b8; flex-wrap: wrap;">
+        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #00f2fe; box-shadow: 0 0 10px #00f2fe;"></span>
+        <span>نمایش فایل‌های <strong style="color: #f8fafc;">{{ pagination.start_index | pnum }}</strong> تا <strong style="color: #f8fafc;">{{ pagination.end_index | pnum }}</strong> از مجموع <strong style="color: #00f2fe;">{{ pagination.total | pnum }}</strong> فایل</span>
+        <span style="color: #64748b;">|</span>
+        <span>صفحه <strong style="color: #fce79f;">{{ pagination.page | pnum }}</strong> از <strong style="color: #fce79f;">{{ pagination.total_pages | pnum }}</strong></span>
+    </div>
+
+    <!-- Navigation Controls (صفحه ۱، ۲...) -->
+    <div style="display: flex; align-items: center; gap: 0.4rem; direction: ltr;">
+        <!-- Previous Page Button -->
+        {% if pagination.has_prev %}
+            <a href="{{ page_url(pagination.prev_num) }}" class="saghf-page-btn" title="صفحه قبلی">
+                <span>‹ قبلی</span>
+            </a>
+        {% else %}
+            <span class="saghf-page-btn disabled" title="در صفحه اول هستید">
+                <span>‹ قبلی</span>
+            </span>
+        {% endif %}
+
+        <!-- First Page Link if not in window -->
+        {% if pagination.pages and pagination.pages[0] > 1 %}
+            <a href="{{ page_url(1) }}" class="saghf-page-num" title="صفحه ۱">۱</a>
+            {% if pagination.pages[0] > 2 %}
+                <span class="saghf-page-ellipsis">...</span>
+            {% endif %}
+        {% endif %}
+
+        <!-- Numbered Page Links -->
+        {% for p_num in pagination.pages %}
+            {% if p_num == pagination.page %}
+                <span class="saghf-page-num active" title="صفحه فعلی">{{ p_num | pnum }}</span>
+            {% else %}
+                <a href="{{ page_url(p_num) }}" class="saghf-page-num" title="رفتن به صفحه {{ p_num }}">{{ p_num | pnum }}</a>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Last Page Link if not in window -->
+        {% if pagination.pages and pagination.pages[-1] < pagination.total_pages %}
+            {% if pagination.pages[-1] < pagination.total_pages - 1 %}
+                <span class="saghf-page-ellipsis">...</span>
+            {% endif %}
+            <a href="{{ page_url(pagination.total_pages) }}" class="saghf-page-num" title="صفحه {{ pagination.total_pages }}">{{ pagination.total_pages | pnum }}</a>
+        {% endif %}
+
+        <!-- Next Page Button -->
+        {% if pagination.has_next %}
+            <a href="{{ page_url(pagination.next_num) }}" class="saghf-page-btn" title="صفحه بعدی">
+                <span>بعدی ›</span>
+            </a>
+        {% else %}
+            <span class="saghf-page-btn disabled" title="در صفحه آخر هستید">
+                <span>بعدی ›</span>
+            </span>
+        {% endif %}
+    </div>
+
+    <!-- Per-page selection -->
+    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: #94a3b8;">
+        <span>تعداد در صفحه:</span>
+        <div style="display: flex; gap: 0.25rem;">
+            {% for pp in [6, 9, 18] %}
+                <a href="{{ url_for('properties.list_properties', page=1, per_page=pp, deal_type=request.args.get('deal_type'), district=request.args.get('district'), q=request.args.get('q')) }}" 
+                   class="saghf-per-page-pill {% if pagination.per_page == pp %}active{% endif %}">
+                    {{ pp | pnum }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endif %}
+
 <div id="no-files-placeholder" style="display: none; text-align: center; color: #64748b; padding: 4rem; background: rgba(15,23,42,0.5); border-radius: 16px; margin-top: 1rem;">
     در این دسته‌بندی فایلی موجود نیست.
 </div>
@@ -1175,8 +1287,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
     window.__TEHRAN_DISTRICTS_DATA__ = {{ all_regions | tojson }};
 </script>
-<script src="{{ url_for('static', filename='js/district_picker.js') }}"></script>
-<script src="{{ url_for('static', filename='js/filter_inputs.js') }}"></script>
+<script src="{{ url_for('static', filename='js/district_picker.js') }}?v=2.0"></script>
+<script src="{{ url_for('static', filename='js/filter_inputs.js') }}?v=2.0"></script>
 
 {% endblock %}
 

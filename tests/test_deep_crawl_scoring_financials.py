@@ -66,6 +66,7 @@ class TestDeepCrawlScoringFinancials(unittest.TestCase):
             source_url='http://divar.ir/v/999',
             title='آپارتمان ۱۰۰ متری',
             deal_type='rent',
+            area=100,
             deposit='۶۰۰ میلیون تومان',
             monthly_rent='۵،۰۰۰،۰۰۰ تومان'
         )

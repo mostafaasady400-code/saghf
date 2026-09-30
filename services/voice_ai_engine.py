@@ -12,6 +12,7 @@ import re
 import json
 import uuid
 import logging
+from urllib.parse import quote
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 
@@ -130,6 +131,7 @@ class VoiceAiPipeline:
                 'intent': 'greeting',
                 'stage': 'greeting',
                 'ai_response_text': greeting_msg,
+                'audio_url': '/static/audio/welcome_greeting.mp3',
                 'extracted_entities': session['entities'],
                 'matched_properties': [],
                 'crawler_running': False,
@@ -178,34 +180,57 @@ class VoiceAiPipeline:
                     entities['features'].append(f)
 
         # ۳. کوئری دیتابیس مستقیم مالکین و آگهی‌های پایش وب
-        query = Property.query.filter(Property.status != 'archived')
+        def _build_db_query():
+            q = Property.query.filter(Property.status != 'archived')
+            for forbidden in ['املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس']:
+                q = q.filter(
+                    Property.title.notilike(f'%{forbidden}%'),
+                    Property.description.notilike(f'%{forbidden}%')
+                )
+            if entities.get('deal_type'):
+                q = q.filter(Property.deal_type == entities['deal_type'])
+            if entities.get('districts'):
+                conds = [Property.district.ilike(f'%{d}%') for d in entities['districts']]
+                q = q.filter(db.or_(*conds))
+            if entities.get('min_area') and entities['min_area'] > 0:
+                q = q.filter(Property.area >= int(entities['min_area'] * 0.85))
+            if entities.get('deal_type') == 'sale' and entities.get('max_budget') and entities['max_budget'] > 0:
+                q = q.filter(Property.total_price <= int(entities['max_budget'] * 1.20))
+            elif entities.get('deal_type') == 'rent':
+                if entities.get('max_deposit') and entities['max_deposit'] > 0:
+                    q = q.filter(Property.deposit <= int(entities['max_deposit'] * 1.25))
+                if entities.get('max_rent') and entities['max_rent'] > 0:
+                    q = q.filter(Property.monthly_rent <= int(entities['max_rent'] * 1.25))
+            return q
 
-        # فیلتر حذف املاکی‌ها
-        for forbidden in ['املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس']:
-            query = query.filter(
-                Property.title.notilike(f'%{forbidden}%'),
-                Property.description.notilike(f'%{forbidden}%')
-            )
+        initial_db_props = _build_db_query().order_by(Property.created_at.desc()).limit(15).all()
 
-        if entities.get('deal_type'):
-            query = query.filter(Property.deal_type == entities['deal_type'])
+        # استخراج درجا و زنده از دیوار (Instant On-Demand Extraction) طبق خط قرمز پروژه:
+        # همون لحظه آخرین آگهی‌های ثبت شده در دیوار (لحظاتی پیش، دقایقی پیش) بدون واسطه استخراج و ثبت شوند
+        live_scraped_props = []
+        if len(initial_db_props) < 3 or entities.get('districts') or entities.get('min_area'):
+            try:
+                from services.on_demand_extractor import instant_extractor
+                live_scraped_props = instant_extractor.scrape_and_persist_live(
+                    deal_type=entities.get('deal_type', 'sale'),
+                    districts=entities.get('districts'),
+                    min_area=entities.get('min_area'),
+                    max_area=entities.get('max_area'),
+                    max_budget=entities.get('max_budget'),
+                    max_deposit=entities.get('max_deposit'),
+                    max_rent=entities.get('max_rent'),
+                    limit=5,
+                    max_duration_seconds=5.0
+                )
+            except Exception as e:
+                logger.error(f"[VoiceAI] خطای استخراج زنده در لحظه: {e}")
 
-        if entities.get('districts'):
-            conds = [Property.district.ilike(f'%{d}%') for d in entities['districts']]
-            query = query.filter(db.or_(*conds))
-
-        if entities.get('min_area') and entities['min_area'] > 0:
-            query = query.filter(Property.area >= int(entities['min_area'] * 0.85))
-
-        if entities.get('deal_type') == 'sale' and entities.get('max_budget') and entities['max_budget'] > 0:
-            query = query.filter(Property.total_price <= int(entities['max_budget'] * 1.20))
-        elif entities.get('deal_type') == 'rent':
-            if entities.get('max_deposit') and entities['max_deposit'] > 0:
-                query = query.filter(Property.deposit <= int(entities['max_deposit'] * 1.25))
-            if entities.get('max_rent') and entities['max_rent'] > 0:
-                query = query.filter(Property.monthly_rent <= int(entities['max_rent'] * 1.25))
-
-        matched_props = query.order_by(Property.created_at.desc()).limit(15).all()
+        # بارگذاری نتایج نهایی از دیتابیس
+        matched_props = _build_db_query().order_by(Property.created_at.desc()).limit(15).all()
+        # اطمینان از قرارگیری فایل‌های تازه استخراج‌شده در صدر
+        for lp in live_scraped_props:
+            if lp not in matched_props:
+                matched_props.insert(0, lp)
 
         # کراول بلادرنگ در پس‌زمینه در صورت نیاز
         crawler_status = crawler_manager.get_status()
@@ -240,10 +265,20 @@ class VoiceAiPipeline:
                 if f == 'آسانسور' and p.has_elevator: score += 2
                 if f == 'انباری' and p.has_warehouse: score += 1
             
+            # لینک مستقیم آگهی مبدأ طبق خط قرمز و قانون ۴.۱ پروژه سقف
+            direct_url = p.source_url or ''
+            if not direct_url and p.source == 'divar' and p.source_id:
+                direct_url = f"https://divar.ir/v/{p.source_id}"
+            elif not direct_url and p.source_id and str(p.source_id).startswith('http'):
+                direct_url = str(p.source_id)
+            elif not direct_url:
+                direct_url = f"/properties/{p.id}"
+
             p_dict = {
                 'id': p.id,
                 'title': p.title,
                 'source': p.source,
+                'source_url': direct_url,
                 'deal_type': p.deal_type,
                 'district': p.district,
                 'address': p.address,
@@ -261,32 +296,35 @@ class VoiceAiPipeline:
         items.sort(key=lambda x: x['match_score'], reverse=True)
         session['matched_properties'] = items
 
-        # ساخت پاسخ استدلالی مشاور ارشد (Human-like Persona)
-        deal_name = 'خرید' if entities.get('deal_type') == 'sale' else 'رهن و اجاره'
-        districts_str = '، '.join(entities['districts']) if entities['districts'] else 'مناطق منتخب'
+        # ساخت پاسخ استدلالی، گرم و کاملاً انسانی مشاور ارشد املاک سقف
+        deal_name = 'خرید آپارتمان' if entities.get('deal_type') == 'sale' else 'رهن و اجاره آپارتمان'
+        districts_str = '، '.join(entities['districts']) if entities['districts'] else 'مناطق مد نظرتان'
         
         # بررسی اسلات‌های ناقص جهت هدایت دوطرفه مکالمه
         missing_slots = []
         if not entities['districts']:
-            missing_slots.append('منطقه')
+            missing_slots.append('منطقه یا محله')
         if not entities.get('max_budget') and not entities.get('max_deposit'):
-            missing_slots.append('بازه بودجه')
+            missing_slots.append('سقف بودجه')
         if not entities.get('min_area'):
             missing_slots.append('متراژ حدودی')
 
         if len(items) > 0:
-            ai_reply = f"درخواست شما برای {deal_name} در {districts_str} بررسی شد. {len(items)} گزینه با تطابق بالا روی میز کارشناسی قرار گرفت."
-            if missing_slots:
-                ai_reply += f" برای فیلتر دقیق‌تر، لطفاً {missing_slots[0]} مد نظرتون رو هم بفرمایید."
+            if live_scraped_props:
+                ai_reply = f"درود بر شما! درخواست شما برای {deal_name} در {districts_str} با استخراج زنده و مستقیم از دیوار بررسی شد. خوشبختانه {len(live_scraped_props)} فایل شخصی نوظهور از دقایق اخیر مستقیماً استخراج شد و مجموعاً {len(items)} گزینه با تطابق عالی روی میز کارشناسی قرار گرفت."
             else:
-                ai_reply += " فایل‌ها با مشخصات متراژ و امکانات در پنل کنار گوی قابل مشاهده و بررسی هستند."
+                ai_reply = f"درود بر شما! مشخصات درخواستی شما برای {deal_name} در {districts_str} بررسی شد و {len(items)} فایل شخصی معتبر و بدون واسطه آماده بررسی است."
+            if missing_slots:
+                ai_reply += f" برای اینکه گزینه‌ها اختصاصی‌تر شود، لطفاً {missing_slots[0]} مد نظرتان را هم بفرمایید."
+            else:
+                ai_reply += " فایل‌ها همراه با مشخصات و لینک مستقیم آگهی در پنل کنار گوی قابل مشاهده هستند."
             if crawler_running:
-                ai_reply += " همزمان کراولر زنده در حال استخراج آخرین آگهی‌های نوظهور است."
+                ai_reply += " همزمان پایشگر زنده برای کشف آگهی‌های لحظه‌ای فعال است."
         else:
             if missing_slots:
-                ai_reply = f"مشخصات شما برای {deal_name} دریافت شد. لطفاً {missing_slots[0]} مد نظرتون رو بفرمایید تا دقیق‌ترین فایل‌ها را استخراج کنم."
+                ai_reply = f"سلام و درود! مشخصات شما برای {deal_name} دریافت شد. لطفاً {missing_slots[0]} مورد نظرتان را بفرمایید تا دقیق‌ترین فایل‌های شخصی را فوراً استخراج کنم."
             else:
-                ai_reply = f"فایل‌های متناظر با {deal_name} در {districts_str} در حال پایش لحظه‌ای هستند. پایشگر زنده دیوار و شیپور فعال گردید تا به محض ثبت آگهی، فوراً در پنل ظاهر شود."
+                ai_reply = f"درخواست شما برای {deal_name} در {districts_str} دریافت شد. پایشگر زنده دیوار فعال گردید و به محض ثبت آگهی‌های شخصی جدید، در همین پنل به شما نمایش داده می‌شوند."
 
         return {
             'success': True,
@@ -294,6 +332,7 @@ class VoiceAiPipeline:
             'intent': 'lead_discovery',
             'stage': 'matched' if len(items) > 0 else 'collecting',
             'ai_response_text': ai_reply,
+            'audio_url': f"/properties/api/tts-audio?text={quote(ai_reply)}",
             'extracted_entities': entities,
             'matched_properties': items,
             'crawler_running': crawler_running,
@@ -353,6 +392,7 @@ class VoiceAiPipeline:
                 'intent': 'listing_intake',
                 'stage': 'awaiting_phone',
                 'ai_response_text': prompt_reply,
+                'audio_url': f"/properties/api/tts-audio?text={quote(prompt_reply)}",
                 'extracted_entities': entities,
                 'matched_properties': [],
                 'crawler_running': False,
@@ -371,6 +411,7 @@ class VoiceAiPipeline:
                 'intent': 'listing_intake',
                 'stage': 'awaiting_specs',
                 'ai_response_text': prompt_reply,
+                'audio_url': f"/properties/api/tts-audio?text={quote(prompt_reply)}",
                 'extracted_entities': entities,
                 'matched_properties': [],
                 'crawler_running': False,
@@ -473,11 +514,13 @@ class VoiceAiPipeline:
                 'intent': 'listing_intake',
                 'stage': 'intake_registered',
                 'ai_response_text': confirmation_msg,
+                'audio_url': f"/properties/api/tts-audio?text={quote(confirmation_msg)}",
                 'extracted_entities': entities,
                 'matched_properties': [{
                     'id': new_prop.id,
                     'title': new_prop.title,
                     'source': 'direct_owner',
+                    'source_url': upload_link,
                     'deal_type': new_prop.deal_type,
                     'district': new_prop.district,
                     'area': new_prop.area,

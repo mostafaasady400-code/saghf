@@ -27,10 +27,12 @@
                     const subList = reg.districts || reg.sub_districts || [];
                     subList.forEach(function(d) {
                         const dName = typeof d === 'string' ? d : d.name;
+                        const dKeywords = typeof d === 'object' && d.keywords ? d.keywords : [];
                         if (dName) {
                             allDistricts.push({
                                 name: dName,
-                                region: regName
+                                region: regName,
+                                keywords: dKeywords
                             });
                         }
                     });
@@ -182,15 +184,40 @@
         });
 
         // جستجوی زنده (Live Instant Search)
+        function normFa(str) {
+            if (!str) return '';
+            return str.toString()
+                .replace(/[\u200c\u200b\ufeff]/g, ' ')
+                .replace(/ي/g, 'ی')
+                .replace(/ك/g, 'ک')
+                .replace(/[\u064b-\u0652]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        }
+
+        // جستجوی زنده (Live Instant Search) با نرمال‌سازی حروف و نیم‌فاصله‌های فارسی
         if (searchInput) {
             searchInput.addEventListener('input', function() {
-                const q = this.value.trim().toLowerCase();
+                const rawQ = this.value;
+                const q = normFa(rawQ);
+                const qNoSpace = q.replace(/\s+/g, '');
                 if (!q) {
                     resetAndRender(allDistricts);
                     return;
                 }
                 const matches = allDistricts.filter(function(d) {
-                    return d.name.toLowerCase().indexOf(q) !== -1 || (d.region && d.region.toLowerCase().indexOf(q) !== -1);
+                    const dNorm = normFa(d.name);
+                    const dNoSpace = dNorm.replace(/\s+/g, '');
+                    const regNorm = normFa(d.region);
+                    const kwMatch = d.keywords && d.keywords.some(function(k) {
+                        const kNorm = normFa(k);
+                        return kNorm.indexOf(q) !== -1 || kNorm.replace(/\s+/g, '').indexOf(qNoSpace) !== -1;
+                    });
+                    return dNorm.indexOf(q) !== -1 ||
+                           dNoSpace.indexOf(qNoSpace) !== -1 ||
+                           regNorm.indexOf(q) !== -1 ||
+                           kwMatch;
                 });
                 resetAndRender(matches);
             });

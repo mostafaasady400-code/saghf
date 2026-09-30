@@ -51,7 +51,17 @@ class CrawlerManager:
             self.logs.append(log_entry)
             if len(self.logs) > 120:
                 self.logs.pop(0)
-        print(f"[{timestamp}] [{level.upper()}] {message}")
+        try:
+            print(f"[{timestamp}] [{level.upper()}] {message}")
+
+        except Exception:
+            try:
+                enc = sys.stdout.encoding or 'utf-8'
+                safe_msg = message.encode(enc, errors='replace').decode(enc)
+                print(f"[{timestamp}] [{level.upper()}] {safe_msg}")
+            except Exception:
+                pass
+
 
     def start_crawl_task(
         self,
@@ -81,8 +91,13 @@ class CrawlerManager:
         if self.is_running:
             return False, "فرآیند کراولینگ در حال حاضر در حال اجرا است."
 
+        # فاز ۱: تمرکز انحصاری و ۱۰۰٪ بر استخراج پایدار از دیوار (عدم استفاده از شیپور طبق دستور کاربری)
         if not sources:
-            sources = ['divar', 'sheypoor']
+            sources = ['divar']
+        else:
+            sources = [s for s in sources if str(s).lower() != 'sheypoor']
+            if not sources:
+                sources = ['divar']
         if not categories:
             categories = ['buy-apartment', 'rent-apartment']
 
@@ -164,6 +179,10 @@ class CrawlerManager:
 
                 # گیت نهایی حذف قطعی هرگونه آگهی حاوی کلمات املاک، مشاور، کارشناس و اسامی فیک
                 combined_check = f"{schema_item.title} {schema_item.description or ''}"
+                import re
+                for odp in getattr(OwnerFilter, 'OWNER_DISCLAIMER_PATTERNS', []):
+                    combined_check = re.sub(odp, '___SAFE_OWNER___', combined_check)
+
                 for forbidden in [
                     'املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوران', 'مشاورین', 'مشاوره', 'آژانس',
                     'دپارتمان', 'دپارتمان املاک', 'بنگاه', 'کارشناس', 'کارشناسان', 'کارشناس فروش', 'مشاور فروش', 'امین شما',
@@ -230,7 +249,7 @@ class CrawlerManager:
                     rooms=schema_item.rooms,
                     floor=schema_item.floor,
                     total_floors=schema_item.total_floors,
-                    build_year=schema_item.build_year or 1401,
+                    build_year=schema_item.build_year,
                     has_elevator=schema_item.has_elevator,
                     has_parking=schema_item.has_parking,
                     has_warehouse=schema_item.has_warehouse,
@@ -268,9 +287,9 @@ class CrawlerManager:
                             monthly_rent=schema_item.monthly_rent or 0,
                             total_price=schema_item.total_price or 0,
                             area=schema_item.area or 0,
-                            rooms=schema_item.rooms or 1,
-                            floor=schema_item.floor or 1,
-                            build_year=schema_item.build_year or 1400,
+                            rooms=schema_item.rooms,
+                            floor=schema_item.floor,
+                            build_year=schema_item.build_year,
                             has_elevator=schema_item.has_elevator,
                             has_parking=schema_item.has_parking,
                             has_warehouse=schema_item.has_warehouse,
@@ -287,10 +306,17 @@ class CrawlerManager:
                 dedup_engine.mark_seen(sid)
                 saved_count += 1
 
-                # Broadcast newly extracted property to Telegram channel/group
+                # Broadcast newly extracted property to Telegram channel/group (Tri-Platform Parity)
                 try:
                     from telegram_bot.notifier import send_property_alert
                     send_property_alert(prop)
+                except Exception:
+                    pass
+
+                # Broadcast newly extracted property to Bale messenger (Tri-Platform Parity)
+                try:
+                    from bale_bot.notifier import send_property_bale_alert
+                    send_property_bale_alert(prop)
                 except Exception:
                     pass
 
@@ -302,70 +328,43 @@ class CrawlerManager:
                 phone_lbl = f"📞 {owner.phone_number}" if (owner and owner.phone_number and owner.phone_number.startswith('09')) else "📱 شماره در دیوار محفوظ است"
                 self.add_log(f"⚡ [ثبت بلادرنگ] {deal_lbl}: {prop.title[:38]} ({prop.district}) | {phone_lbl}", 'success')
 
-            # اولویت‌دهی محوری به دیوار به عنوان مرجع اصلی آگهی‌ها
-            sources = sorted(sources, key=lambda s: 0 if s == 'divar' else 1)
+            # فاز ۱: تمرکز ۱۰۰٪ بر استخراج پایدار، پرسرعت و عمیق از دیوار
+            sources = [s for s in sources if str(s).lower() == 'divar']
+            if not sources:
+                sources = ['divar']
 
             for source in sources:
-                if source == 'divar':
-                    self.add_log("⭐ تمرکز ویژه بر پلتفرم مرجع DIVAR (دیوار) به عنوان بانک اصلی آگهی‌ها...", 'info')
-                else:
-                    self.add_log(f"🔍 اتصال به پلتفرم مکمل {source.upper()}...", 'info')
+                self.add_log("⭐ اجرای موتور فاز ۱: تمرکز انحصاری و پایدار بر پلتفرم دیوار (DIVAR)...", 'info')
 
                 for cat in categories:
-                    # تخصیص حجم بیشتر به دیوار به عنوان مرجع اصلی
-                    cat_limit = int(limit_per_cat * 1.5) if source == 'divar' else limit_per_cat
-                    self.add_log(f"در حال استخراج دسته‌بندی {cat} از {source} (سقف {cat_limit} فایل، پایش ۵ روز اخیر)...", 'info')
+                    cat_limit = int(limit_per_cat * 1.5)
+                    self.add_log(f"در حال استخراج دسته‌بندی {cat} از دیوار (سقف {cat_limit} فایل، پایش زنده و ۵ روز اخیر)...", 'info')
                     try:
-                        if source == 'divar':
-                            self.divar_crawler.fetch_listings(
-                                category_key=cat,
-                                limit=cat_limit,
-                                query=district,
-                                districts=filters_dict.get('districts'),
-                                min_price=filters_dict.get('min_price'),
-                                max_price=filters_dict.get('max_price'),
-                                min_deposit=filters_dict.get('min_deposit'),
-                                max_deposit=filters_dict.get('max_deposit'),
-                                min_rent=filters_dict.get('min_rent'),
-                                max_rent=filters_dict.get('max_rent'),
-                                min_area=filters_dict.get('min_area'),
-                                max_area=filters_dict.get('max_area'),
-                                min_year=filters_dict.get('min_year'),
-                                max_year=filters_dict.get('max_year'),
-                                min_age=filters_dict.get('min_age'),
-                                max_age=filters_dict.get('max_age'),
-                                rooms=filters_dict.get('rooms'),
-                                has_parking=filters_dict.get('has_parking'),
-                                has_elevator=filters_dict.get('has_elevator'),
-                                has_warehouse=filters_dict.get('has_warehouse'),
-                                has_balcony=filters_dict.get('has_balcony'),
-                                property_type=filters_dict.get('property_type'),
-                                on_item_found=on_item_crawled
-                            )
-                        else:
-                            self.sheypoor_crawler.fetch_listings(
-                                category_key=cat,
-                                limit=cat_limit,
-                                query=district,
-                                min_price=filters_dict.get('min_price'),
-                                max_price=filters_dict.get('max_price'),
-                                min_deposit=filters_dict.get('min_deposit'),
-                                max_deposit=filters_dict.get('max_deposit'),
-                                min_rent=filters_dict.get('min_rent'),
-                                max_rent=filters_dict.get('max_rent'),
-                                min_area=filters_dict.get('min_area'),
-                                max_area=filters_dict.get('max_area'),
-                                min_year=filters_dict.get('min_year'),
-                                max_year=filters_dict.get('max_year'),
-                                min_age=filters_dict.get('min_age'),
-                                max_age=filters_dict.get('max_age'),
-                                rooms=filters_dict.get('rooms'),
-                                has_parking=filters_dict.get('has_parking'),
-                                has_elevator=filters_dict.get('has_elevator'),
-                                has_warehouse=filters_dict.get('has_warehouse'),
-                                has_balcony=filters_dict.get('has_balcony'),
-                                on_item_found=on_item_crawled
-                            )
+                        self.divar_crawler.fetch_listings(
+                            category_key=cat,
+                            limit=cat_limit,
+                            query=district,
+                            districts=filters_dict.get('districts'),
+                            min_price=filters_dict.get('min_price'),
+                            max_price=filters_dict.get('max_price'),
+                            min_deposit=filters_dict.get('min_deposit'),
+                            max_deposit=filters_dict.get('max_deposit'),
+                            min_rent=filters_dict.get('min_rent'),
+                            max_rent=filters_dict.get('max_rent'),
+                            min_area=filters_dict.get('min_area'),
+                            max_area=filters_dict.get('max_area'),
+                            min_year=filters_dict.get('min_year'),
+                            max_year=filters_dict.get('max_year'),
+                            min_age=filters_dict.get('min_age'),
+                            max_age=filters_dict.get('max_age'),
+                            rooms=filters_dict.get('rooms'),
+                            has_parking=filters_dict.get('has_parking'),
+                            has_elevator=filters_dict.get('has_elevator'),
+                            has_warehouse=filters_dict.get('has_warehouse'),
+                            has_balcony=filters_dict.get('has_balcony'),
+                            property_type=filters_dict.get('property_type'),
+                            on_item_found=on_item_crawled
+                        )
                         time.sleep(0.5)
                     except Exception as err:
                         db.session.rollback()

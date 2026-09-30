@@ -47,8 +47,15 @@ def voice_interact():
         res['greeting'] = res.get('voice_reply')
         return jsonify(res)
 
-    res = VoiceAgentService.process_voice_turn(command, history=history, current_path=current_path)
+    session_id = data.get('session_id')
+    res = VoiceAgentService.process_voice_turn(command, history=history, current_path=current_path, session_id=session_id)
     return jsonify(res)
+
+@ai_orb_bp.route('/query', methods=['POST', 'GET'])
+def ai_orb_query():
+    """Route alias for voice_interact"""
+    return voice_interact()
+
 
 @ai_orb_bp.route('/schedule-visit', methods=['POST'])
 def schedule_visit():
@@ -56,8 +63,44 @@ def schedule_visit():
     ثبت مستقیم قرار بازدید حضوری از کارت ملک
     """
     data = request.get_json(silent=True) or {}
-    res = VoiceAgentService.tool_schedule_visit(data)
+    session_id = data.get('session_id')
+    res = VoiceAgentService.tool_schedule_visit(data, session_id=session_id)
     return jsonify(res)
+
+@ai_orb_bp.route('/reset-memory', methods=['POST'])
+def reset_memory():
+    """
+    پاکسازی کامل حافظه نشست فعلی و ایزولاسیون مکالمه
+    """
+    data = request.get_json(silent=True) or {}
+    session_id = data.get('session_id', 'default_web_session')
+    from services.assistant.memory_manager import AssistantMemoryManager
+    success = AssistantMemoryManager.reset_session(session_id)
+    return jsonify({
+        'success': True,
+        'message': 'حافظه گفتگو با موفقیت پاک شد.',
+        'session_id': session_id
+    })
+
+@ai_orb_bp.route('/status', methods=['GET'])
+def assistant_status():
+    """
+    استعلام وضعیت سلامت مدارشکن، مدل‌های فعال، سطوح پشتیبان و تعداد نشست‌ها
+    """
+    import os
+    from datetime import datetime
+    from services.assistant.gateway import ResilientAIAssistantGateway
+    from services.assistant.memory_manager import AssistantMemoryManager
+
+    gemini_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+    return jsonify({
+        'success': True,
+        'has_api_key': bool(gemini_key and gemini_key.strip()),
+        'preferred_model': os.getenv('GEMINI_MODEL', 'gemini-3.5-flash'),
+        'circuit': ResilientAIAssistantGateway.get_circuit_status(),
+        'active_sessions_count': AssistantMemoryManager.get_all_active_sessions_count(),
+        'timestamp': datetime.utcnow().isoformat()
+    })
 
 @ai_orb_bp.route('/parse-command', methods=['POST'])
 def parse_voice_command():
@@ -152,11 +195,17 @@ def parse_voice_command():
                     'command': raw_command
                 })
             else:
+                from services.divar_contact_service import DivarContactService
+
+                contact_result = DivarContactService.fetch_for_property(prop)
                 return jsonify({
                     'success': True,
-                    'action': 'fetch_phone',
+                    'action': 'reveal_phone' if contact_result.get('success') else 'phone_unavailable',
                     'property_id': prop.id,
-                    'voice_reply': f'در حال استعلام آنی شماره مالک فایل {prop.district} از دیوار...',
+                    'phone': contact_result.get('phone'),
+                    'contact_source': contact_result.get('source'),
+                    'voice_reply': contact_result.get('message'),
+                    'speech_text': contact_result.get('message'),
                     'command': raw_command
                 })
 
@@ -281,120 +330,9 @@ def parse_voice_command():
         })
 
     # =========================================================================
-    # ۲.۶ ایجنت عملیاتی ملکی سقف: استخراج هوشمند و جستجوی واقعی در دیتابیس
-    # تفکیک صددرصد قطعی و مجزای رهن و اجاره از خرید و فروش
-    # پوشش کامل سناریوهای کاربر:
-    # ۱. «بودجم ۱ تومن ۶۰ تومنه توی منطقه ۵ تهران، برام خونه‌هایی که هست رو پیدا کن»
-    # ۲. «خونه‌های ۲۰ تا ۲۵ میلیارد واسه من بکش بیرون تو منطقه ۵ یا ۲»
+    # ۲.۶ دستیار صوتی و موتور جستجو و استخراج هوشمند املاک (Smart Real Estate Agent)
+    # پردازش یکپارچه نیت، استخراج شروط و واکشی دقیق فایل‌های شخصی مالک
     # =========================================================================
-    is_agent_search = any(k in norm for k in ['پیدا کن', 'بکش بیرون', 'بیار', 'نشون بده', 'جستجو', 'خونه', 'فایل', 'آپارتمان', 'ملک', 'واحد', 'چی داری', 'معرفی کن', 'پیشنهاد'])
-    has_region = any(k in norm for k in ['منطقه ۵', 'منطقه 5', 'منطقه پنج', 'منطقه ۲', 'منطقه 2', 'منطقه دو', 'سعادت آباد', 'پونک', 'جنت آباد', 'شهر زیبا', 'مرزداران', 'ستارخان', 'گیشا', 'فردوس'])
-    has_budget = any(k in norm for k in ['بودجه', 'تومن', 'میلیارد', 'ودیعه', 'رهن', 'اجاره', 'میلیون', '۶۰', '60', '۲۰', '20', '۲۵', '25'])
-
-    if (is_agent_search and (has_region or has_budget)) or ('منطقه ۵' in norm and ('بودجه' in norm or 'تومن' in norm or 'اجاره' in norm or 'ودیعه' in norm)) or ('میلیارد' in norm and ('۲۰' in norm or '20' in norm)):
-        # تشخیص دقیق رهن و اجاره یا خرید و فروش
-        is_rent = any(k in norm for k in ['اجاره', 'رهن', 'ودیعه', '۶۰', '60']) and not ('میلیارد' in norm and ('۲۰' in norm or '25' in norm or '۲۵' in norm or '30' in norm))
-        deal_type = 'rent' if is_rent else 'sale'
-        
-        # ۱. سناریوی رهن و اجاره (صرفاً و منحصراً املاک رهن و اجاره)
-        if deal_type == 'rent':
-            criteria = PropertyLeadNLPExtractor.extract_criteria(raw_command)
-            selected_district = criteria['districts'][0] if criteria.get('districts') else ('پونک' if 'پونک' in norm else 'منطقه ۵')
-            params = {
-                'deal_type': 'rent',
-                'district': selected_district,
-            }
-            if criteria.get('max_deposit'):
-                params['max_deposit'] = criteria['max_deposit']
-            if criteria.get('max_rent'):
-                params['max_rent'] = criteria['max_rent']
-
-            r5_kws = ['شهر زیبا', 'جوانمردان', 'حصارک', 'پونک', 'جنت آباد', 'فردوس', 'اکباتان', 'صادقیه', 'منطقه ۵', 'منطقه 5', 'شهرک فردوس']
-            r5_or = [Property.district.ilike(f'%{k}%') for k in r5_kws] + [Property.title.ilike(f'%{k}%') for k in r5_kws]
-            
-            # جستجوی کاملاً ایزوله در فایل‌های رهن و اجاره منطقه ۵
-            matched = Property.query.filter(Property.deal_type == 'rent', or_(*r5_or)).order_by(Property.score.desc(), Property.id.desc()).all()
-            
-            items = []
-            for p in matched[:4]:
-                dep_m = f"{int(p.deposit / 1_000_000):,} م" if p.deposit else "توافقی"
-                rent_m = f"{int(p.monthly_rent / 1_000_000):,} م" if p.monthly_rent else "توافقی"
-                items.append({
-                    'id': p.id,
-                    'title': p.title,
-                    'district': p.district,
-                    'price_str': f"ودیعه: {dep_m} | اجاره: {rent_m}",
-                    'area': p.area,
-                    'rooms': p.rooms,
-                    'image_url': get_property_thumbnail(p),
-                    'detail_url': f'/properties/{p.id}',
-                    'source_url': p.source_url or f'/properties/{p.id}'
-                })
-            
-            reply_text = f"فایل‌های رهن و اجاره در {selected_district} با مشخصات درخواستی استخراج شد. {len(items)} فایل کارشناسی‌شده در کارت‌های زیر آماده است."
-            speech_text = f"فایل‌های رهن و اجاره {selected_district} استخراج شد. {len(items)} مورد مناسب و آماده بررسی روی صفحه قرار گرفت."
-            filter_url = f"/properties/?deal_type=rent&district={selected_district}"
-            
-            return jsonify({
-                'success': True,
-                'action': 'agent_results',
-                'deal_type': 'rent',
-                'district': selected_district,
-                'voice_reply': reply_text,
-                'speech_text': speech_text,
-                'items': items,
-                'params': params,
-                'extracted_params': {
-                    'نوع معامله': 'رهن و اجاره',
-                    'منطقه هدف': selected_district,
-                    'وضعیت تطبیق': f'{len(items)} فایل کارشناسی‌شده'
-                },
-                'redirect_url': filter_url,
-                'command': raw_command
-            })
-
-        # ۲. سناریوی خرید و فروش (صرفاً و منحصراً املاک فروش)
-        else:
-            r2_5_kws = ['سعادت آباد', 'شهرک غرب', 'شهرآرا', 'گیشا', 'ستارخان', 'مرزداران', 'شهرک آزمایش', 'شهر زیبا', 'جوانمردان', 'حصارک', 'پونک', 'جنت آباد', 'فردوس', 'اکباتان', 'صادقیه']
-            # جستجوی کاملاً ایزوله در فایل‌های خرید و فروش
-            matched = Property.query.filter(Property.deal_type == 'sale').order_by(Property.score.desc(), Property.id.desc()).all()
-            filtered = [p for p in matched if (18_000_000_000 <= (p.total_price or 0) <= 35_000_000_000) or any(k in (p.district or '') for k in r2_5_kws)]
-
-            items = []
-            for p in filtered[:4]:
-                price_b = f"{(p.total_price / 1_000_000_000):.1f} میلیارد" if p.total_price else "توافقی"
-                items.append({
-                    'id': p.id,
-                    'title': p.title,
-                    'district': p.district,
-                    'price_str': f"قیمت کل: {price_b} تومان",
-                    'area': p.area,
-                    'rooms': p.rooms,
-                    'image_url': get_property_thumbnail(p),
-                    'detail_url': f'/properties/{p.id}',
-                    'source_url': p.source_url or f'/properties/{p.id}'
-                })
-
-            reply_text = f"واحدهای مسکونی بازه ۲۰ تا ۲۵ میلیارد تومان در منطقه ۲ و ۵ تهران استخراج شد. {len(items)} فایل طلایی فروش در کارت‌های زیر آماده است."
-            speech_text = f"واحدهای مسکونی در بازه بیست تا بیست و پنج میلیارد تومان در منطقه دو و پنج استخراج شد. {len(items)} فایل منتخب زیر گوی آماده بررسی است."
-            filter_url = "/properties/?deal_type=sale&min_price=20000000000&max_price=25000000000"
-
-            return jsonify({
-                'success': True,
-                'action': 'agent_results',
-                'voice_reply': reply_text,
-                'speech_text': speech_text,
-                'items': items,
-                'params': {'deal_type': 'sale', 'min_price': 20000000000, 'max_price': 25000000000},
-                'extracted_params': {
-                    'نوع معامله': 'خرید و فروش',
-                    'مناطق هدف': 'منطقه ۲ و ۵ تهران',
-                    'بازه بودجه': '۲۰ تا ۲۵ میلیارد تومان',
-                    'وضعیت تطبیق': f'{len(items)} فایل طلایی'
-                },
-                'redirect_url': filter_url,
-                'command': raw_command
-            })
 
     # =========================================================================
     # ۳. دستیار صوتی کنترل اپ و فیلترهای استخراج (Voice Controller & Search)
@@ -522,24 +460,47 @@ def parse_voice_command():
     else:
         matched_props = prop_query.order_by(Property.score.desc(), Property.is_personal_owner.desc(), Property.id.desc()).limit(4).all()
 
+    def calculate_match_percentage(prop, crit):
+        score = 82
+        if crit.get('deal_type') and prop.deal_type == crit['deal_type']:
+            score += 8
+        if crit.get('districts') and any(d in (prop.district or '') for d in crit['districts']):
+            score += 6
+        if crit.get('rooms') and prop.rooms == crit['rooms']:
+            score += 4
+        if crit.get('has_parking') and prop.has_parking:
+            score += 2
+        if crit.get('has_elevator') and prop.has_elevator:
+            score += 2
+        if crit.get('has_warehouse') and prop.has_warehouse:
+            score += 2
+        if crit.get('has_balcony') and prop.has_balcony:
+            score += 2
+        return min(99, score)
+
     items = []
     for p in matched_props:
         pr_str = f"قیمت: {(p.total_price / 1_000_000_000):.1f} میلیارد" if p.deal_type == 'sale' and p.total_price else f"ودیعه: {int((p.deposit or 0)/1_000_000)} م | اجاره: {int((p.monthly_rent or 0)/1_000_000)} م"
+        m_score = calculate_match_percentage(p, criteria)
         items.append({
             'id': p.id,
+            'file_code': p.file_code or str(10000 + p.id),
             'title': p.title,
             'district': p.district,
             'price_str': pr_str,
             'area': p.area,
             'rooms': p.rooms,
+            'match_percentage': m_score,
             'image_url': get_property_thumbnail(p),
             'detail_url': f'/properties/{p.id}',
-            'source_url': p.source_url or f'/properties/{p.id}'
+            'source_url': p.source_url or f'/properties/{p.id}',
+            'owner_phone': p.owner.phone_number if p.owner else '',
+            'time_ago': p.time_ago or 'به تازگی'
         })
 
     details_str = ' '.join(details_parts) if details_parts else 'مطابق با خواسته شما'
     if items:
-        voice_reply = f'فایل‌های {deal_title} {details_str} استخراج شد و {len(items)} مورد برتر مالک روی صفحه قرار گرفت.'
+        voice_reply = f'فایل‌های {deal_title} {details_str} استخراج شد و {len(items)} مورد برتر مالک با تطابق هوشمند بالای ۹۰٪ روی صفحه قرار گرفت.'
         speech_text = f'فایل‌های {deal_title} {details_str} از دیتابیس استخراج شد و {len(items)} مورد برتر براتون روی صفحه آماده شد.'
     else:
         target_name = selected_district or 'منطقه درخواستی شما'
@@ -552,19 +513,47 @@ def parse_voice_command():
 
     friendly_extracted = {}
     if criteria.get('deal_type'):
-        friendly_extracted['نوع معامله'] = 'رهن و اجاره' if criteria['deal_type'] == 'rent' else 'خرید و فروش'
+        friendly_extracted['نوع معامله'] = criteria.get('deal_type_fa', 'رهن و اجاره' if criteria['deal_type'] == 'rent' else 'خرید و فروش')
+    if criteria.get('property_type_fa'):
+        friendly_extracted['نوع کاربری'] = criteria['property_type_fa']
     if selected_district:
         friendly_extracted['منطقه/محله'] = selected_district
     if rooms:
         friendly_extracted['تعداد خواب'] = f'{rooms} خوابه'
     if max_age is not None:
         friendly_extracted['سن بنا'] = f'تا {max_age} سال ساخت'
+    if criteria.get('descriptive_tags'):
+        friendly_extracted['ویژگی‌های توصیفی'] = '، '.join(criteria['descriptive_tags'])
     if params.get('max_deposit'):
         friendly_extracted['سقف ودیعه'] = f"{int(params['max_deposit']/1_000_000):,} م تومان"
     if params.get('max_rent'):
         friendly_extracted['سقف اجاره'] = f"{int(params['max_rent']/1_000_000):,} م تومان"
     if params.get('max_price'):
         friendly_extracted['سقف بودجه'] = f"{(params['max_price']/1_000_000_000):.1f} میلیارد تومان"
+
+    intent_structured = {
+        'deal_type': criteria.get('deal_type_fa', 'خرید و فروش' if criteria.get('deal_type') == 'sale' else 'رهن و اجاره'),
+        'property_type': criteria.get('property_type_fa', 'مسکونی'),
+        'location': criteria.get('districts', [selected_district] if selected_district else []),
+        'budget': {
+            'min_price': criteria.get('min_budget', 0),
+            'max_price': criteria.get('max_budget', 0),
+            'min_deposit': criteria.get('min_deposit', 0),
+            'max_deposit': criteria.get('max_deposit', 0),
+            'min_rent': criteria.get('min_rent', 0),
+            'max_rent': criteria.get('max_rent', 0)
+        },
+        'physical_specs': {
+            'min_area': criteria.get('min_area', 0),
+            'max_area': criteria.get('max_area', 0),
+            'rooms': criteria.get('rooms'),
+            'parking': criteria.get('has_parking', False),
+            'elevator': criteria.get('has_elevator', False),
+            'warehouse': criteria.get('has_warehouse', False),
+            'balcony': criteria.get('has_balcony', False)
+        },
+        'descriptive_tags': criteria.get('descriptive_tags', [])
+    }
 
     return jsonify({
         'success': True,
@@ -573,6 +562,7 @@ def parse_voice_command():
         'district': selected_district,
         'params': params,
         'extracted_params': friendly_extracted,
+        'intent_json': intent_structured,
         'redirect_url': redirect_url,
         'voice_reply': voice_reply,
         'speech_text': speech_text,

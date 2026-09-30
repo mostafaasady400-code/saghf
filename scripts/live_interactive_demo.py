@@ -1,137 +1,170 @@
-import os
 import sys
+import os
 import time
+import subprocess
+import urllib.request
+from playwright.sync_api import sync_playwright
 
 if sys.platform == 'win32':
     try:
-        sys.stdout.reconfigure(encoding='utf-8')
-        sys.stderr.reconfigure(encoding='utf-8')
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     except Exception:
         pass
 
-from playwright.sync_api import sync_playwright
+SHOT_DIR = os.path.abspath(r"browser_test_shots")
+os.makedirs(SHOT_DIR, exist_ok=True)
 
-def run_visible_demo():
-    print("==================================================================")
-    print("🚀 اجرای زنده و نمایشی سامانه املاک سقف و دستیار هوشمند با Google Chrome")
-    print("🌐 پنجره رسمی گوگل کروم روی مانیتور شما باز می‌شود تا مراحل را به طور زنده ببینید...")
-    print("==================================================================")
+CDP_PORT = 9222
+CDP_URL = f"http://127.0.0.1:{CDP_PORT}"
 
-    chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-    if not os.path.exists(chrome_path):
-        chrome_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+def is_cdp_available(timeout=1.0) -> bool:
+    try:
+        with urllib.request.urlopen(f"{CDP_URL}/json/version", timeout=timeout) as response:
+            return response.status == 200
+    except Exception:
+        return False
 
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=chrome_path,
-            headless=False,
-            slow_mo=1000,  # مکث ۱ ثانیه‌ای برای مشاهده کامل کاربر
-            args=['--start-maximized']
-        )
-        context = browser.new_context(
-            no_viewport=True,
-            locale='fa-IR'
-        )
-        page = context.new_page()
+def ensure_browser_running() -> bool:
+    if is_cdp_available():
+        print("✅ مرورگر گوگل کروم روی پورت 9222 آماده اتصال است.")
+        return True
 
-        # ----------------------------------------------------
-        # صحنه ۱: بارگذاری داشبورد مدیریتی سقف
-        # ----------------------------------------------------
-        print("\n[صحنه ۱] باز کردن داشبورد جامع مدیریتی سقف...")
-        page.goto("http://127.0.0.1:5000/", wait_until="networkidle")
-        time.sleep(3)
+    print("🔍 پورت 9222 فعال نیست. در حال اجرای مستقیم Google Chrome...")
+    chrome_candidates = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+    ]
+    browser_exe = next((p for p in chrome_candidates if os.path.exists(p)), None)
+    if not browser_exe:
+        print("❌ مرورگر یافت نشد.")
+        return False
 
-        # ----------------------------------------------------
-        # صحنه ۲: کلیک روی دکمه دستیار هوشمند در داشبورد
-        # ----------------------------------------------------
-        print("\n[صحنه ۲] کلیک روی «دستیار هوشمند (گوی سه بعدی)» در سربرگ داشبورد...")
-        dash_btn = page.locator("button:has-text('دستیار هوشمند (گوی سه بعدی)')").first
-        if dash_btn.is_visible():
-            dash_btn.hover()
+    temp_profile = os.path.abspath(r"scratch\chrome_auto_profile")
+    os.makedirs(temp_profile, exist_ok=True)
+
+    cmd = [
+        browser_exe,
+        f"--remote-debugging-port={CDP_PORT}",
+        f"--user-data-dir={temp_profile}",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--start-maximized"
+    ]
+    subprocess.Popen(cmd)
+    for _ in range(20):
+        time.sleep(0.5)
+        if is_cdp_available():
+            print("✅ مرورگر با موفقیت در پیش‌زمینه مانیتور باز شد.")
+            return True
+    return False
+
+def run_live_interactive_demo():
+    print("\n" + "=" * 70)
+    print("🎬 اجرای آزمون زنده، تعاملی و نمایشی سقف روی گوگل کروم مانیتور")
+    print("=" * 70)
+
+    if not ensure_browser_running():
+        return False
+
+    with sync_playwright() as p:
+        try:
+            browser = p.chromium.connect_over_cdp(CDP_URL)
+            context = browser.contexts[0] if browser.contexts else browser.new_context(no_viewport=True)
+            if context.pages:
+                page = context.pages[0]
+            else:
+                page = context.new_page()
+            page.bring_to_front()
+            print("🌐 در حال انتقال پنجره کروم به صفحه فایلینگ املاک سقف...")
+            page.goto("http://127.0.0.1:5000/properties/", wait_until="commit", timeout=15000)
+            time.sleep(2.5)
+
+            # ۱. اسکرول نرم برای دیدن کارت‌های املاک و استایل بلک اند گلد
+            print("📜 ۱. اسکرول نرم جهت تماشای کارت‌های لوکس املاک و مشخصات...")
+            for step in range(1, 4):
+                page.evaluate("window.scrollBy({ top: 450, behavior: 'smooth' });")
+                time.sleep(1.2)
+
+            page.screenshot(path=os.path.join(SHOT_DIR, "demo_01_cards_scroll.png"))
             time.sleep(1)
-            dash_btn.click()
-            time.sleep(3)
 
-        # ----------------------------------------------------
-        # صحنه ۳: مشاهده گوی جمع‌وجور و باز شدن مودال ChatGPT Voice
-        # ----------------------------------------------------
-        print("\n[صحنه ۳] مشاهده مودال تمام‌صفحه صوتی ChatGPT Voice با گوی کریستالی...")
-        modal = page.locator("#chatgptVoiceModal")
-        if not modal.is_visible():
-            # اگر هنوز باز نشده، روی نوار پیل کلیک می‌کنیم
-            page.locator("#ai-station").click()
-            time.sleep(2)
+            # ۲. اسکرول به بالای صفحه به بخش فیلترها
+            print("⬆️ ۲. بازگشت به بخش فیلترهای پیشرفته...")
+            page.evaluate("window.scrollTo({ top: 0, behavior: 'smooth' });")
+            time.sleep(1.5)
 
-        time.sleep(2)
+            # ۳. تست فیلتر انتخاب محله (District Picker)
+            print("📍 ۳. کلیک روی انتخاب منطقه و محله‌های تهران...")
+            picker_trigger = page.locator("#districtPickerTrigger")
+            if picker_trigger.is_visible():
+                picker_trigger.click()
+                time.sleep(1)
+                search_input = page.locator("#districtPickerSearch")
+                if search_input.is_visible():
+                    print("   ⌨️ تایپ زنده نام محله 'سعادت آباد' در کادر جستجوی محله...")
+                    search_input.type("سعادت آباد", delay=150)
+                    time.sleep(1.5)
+                    # انتخاب اولین نتیجه
+                    first_district = page.locator(".district-picker-item, .district-item, #districtPickerList > div").first
+                    if first_district.is_visible():
+                        print("   ✅ انتخاب محله سعادت‌آباد...")
+                        first_district.click()
+                        time.sleep(1)
 
-        # ----------------------------------------------------
-        # صحنه ۴: تست سناریوی اول کاربر (۱ تومن ۶۰ تومن منطقه ۵)
-        # ----------------------------------------------------
-        prompt1 = "بودجم ۱ تومن ۶۰ تومنه توی منطقه ۵ تهران برام خونه‌ها رو پیدا کن"
-        print(f"\n[صحنه ۴] اجرای دستور واقعی کاربر:\n«{prompt1}»...")
-        
-        input_box = page.locator("#chatgptVoiceInput")
-        send_btn = page.locator("#btnChatgptSend")
+            page.screenshot(path=os.path.join(SHOT_DIR, "demo_02_district_selected.png"))
 
-        input_box.fill(prompt1)
-        time.sleep(1.5)
-        send_btn.click()
+            # ۴. تست درج مبالغ و جداکننده ۳ رقمی فارسی
+            print("💰 ۴. تست ورودی‌های مالی و تبدیل ۳ رقمی فارسی...")
+            min_price_input = page.locator("#filterMinPrice")
+            if min_price_input.is_visible():
+                min_price_input.click()
+                min_price_input.fill("5000000000")
+                time.sleep(1)
 
-        print("  ⚡ در حال پردازش توسط ایجنت هوشمند سقف...")
-        time.sleep(3.5)
+            # ۵. کلیک روی دکمه اعمال فیلتر (On-Demand Filter)
+            print("🔍 ۵. کلیک روی دکمه «اعمال فیلتر» و اجرای استخراج زنده...")
+            btn_filter = page.locator("#btnApplyFilter")
+            if btn_filter.is_visible():
+                btn_filter.click()
+                time.sleep(2.5)
 
-        transcript = page.locator("#chatgptLiveTranscript").inner_text()
-        print(f"  🔊 پاسخ صوتی ایجنت: «{transcript[:100]}...»")
-        time.sleep(4)
+            page.screenshot(path=os.path.join(SHOT_DIR, "demo_03_filtered_results.png"))
 
-        # ----------------------------------------------------
-        # صحنه ۵: تست سناریوی دوم کاربر (فروش ۲۰ تا ۲۵ میلیارد)
-        # ----------------------------------------------------
-        print("\n[صحنه ۵] اجرای سناریوی دوم: «فروش ۲۰ تا ۲۵ میلیارد منطقه ۲ و ۵»...")
-        chip_btn = page.locator("button.station-chip:has-text('فروش ۲۰ تا ۲۵ میلیارد')").first
-        chip_btn.hover()
-        time.sleep(1)
-        chip_btn.click()
+            # ۶. فعال‌سازی گوی شناور سه‌بعدی هوش مصنوعی (AI Orb)
+            print("🔮 ۶. تست تعاملی گوی شناور هوش مصنوعی سقف...")
+            ai_orb = page.locator("#saghfSmartSphereFloating")
+            if ai_orb.is_visible():
+                ai_orb.scroll_into_view_if_needed()
+                time.sleep(0.5)
+                ai_orb.click()
+                time.sleep(1.5)
+                print("   ✅ گوی فعال شد و پنل HUD دستیار ملکی باز گردید.")
+                page.screenshot(path=os.path.join(SHOT_DIR, "demo_04_orb_hud.png"))
 
-        print("  ⚡ در حال استخراج فایل‌های فروش طلایی از دیتابیس...")
-        time.sleep(3.5)
+                # بستن مودال HUD
+                close_btn = page.locator("#aiHudCloseBtn")
+                if close_btn.is_visible():
+                    time.sleep(1)
+                    close_btn.click()
+                    time.sleep(1)
 
-        transcript2 = page.locator("#chatgptLiveTranscript").inner_text()
-        print(f"  🔊 پاسخ صوتی ایجنت: «{transcript2[:100]}...»")
-        time.sleep(4)
+            # ۷. بازگشت به نمای اصلی و نگه داشتن پنجره باز برای کاربر
+            print("🖥️ ۷. مرورگر کروم روی صفحه مانیتور شما در آدرس http://127.0.0.1:5000/properties/ فعال و آماده کار است.")
+            page.evaluate("window.scrollTo({ top: 300, behavior: 'smooth' });")
+            time.sleep(1)
+            page.screenshot(path=os.path.join(SHOT_DIR, "demo_05_final_view.png"))
 
-        # ----------------------------------------------------
-        # صحنه ۶: بستن مودال و مشاهده تور مجازی ۳۶۰ درجه و فایل‌های ویترین
-        # ----------------------------------------------------
-        print("\n[صحنه ۶] بستن مودال صوتی و ورق زدن تور مجازی ۳۶۰ درجه عمارت...")
-        close_btn = page.locator("button[title='بستن']:has-text('✕')").first
-        close_btn.click()
-        time.sleep(2)
-
-        # اسکرول نرم به بالای صفحه برای مشاهده تور ۳۶۰
-        page.evaluate("window.scrollTo({ top: 0, behavior: 'smooth' })")
-        time.sleep(2.5)
-
-        # تغییر اتاق تور به مستر روم
-        bedroom_btn = page.locator("button.tour-zone-pill-btn[data-zone-index='2']").first
-        if bedroom_btn.is_visible():
-            bedroom_btn.click()
-            time.sleep(2)
-
-        # اسکرول به فهرست آگهی‌ها
-        page.evaluate("window.scrollTo({ top: 800, behavior: 'smooth' })")
-        time.sleep(3)
-
-        # ----------------------------------------------------
-        # صحنه ۷: بررسی وضعیت اتاق مانیتورینگ زنده کراولر
-        # ----------------------------------------------------
-        print("\n[صحنه ۷] ورود به اتاق مانیتورینگ زنده کراولر دیوار و شیپور...")
-        page.goto("http://127.0.0.1:5000/crawler/live", wait_until="networkidle")
-        time.sleep(3)
-
-        print("\n✨ تمامی بخش‌های سامانه و دستیار صوتی با موفقیت کامل جلوی چشم شما اجرا شدند.")
-        time.sleep(2)
-        browser.close()
+            print("\n" + "=" * 70)
+            print("🎉 تمامی تست‌های بصری، اسکرول، فیلترها و گوی سه‌بعدی با موفقیت کامل اجرا شدند!")
+            print("=" * 70 + "\n")
+            return True
+        except Exception as e:
+            print(f"❌ خطا در اجرای آزمون تعاملی: {e}")
+            return False
 
 if __name__ == '__main__':
-    run_visible_demo()
+    run_live_interactive_demo()

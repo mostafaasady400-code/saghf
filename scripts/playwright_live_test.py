@@ -20,7 +20,10 @@ from database.db import db
 from database.models import Property
 
 def run_live_test():
-    artifact_dir = r"C:\Users\RINO TEK\.gemini\antigravity-ide\brain\ae6d95ef-305d-4bff-b1ca-7fcce2ce91f2"
+    artifact_dir = os.path.join(ROOT_DIR, "static", "test_artifacts")
+    current_conv_dir = r"C:\Users\RINO TEK\.gemini\antigravity-ide\brain\3649b9d3-873f-4177-ab63-4d933f9cb3de"
+    if os.path.exists(current_conv_dir):
+        artifact_dir = current_conv_dir
     os.makedirs(artifact_dir, exist_ok=True)
 
     print("🚀 شروع آزمون زنده End-to-End با Playwright و مرورگر Google Chrome...")

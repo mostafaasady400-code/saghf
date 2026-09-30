@@ -7,7 +7,7 @@
 - سرویس فوروارد و نوتیفیکیشن خودکار فایل‌های جدید به کانال/گروه
 """
 
-from .bot import get_bot, process_update, setup_webhook, remove_webhook, get_webhook_info, start_polling, is_admin_telegram_user, send_admin_system_alert
+from .bot import get_bot, process_update, setup_webhook, remove_webhook, get_webhook_info, start_polling, stop_polling, is_admin_telegram_user, send_admin_system_alert
 from .notifier import send_property_alert, send_property_media_group, format_property_telegram_message
 
 __all__ = [
@@ -17,6 +17,7 @@ __all__ = [
     'remove_webhook',
     'get_webhook_info',
     'start_polling',
+    'stop_polling',
     'is_admin_telegram_user',
     'send_admin_system_alert',
     'send_property_alert',

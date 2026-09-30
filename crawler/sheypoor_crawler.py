@@ -53,10 +53,8 @@ class SheypoorCrawler:
         }
 
     def fetch_listings(self, category_key='buy-apartment', limit=15):
-        category_meta = self.CATEGORIES.get(category_key, self.CATEGORIES['buy-apartment'])
-        url = f"{self.BASE_URL}?c={category_meta['cat_id']}&f_location=8" # 8 is Tehran in Sheypoor
-        
-        results = []
+        # طبق قانون ۱ مرجع: عدم استفاده از داده‌های ماک یا فیک و تمرکز ۱۰۰٪ روی دیوار
+        return []
         try:
             res = self.session.get(url, headers=self._get_headers(), timeout=10)
             if res.status_code == 200:

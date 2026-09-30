@@ -150,25 +150,56 @@ class PropertyLeadNLPExtractor:
         """
         norm = normalize_persian_text(text)
         criteria: Dict[str, Any] = {
-            'deal_type': 'rent',
+            'deal_type': 'any',
+            'deal_type_fa': 'نامشخص',
+            'property_type': 'apartment',
+            'property_type_fa': 'آپارتمان',
             'districts': [],
             'region': '5',
             'min_area': 0,
             'max_area': 0,
-            'max_deposit': 0,
-            'max_rent': 0,
+            'rooms': None,
+            'min_budget': 0,
             'max_budget': 0,
+            'min_deposit': 0,
+            'max_deposit': 0,
+            'min_rent': 0,
+            'max_rent': 0,
             'features': [],
+            'descriptive_tags': [],
+            'has_parking': False,
+            'has_elevator': False,
+            'has_warehouse': False,
+            'has_balcony': False,
             'active_messenger': 'telegram'
         }
 
-        # ۱. تشخیص نوع معامله
-        if any(k in norm for k in ['خرید', 'فروش', 'پیش‌فروش', 'سرمایه‌گذاری', 'پیش خرید']):
+        # ۱. تشخیص نوع معامله (خرید / رهن / اجاره)
+        if any(k in norm for k in ['خرید', 'فروش', 'پیش‌فروش', 'پیش فروش', 'سرمایه‌گذاری', 'سرمایه گذاری', 'پیش خرید']) or (any(k in norm for k in ['میلیارد', 'همت']) and not any(r in norm for r in ['اجاره', 'ودیعه', 'رهن', 'ماهانه', 'ماهی'])):
             criteria['deal_type'] = 'sale'
-        else:
+            criteria['deal_type_fa'] = 'خرید و فروش'
+        elif any(k in norm for k in ['رهن کامل', 'فقط رهن', 'بدون اجاره']):
             criteria['deal_type'] = 'rent'
+            criteria['deal_type_fa'] = 'رهن کامل'
+        elif any(k in norm for k in ['اجاره', 'ودیعه', 'رهن', 'ماهانه', 'ماهی', 'مستاجر', 'مستأجر']):
+            criteria['deal_type'] = 'rent'
+            criteria['deal_type_fa'] = 'رهن و اجاره'
 
-        # ۲. تشخیص محله‌ها و مناطق با بررسی مرز کلمات (جلوگیری از انطباق ونک در پونک)
+        # ۲. تشخیص نوع کاربری (مسکونی / تجاری / زمین / ویلا)
+        if any(k in norm for k in ['تجاری', 'مغازه', 'اداری', 'دفتر کار', 'مطب', 'پاساژ']):
+            criteria['property_type'] = 'commercial'
+            criteria['property_type_fa'] = 'تجاری و اداری'
+        elif any(k in norm for k in ['زمین', 'کلنگی', 'مشارکت در ساخت', 'تراکم']):
+            criteria['property_type'] = 'land'
+            criteria['property_type_fa'] = 'زمین و کلنگی'
+        elif any(k in norm for k in ['ویلا', 'ویلایی', 'باغ', 'عمارت', 'دوبلکس', 'تریپلکس']):
+            criteria['property_type'] = 'villa'
+            criteria['property_type_fa'] = 'ویلا'
+        else:
+            criteria['property_type'] = 'apartment'
+            criteria['property_type_fa'] = 'آپارتمان'
+
+        # ۳. تشخیص محله‌ها و مناطق
         detected_districts = []
         all_candidate_districts = []
         for reg_id, reg_data in TEHRAN_REGIONS.items():
@@ -181,15 +212,29 @@ class PropertyLeadNLPExtractor:
         all_candidate_districts.sort(key=lambda x: x[0], reverse=True)
 
         found_names = set()
+        # عبارات فعل مرکب با کن که نباید با محله «کن» اشتباه شوند
+        verb_kan_patterns = [r'پیدا\s*کن', r'جستجو\s*کن', r'معرفی\s*کن', r'استخراج\s*کن', r'بررسی\s*کن', r'چک\s*کن', r'مشخص\s*کن', r'ثبت\s*کن', r'انتخاب\s*کن', r'درست\s*کن', r'کمک\s*کن']
+
         for _, kw, d_name, reg_id in all_candidate_districts:
             pattern = r'(?:^|[^\w])' + re.escape(kw) + r'(?:[^\w]|$)'
             if re.search(pattern, norm):
+                # اگر کلمه کلیدی کن بود ولی در حقیقت فعل جمله بود نادیده گرفته شود
+                if kw == 'کن' and any(re.search(vp, norm) for vp in verb_kan_patterns):
+                    continue
                 if d_name not in found_names:
                     found_names.add(d_name)
                     detected_districts.append(d_name)
                     criteria['region'] = reg_id
 
-        # اولویت تشخیص محله و منطقه
+        # اگر منطقه ۵ یا منطقه ۲ در متن ذکر شده بود
+        if any(r in norm for r in ['منطقه ۵', 'منطقه 5', 'منطقه پنج']) and 'منطقه ۵' not in detected_districts:
+            detected_districts.append('منطقه ۵')
+            criteria['region'] = 'region_5'
+        if any(r in norm for r in ['منطقه ۲', 'منطقه 2', 'منطقه دو', 'یا ۲', 'یا 2']) and 'منطقه ۲' not in detected_districts:
+            detected_districts.append('منطقه ۲')
+            if not criteria.get('region'):
+                criteria['region'] = 'region_2'
+
         if not detected_districts:
             matched = find_matched_district(norm)
             if matched:
@@ -197,12 +242,13 @@ class PropertyLeadNLPExtractor:
 
         criteria['districts'] = detected_districts
 
-        # ۳. استخراج متراژ
+        # ۴. استخراج متراژ
         range_match = re.search(r'(\d+)\s*(?:تا|الی|-)\s*(\d+)\s*(?:متر|متری)', norm)
         if range_match:
             try:
                 criteria['min_area'] = int(range_match.group(1))
                 criteria['max_area'] = int(range_match.group(2))
+                criteria['area_match_mode'] = 'range'
             except ValueError:
                 pass
         else:
@@ -210,66 +256,123 @@ class PropertyLeadNLPExtractor:
             if area_match:
                 try:
                     area_val = int(area_match.group(1))
-                    criteria['min_area'] = max(30, area_val - 15)
-                    criteria['max_area'] = area_val + 20
+                    # «۸۰ متری» یک مقدار صریح است؛ دامنهٔ دلخواه اختراع نمی‌کنیم.
+                    criteria['min_area'] = area_val
+                    criteria['max_area'] = area_val
+                    criteria['area_match_mode'] = 'exact'
                 except ValueError:
                     pass
-            else:
-                criteria['min_area'] = 0  # در صورتی که کاربر متراژ خاصی نگفت، صفر باشد
 
-        # ۴. استخراج امکانات الزامی
+        # ۵. استخراج تعداد اتاق خواب
+        rooms_match = re.search(r'(\d+)\s*(?:خواب|خوابه|اتاق)', norm)
+        if rooms_match:
+            try:
+                criteria['rooms'] = int(rooms_match.group(1))
+            except ValueError:
+                pass
+        elif 'تک خواب' in norm or 'یک خواب' in norm:
+            criteria['rooms'] = 1
+        elif 'دو خواب' in norm:
+            criteria['rooms'] = 2
+        elif 'سه خواب' in norm or '۳ خواب' in norm:
+            criteria['rooms'] = 3
+        elif 'چهار خواب' in norm:
+            criteria['rooms'] = 4
+        elif 'سوئیت' in norm or 'بدون اتاق' in norm:
+            criteria['rooms'] = 0
+        if criteria['rooms'] is not None:
+            criteria['rooms_match_mode'] = 'exact'
+
+        # ۶. استخراج امکانات الزامی و فیزیکی
         features = []
         if 'پارکینگ' in norm:
             features.append('پارکینگ')
+            criteria['has_parking'] = True
         if 'آسانسور' in norm:
             features.append('آسانسور')
+            criteria['has_elevator'] = True
         if 'انباری' in norm:
             features.append('انباری')
+            criteria['has_warehouse'] = True
         if any(b in norm for b in ['بالکن', 'تراس']):
             features.append('بالکن')
+            criteria['has_balcony'] = True
         criteria['features'] = features
 
-        # ۵. استخراج مبالغ مالی و بودجه
+        # ۷. تبدیل عبارات توصیفی کاربر به فیلترهای تحلیلی
+        descriptive_tags = []
+        if any(m in norm for m in ['مترو', 'ایستگاه مترو', 'نزدیک مترو', 'دسترسی مترو']):
+            descriptive_tags.append('نزدیک ایستگاه مترو')
+        if any(m in norm for m in ['خوش نقشه', 'خوشنقشه', 'خوش چیدمان', 'بدون پرتی']):
+            descriptive_tags.append('خوش‌نقشه')
+        if any(m in norm for m in ['نورگیر', 'نورگیر عالی', 'غرق نور', 'رو به آفتاب', 'آفتابگیر']):
+            descriptive_tags.append('نورگیر عالی')
+        if any(m in norm for m in ['فول امکانات', 'فول', 'کامل']):
+            descriptive_tags.append('فول امکانات')
+        if any(m in norm for m in ['نوساز', 'کلید نخورده', 'صفر']):
+            descriptive_tags.append('نوساز و کلید نخورده')
+        if any(m in norm for m in ['شخصی ساز', 'شخصیساز', 'شخصی']):
+            descriptive_tags.append('شخصی‌ساز')
+        if any(m in norm for m in ['بازسازی', 'بازسازی شده', 'شیک']):
+            descriptive_tags.append('بازسازی شده')
+        if any(m in norm for m in ['تخلیه', 'اماده تخلیه', 'آماده تحویل']):
+            descriptive_tags.append('تخلیه و آماده سکونت')
+
+        criteria['descriptive_tags'] = descriptive_tags
+
+        # ۸. استخراج مبالغ مالی و بودجه (کف و سقف)
         if criteria['deal_type'] == 'sale':
-            amt = extract_numeric_clause_near(norm, ['میلیارد تومان', 'میلیارد', 'همت', 'قیمت کل', 'بودجه', 'سرمایه'])
-            if amt > 0:
-                if amt < 100_000:
-                    amt = amt * 1_000_000_000
-                criteria['max_budget'] = amt
+            range_budget = re.search(r'(\d+)\s*(?:تا|الی|-)\s*(\d+)\s*میلیارد', norm)
+            if range_budget:
+                criteria['min_budget'] = int(range_budget.group(1)) * 1_000_000_000
+                criteria['max_budget'] = int(range_budget.group(2)) * 1_000_000_000
             else:
-                criteria['max_budget'] = 0
+                amt = extract_numeric_clause_near(norm, ['میلیارد تومان', 'میلیارد', 'همت', 'قیمت کل', 'بودجه', 'سرمایه'])
+                if amt > 0:
+                    if amt < 100_000:
+                        amt = amt * 1_000_000_000
+                    criteria['max_budget'] = amt
         else:
-            # استخراج ساختار گفتاری «بین X میلیون تا Y میلیون» (ودیعه و اجاره)
-            between_match = re.search(r'بین\s*([\d\.\,]+)\s*(میلیارد|میلیون)\s*(?:ودیعه|رهن)?\s*تا\s*([\d\.\,]+)\s*(میلیارد|میلیون)\s*(?:اجاره)?', norm)
-            if between_match:
-                v1 = float(between_match.group(1).replace(',', ''))
-                u1 = between_match.group(2)
-                v2 = float(between_match.group(3).replace(',', ''))
-                u2 = between_match.group(4)
-                amt1 = int(v1 * (1_000_000_000 if 'میلیارد' in u1 else 1_000_000))
-                amt2 = int(v2 * (1_000_000_000 if 'میلیارد' in u2 else 1_000_000))
-                criteria['max_deposit'] = max(amt1, amt2)
-                criteria['max_rent'] = min(amt1, amt2)
+            # الگوی محاوره‌ای دو رقمی رهن و اجاره: مثال «۱ تومن ۶۰ تومن» یا «۱ میلیارد ۶۰ میلیون»
+            colloquial_match = re.search(r'(\d+)\s*(?:تومن|تومان|میلیارد|همت)\s*(\d+)\s*(?:تومن|تومنه|تومان|میلیون)', norm)
+            if colloquial_match:
+                v1 = int(colloquial_match.group(1))
+                v2 = int(colloquial_match.group(2))
+                # در بازار ملک تهران: عدد اول ودیعه (مثلاً ۱ میلیارد) و عدد دوم اجاره ماهانه (مثلاً ۶۰ میلیون)
+                if v1 <= 20: # زیر ۲۰ معمولاً به معنی میلیارد تومان است (مثلاً ۱ تومن = ۱ میلیارد)
+                    criteria['max_deposit'] = v1 * 1_000_000_000
+                else:
+                    criteria['max_deposit'] = v1 * 1_000_000
+                
+                if v2 < 1000: # مثلاً ۶۰ تومن اجاره = ۶۰ میلیون تومان
+                    criteria['max_rent'] = v2 * 1_000_000
+                else:
+                    criteria['max_rent'] = v2
             else:
-                # استخراج ودیعه / رهن
-                dep_amt = extract_numeric_clause_near(norm, ['میلیون تومان ودیعه', 'میلیون تومان رهن', 'ودیعه', 'رهن', 'پیش', 'میلیون تومان'])
-                if dep_amt > 0:
-                    if dep_amt < 100_000:
-                        dep_amt = dep_amt * 1_000_000
-                    criteria['max_deposit'] = dep_amt
+                between_match = re.search(r'بین\s*([\d\.\,]+)\s*(میلیارد|میلیون)\s*(?:ودیعه|رهن)?\s*تا\s*([\d\.\,]+)\s*(میلیارد|میلیون)\s*(?:اجاره)?', norm)
+                if between_match:
+                    v1 = float(between_match.group(1).replace(',', ''))
+                    u1 = between_match.group(2)
+                    v2 = float(between_match.group(3).replace(',', ''))
+                    u2 = between_match.group(4)
+                    amt1 = int(v1 * (1_000_000_000 if 'میلیارد' in u1 else 1_000_000))
+                    amt2 = int(v2 * (1_000_000_000 if 'میلیارد' in u2 else 1_000_000))
+                    criteria['max_deposit'] = max(amt1, amt2)
+                    criteria['max_rent'] = min(amt1, amt2)
                 else:
-                    criteria['max_deposit'] = 0
+                    dep_amt = extract_numeric_clause_near(norm, ['میلیون تومان ودیعه', 'میلیون تومان رهن', 'ودیعه', 'رهن', 'پیش', 'میلیون تومان'])
+                    if dep_amt > 0:
+                        if dep_amt < 100_000:
+                            dep_amt = dep_amt * 1_000_000
+                        criteria['max_deposit'] = dep_amt
 
-                # استخراج اجاره ماهانه
-                rent_amt = extract_numeric_clause_near(norm, ['میلیون اجاره', 'میلیون تومن اجاره', 'تومان اجاره', 'اجاره در ماه', 'اجاره ماهانه', 'اجاره'])
-                if rent_amt > 0:
-                    if rent_amt < 100_000:
-                        rent_amt = rent_amt * 1_000_000
-                    criteria['max_rent'] = rent_amt
-                else:
-                    criteria['max_rent'] = 0
+                    rent_amt = extract_numeric_clause_near(norm, ['میلیون اجاره', 'میلیون تومن اجاره', 'تومان اجاره', 'اجاره در ماه', 'اجاره ماهانه', 'اجاره'])
+                    if rent_amt > 0:
+                        if rent_amt < 100_000:
+                            rent_amt = rent_amt * 1_000_000
+                        criteria['max_rent'] = rent_amt
 
-        # ۶. پیام‌رسان فعال متقاضی
+        # ۹. پیام‌رسان فعال
         if 'ایتا' in norm:
             criteria['active_messenger'] = 'eitaa'
         elif 'بله' in norm:

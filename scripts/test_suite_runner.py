@@ -33,7 +33,7 @@ TEST_SUITES = [
         'id': 1,
         'layer': 'شبکه و جعل اثر انگشت TLS',
         'file': 'tests/test_tier1_impersonator.py',
-        'expected_count': 5,
+        'expected_count': 6,
         'desc': 'کلاینت curl_cffi و پروفایل‌های Chrome/Safari'
     },
     {
@@ -133,7 +133,7 @@ TEST_SUITES = [
 def run_suite(suite_info):
     file_path = suite_info['file']
     cmd = [
-        os.path.join(PROJECT_ROOT, '.venv', 'Scripts', 'python.exe'),
+        sys.executable,
         '-m', 'pytest',
         file_path,
         '-q',

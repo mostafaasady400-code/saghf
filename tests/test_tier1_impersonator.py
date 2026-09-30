@@ -47,8 +47,12 @@ class TestTier1TLSImpersonator(unittest.TestCase):
             elif "131" in key:
                 self.assertIn("131", prof["user_agent"])
                 self.assertIn("131", prof["sec_ch_ua"])
+            elif "133" in key:
+                self.assertIn("133", prof["user_agent"])
+                self.assertIn("133", prof["sec_ch_ua"])
 
         print(f"  ✓ تعداد {len(FINGERPRINT_PROFILES)} پروفایل مدرن با هماهنگی ۱۰۰٪ تایید شدند.")
+
 
     def test_02_context_aware_header_synthesis(self):
         """۲. بررسی تولیدکننده تطبیقی هدرها متناسب با نوع درخواست (HTML vs API)"""
@@ -116,6 +120,31 @@ class TestTier1TLSImpersonator(unittest.TestCase):
         metrics = small_client.get_metrics()
         print(f"  ✓ بازنشانی نشست تایید شد. آمار مانیتورینگ: {metrics}")
 
+    def test_06_connection_tester_and_proxy_circuit_breaker(self):
+        """۶. تست متد سنجش اتصال زنده و Circuit Breaker استخر پراکسی"""
+        print("\n--- [تست ۶] بررسی سنجش اتصال زنده و Circuit Breaker پراکسی ---")
+        res = self.client.test_connection("https://divar.ir")
+        self.assertIn("ok", res)
+        self.assertIn("latency_ms", res)
+        self.assertIn("profile", res)
+
+        from crawler.network.proxy_manager import ProxyManager
+        pm = ProxyManager(proxies=["http://127.0.0.1:9999"], cooldown_seconds=1.0)
+        self.assertEqual(pm.get_proxy(), "http://127.0.0.1:9999")
+        pm.report_failure("http://127.0.0.1:9999")
+        pm.report_failure("http://127.0.0.1:9999")
+        pm.report_failure("http://127.0.0.1:9999")
+        self.assertIsNone(pm.get_proxy())  # Circuit broken
+        status = pm.get_pool_status()
+        self.assertEqual(status["healthy_proxies"], 0)
+        self.assertTrue(status["circuit_breaker_active"])
+
+        # بازپروری خودکار پس از پایان کوول‌داون
+        time.sleep(1.1)
+        self.assertEqual(pm.get_proxy(), "http://127.0.0.1:9999")
+        print("  ✓ مدار شکن (Circuit Breaker) و بازپروری خودکار پراکسی با موفقیت تایید شد.")
+
 
 if __name__ == '__main__':
+
     unittest.main()

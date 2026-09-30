@@ -80,6 +80,73 @@ def _clean_persian_str(s: str) -> str:
 def _clean_compact_str(s: str) -> str:
     return _clean_persian_str(s).replace(' ', '')
 
+# محله‌های رسمی و شاخص منطقه ۲ تهران
+REGION_2_DISTRICT_NAMES = [
+    'سعادت آباد', 'سعادت‌آباد', 'شهرک غرب', 'گیشا', 'کوی نصر', 'مرزداران', 
+    'ستارخان', 'طرشت', 'شهرک ژاندارمری', 'ژاندارمری', 'فرحزاد', 'شهرآرا', 
+    'بهبودی', 'توحید', 'دریان نو', 'همایون شهر', 'ایوانک', 'کوی فراز', 
+    'پرواز', 'صادقیه', 'بلوار پاکنژاد', 'بلوار دادمان', 'بلوار شهرداری', 
+    'شهرک مخابرات', 'آسمان'
+]
+
+# محله‌های رسمی و شاخص منطقه ۵ تهران
+REGION_5_DISTRICT_NAMES = [
+    'پونک', 'جنت آباد', 'جنت‌آباد', 'جنت آباد مرکزی', 'جنت‌آباد مرکزی', 
+    'جنت آباد جنوبی', 'جنت‌آباد جنوبی', 'جنت آباد شمالی', 'جنت‌آباد شمالی', 
+    'صادقیه', 'آریاشهر', 'شهران', 'شهران شمالی', 'شهران جنوبی', 'باغ فیض', 
+    'باغ‌فیض', 'بلوار فردوس', 'فردوس', 'فردوس شرق', 'فردوس غرب', 'اباذر', 
+    'ابوذر', 'بلوار اباذر', 'اکباتان', 'شهرک اکباتان', 'شاهین', 'شاهین شمالی', 
+    'شاهین جنوبی', 'سازمان برنامه', 'سازمان برنامه شمالی', 'سازمان برنامه جنوبی', 
+    'شهرزیبا', 'شهر زیبا', 'کوهسار', 'کن', 'آیت الله کاشانی', 'کاشانی', 
+    'بلوار کاشانی', 'مهران', 'ارم', 'شهرک ارم', 'بیمه', 'شهرک بیمه', 
+    'آپادانا', 'شهرک آپادانا', 'المهدی', 'حصارک', 'سازمان آب'
+]
+
+# تلفیق مناطق هدف ۲ و ۵
+DISTRICTS_2_AND_5_NAMES = REGION_2_DISTRICT_NAMES + REGION_5_DISTRICT_NAMES
+
+DISTRICTS_2_AND_5_SLUGS = [
+    'saadat-abad', 'shahrak-e-gharb', 'gisha', 'marzdaran', 'sattarkhan', 
+    'tarasht', 'zhandarmari', 'farahzad', 'shahrara', 'punak', 
+    'central-jannat-abad', 'south-jannat-abad', 'north-jannat-abad', 
+    'sadeghiyeh', 'shahran', 'bagh-feyz', 'ferdows', 'abazar', 
+    'ekbatan', 'shahin', 'sazman-barnameh', 'shahr-e-ziba', 'koohsar', 'kan'
+]
+
+def is_in_region_2_or_5(district_name: Optional[str], text: Optional[str] = "") -> bool:
+    """
+    بررسی دقیق و قطعی اینکه آیا یک محله یا ملک در منطقه ۲ یا ۵ تهران واقع شده است یا خیر.
+    تمرکز ۱۰۰ درصدی بر تفکیک مناطق ۲ و ۵ پایتخت.
+    """
+    if not district_name and not text:
+        return False
+    clean_d = _clean_persian_str(district_name or '')
+    clean_t = _clean_persian_str(text or '')
+    compact_d = _clean_compact_str(clean_d)
+    compact_t = _clean_compact_str(clean_t)
+
+    # بررسی تطابق با نام‌های مناطق ۲ و ۵
+    for name in DISTRICTS_2_AND_5_NAMES:
+        c_name = _clean_compact_str(name)
+        if len(c_name) < 2:
+            continue
+        if c_name in compact_d or compact_d in c_name:
+            return True
+        if len(c_name) >= 4 and c_name in compact_t:
+            return True
+
+    # بررسی عبارات کلیدی منطقه ۲ و منطقه ۵
+    if 'منطقه۲' in compact_d or 'منطقه2' in compact_d or 'منطقه۵' in compact_d or 'منطقه5' in compact_d:
+        return True
+    if 'منطقه۲' in compact_t or 'منطقه2' in compact_t or 'منطقه۵' in compact_t or 'منطقه5' in compact_t:
+        return True
+
+    return False
+
+def get_region_2_and_5_districts() -> List[str]:
+    """دریافت لیست تمام محله‌های مناطق ۲ و ۵ تهران به صورت یکجا"""
+    return list(set(DISTRICTS_2_AND_5_NAMES))
+
 def get_divar_slug_for_district(district_name: str) -> Optional[str]:
     """تبدیل نام محله فارسی به slug معادل در دیوار"""
     if not district_name:

@@ -232,6 +232,79 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Smart Luxury Pagination Bar for Admin Users -->
+        {% macro user_page_url(p) %}
+        {{ url_for('admin.users_list',
+            page=p,
+            per_page=pagination.per_page,
+            role=role_filter,
+            status=status_filter,
+            q=query_str
+        ) }}
+        {% endmacro %}
+
+        {% if pagination and pagination.total > 0 %}
+        <div class="saghf-pagination-wrapper" style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            
+            <!-- Range & Count Meta -->
+            <div style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: #94a3b8;">
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 10px #38bdf8;"></span>
+                <span>نمایش کاربران <strong style="color: #f8fafc;">{{ pagination.start_index | pnum }}</strong> تا <strong style="color: #f8fafc;">{{ pagination.end_index | pnum }}</strong> از مجموع <strong style="color: #38bdf8;">{{ pagination.total | pnum }}</strong> حساب</span>
+                <span style="color: #64748b;">|</span>
+                <span>صفحه <strong style="color: #fce79f;">{{ pagination.page | pnum }}</strong> از <strong style="color: #fce79f;">{{ pagination.total_pages | pnum }}</strong></span>
+            </div>
+
+            <!-- Navigation Controls (صفحه ۱، ۲...) -->
+            <div style="display: flex; align-items: center; gap: 0.4rem; direction: ltr;">
+                <!-- Previous Page Button -->
+                {% if pagination.has_prev %}
+                    <a href="{{ user_page_url(pagination.prev_num) }}" class="saghf-page-btn" title="صفحه قبلی">
+                        <span>‹ قبلی</span>
+                    </a>
+                {% else %}
+                    <span class="saghf-page-btn disabled" title="در صفحه اول هستید">
+                        <span>‹ قبلی</span>
+                    </span>
+                {% endif %}
+
+                <!-- Numbered Page Links -->
+                {% for p_num in pagination.pages %}
+                    {% if p_num == pagination.page %}
+                        <span class="saghf-page-num active" title="صفحه فعلی">{{ p_num | pnum }}</span>
+                    {% else %}
+                        <a href="{{ user_page_url(p_num) }}" class="saghf-page-num" title="رفتن به صفحه {{ p_num }}">{{ p_num | pnum }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Next Page Button -->
+                {% if pagination.has_next %}
+                    <a href="{{ user_page_url(pagination.next_num) }}" class="saghf-page-btn" title="صفحه بعدی">
+                        <span>بعدی ›</span>
+                    </a>
+                {% else %}
+                    <span class="saghf-page-btn disabled" title="در صفحه آخر هستید">
+                        <span>بعدی ›</span>
+                    </span>
+                {% endif %}
+            </div>
+
+            <!-- Per-page selection -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: #94a3b8;">
+                <span>تعداد در صفحه:</span>
+                <div style="display: flex; gap: 0.25rem;">
+                    {% for pp in [5, 10, 20] %}
+                        <a href="{{ url_for('admin.users_list', page=1, per_page=pp, role=role_filter, status=status_filter, q=query_str) }}" 
+                           class="saghf-per-page-pill {% if pagination.per_page == pp %}active{% endif %}">
+                            {{ pp | pnum }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+        {% endif %}
+
     </div>
 </div>
 

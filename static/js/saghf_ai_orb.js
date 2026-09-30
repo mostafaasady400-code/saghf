@@ -1,8 +1,7 @@
 /**
  * ==========================================================================
  * SAGHF 3D LUXURY AI ORB (Three.js WebGL Engine)
- * Strictly: Deep Black Obsidian Core + Metallic Blue (#00D2FF) & Neon Purple (#9B51E0)
- * NO GOLD in the sphere.
+ * Strictly: Deep Black Obsidian Core (#0A0A0C) + Liquid Gold (#D4AF37 & #FFDF73)
  * States: 'standby' | 'listening' | 'processing' | 'speaking'
  * ==========================================================================
  */
@@ -43,21 +42,23 @@ class SaghfAiOrb {
         this.renderer.setSize(width, height);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.25;
+        this.renderer.toneMappingExposure = 1.35;
 
-        // Dynamic Dual-Color Lighting (Metallic Blue & Neon Purple only)
-        this.ambientLight = new THREE.AmbientLight(0x04040a, 1.2);
+        // Dynamic Luxury Gold Lighting
+        this.ambientLight = new THREE.AmbientLight(0x0a0a0e, 1.2);
         this.scene.add(this.ambientLight);
 
-        // Metallic Blue Key Light (#00D2FF)
-        this.blueLight = new THREE.PointLight(0x00d2ff, 3.2, 20);
+        // Liquid Gold Key Light (#D4AF37)
+        this.blueLight = new THREE.PointLight(0xD4AF37, 3.8, 22);
         this.blueLight.position.set(4, 3, 5);
         this.scene.add(this.blueLight);
+        this.goldKeyLight = this.blueLight;
 
-        // Neon Purple Rim Light (#9B51E0)
-        this.purpleLight = new THREE.PointLight(0x9b51e0, 3.5, 20);
+        // Bright Warm Gold Rim Light (#FFDF73)
+        this.purpleLight = new THREE.PointLight(0xFFDF73, 3.5, 20);
         this.purpleLight.position.set(-4, -3, 4);
         this.scene.add(this.purpleLight);
+        this.goldRimLight = this.purpleLight;
 
         this.clock = new THREE.Clock();
     }
@@ -66,21 +67,21 @@ class SaghfAiOrb {
         this.orbGroup = new THREE.Group();
         this.scene.add(this.orbGroup);
 
-        // 1. Central Core: Deep Obsidian Black Sphere (No Gold)
+        // 1. Central Core: Deep Obsidian Black Sphere (#0A0A0C)
         const coreGeo = new THREE.IcosahedronGeometry(1.65, 5);
         const coreMat = new THREE.MeshPhysicalMaterial({
-            color: 0x050508, // Deep obsidian black
-            emissive: 0x020205,
-            roughness: 0.12,
+            color: 0x0a0a0c, // Deep obsidian black
+            emissive: 0x120e06, // Ultra subtle warm gold undertone
+            roughness: 0.1,
             metalness: 0.95,
             clearcoat: 1.0,
-            clearcoatRoughness: 0.08,
-            reflectivity: 0.9
+            clearcoatRoughness: 0.06,
+            reflectivity: 0.95
         });
         this.coreMesh = new THREE.Mesh(coreGeo, coreMat);
         this.orbGroup.add(this.coreMesh);
 
-        // 2. Outer Waveform Dynamic Displacement Energy Shell
+        // 2. Outer Waveform Dynamic Displacement Energy Shell (Liquid Gold Wireframe)
         // Vertices deform in real-time with sound and fluid waves
         const energyGeo = new THREE.IcosahedronGeometry(1.85, 4);
         this.originalVertices = [];
@@ -93,26 +94,26 @@ class SaghfAiOrb {
             ));
         }
 
-        // Metallic Blue & Neon Purple wireframe shader material
+        // Liquid Gold wireframe shader material
         this.energyMat = new THREE.MeshStandardMaterial({
-            color: 0x00d2ff,
-            emissive: 0x9b51e0,
+            color: 0xD4AF37,
+            emissive: 0xAA7C11,
             emissiveIntensity: 0.85,
             wireframe: true,
             transparent: true,
-            opacity: 0.75,
+            opacity: 0.8,
             blending: THREE.AdditiveBlending
         });
         this.energyMesh = new THREE.Mesh(energyGeo, this.energyMat);
         this.orbGroup.add(this.energyMesh);
 
         // 3. Dual Orbiting Plasma Rings (Counter-Rotating Vortex)
-        // Ring 1: Metallic Blue (#00D2FF)
+        // Ring 1: Rich Metallic Gold (#D4AF37)
         const ring1Geo = new THREE.TorusGeometry(2.35, 0.022, 16, 120);
         const ring1Mat = new THREE.MeshBasicMaterial({
-            color: 0x00d2ff,
+            color: 0xD4AF37,
             transparent: true,
-            opacity: 0.85,
+            opacity: 0.9,
             blending: THREE.AdditiveBlending
         });
         this.ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
@@ -120,12 +121,12 @@ class SaghfAiOrb {
         this.ring1.rotation.y = Math.PI * 0.15;
         this.orbGroup.add(this.ring1);
 
-        // Ring 2: Neon Purple (#9B51E0)
+        // Ring 2: Bright Warm Gold (#FFDF73)
         const ring2Geo = new THREE.TorusGeometry(2.52, 0.02, 16, 120);
         const ring2Mat = new THREE.MeshBasicMaterial({
-            color: 0x9b51e0,
+            color: 0xFFDF73,
             transparent: true,
-            opacity: 0.8,
+            opacity: 0.85,
             blending: THREE.AdditiveBlending
         });
         this.ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
@@ -133,14 +134,14 @@ class SaghfAiOrb {
         this.ring2.rotation.z = Math.PI * 0.25;
         this.orbGroup.add(this.ring2);
 
-        // 4. Volumetric Floating Particle Cloud (Purple & Cyan Mist)
-        const particleCount = 750;
+        // 4. Volumetric Floating Particle Cloud (Anti-Gravity Gold Dust)
+        const particleCount = 900;
         const particleGeo = new THREE.BufferGeometry();
         const particlePositions = new Float32Array(particleCount * 3);
         const particleColors = new Float32Array(particleCount * 3);
 
-        const cBlue = new THREE.Color(0x00d2ff);
-        const cPurple = new THREE.Color(0x9b51e0);
+        const cGold = new THREE.Color(0xD4AF37);
+        const cBrightGold = new THREE.Color(0xFFDF73);
 
         for (let i = 0; i < particleCount; i++) {
             // Spherical distribution around orb
@@ -148,7 +149,7 @@ class SaghfAiOrb {
             const v = Math.random();
             const theta = u * 2.0 * Math.PI;
             const phi = Math.acos(2.0 * v - 1.0);
-            const r = 2.0 + Math.random() * 1.3;
+            const r = 2.0 + Math.random() * 1.4;
 
             const sinPhi = Math.sin(phi);
             const x = r * sinPhi * Math.cos(theta);
@@ -159,8 +160,8 @@ class SaghfAiOrb {
             particlePositions[i * 3 + 1] = y;
             particlePositions[i * 3 + 2] = z;
 
-            // Color: Alternate between Blue and Purple
-            const mixedColor = Math.random() > 0.45 ? cBlue : cPurple;
+            // Color: Alternate between Rich Gold and Bright Gold
+            const mixedColor = Math.random() > 0.45 ? cGold : cBrightGold;
             particleColors[i * 3] = mixedColor.r;
             particleColors[i * 3 + 1] = mixedColor.g;
             particleColors[i * 3 + 2] = mixedColor.b;
@@ -173,7 +174,7 @@ class SaghfAiOrb {
             size: 0.055,
             vertexColors: true,
             transparent: true,
-            opacity: 0.7,
+            opacity: 0.75,
             blending: THREE.AdditiveBlending
         });
 
@@ -273,7 +274,7 @@ class SaghfAiOrb {
             this.blueLight.intensity = 3.5 + (this.audioLevel * 3.0);
             this.purpleLight.intensity = 4.0 + (this.audioLevel * 3.5);
         } else if (this.state === 'processing') {
-            // Rapid vortex acceleration! Swirling lights between purple and blue
+            // Rapid vortex acceleration! Liquid gold dynamic swirl
             speed = 0.065;
             displacementFactor = 0.08 + Math.sin(time * 12) * 0.04;
             this.energyMat.emissiveIntensity = 1.4 + Math.sin(time * 10) * 0.4;

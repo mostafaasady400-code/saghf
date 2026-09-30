@@ -2,7 +2,7 @@
 اندپوینت‌های وب‌هوک و API یکپارچه چندکاناله (Omni-Channel Ingestion & Automation API)
 مسیر پایه: /api/omnichannel
 پشتیبانی از کلیه درگاه‌های: VoIP, SMS, Telegram, WhatsApp, Bale, Eitaa, Rubika, Instagram
-و ارتباط متقابل با ورک‌فلوهای n8n
+و پردازش مستقیم با موتور بومی پایتون
 """
 
 import os
@@ -80,15 +80,15 @@ def handle_omnichannel_webhook(channel):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @omnichannel_bp.route('/owner/create', methods=['POST'])
-def create_owner_from_n8n():
+def create_owner_from_automation():
     """
-    اندپوینت اختصاصی ثبت ملک و مالک از طریق n8n یا سرویس‌های هوش مصنوعی بیرونی
+    اندپوینت اختصاصی ثبت ملک و مالک از طریق اتوماسیون بومی
     """
     data = request.get_json(silent=True) or {}
     if not data:
         return jsonify({'success': False, 'error': 'داده JSON الزامی است'}), 400
 
-    channel = data.get('channel', 'n8n_automation')
+    channel = data.get('channel', 'native_automation')
     raw_text = data.get('raw_text', '')
 
     owner, prop = DualCRMStore.store_owner_and_property(data, channel=channel, raw_text=raw_text)
@@ -105,15 +105,15 @@ def create_owner_from_n8n():
     })
 
 @omnichannel_bp.route('/lead/create', methods=['POST'])
-def create_lead_from_n8n():
+def create_lead_from_automation():
     """
-    اندپوینت اختصاصی ثبت متقاضی از طریق n8n یا وب‌هوک‌های جانبی
+    اندپوینت اختصاصی ثبت متقاضی از طریق اتوماسیون بومی
     """
     data = request.get_json(silent=True) or {}
     if not data:
         return jsonify({'success': False, 'error': 'داده JSON الزامی است'}), 400
 
-    channel = data.get('channel', 'n8n_automation')
+    channel = data.get('channel', 'native_automation')
     raw_text = data.get('raw_text', '')
 
     lead, client = DualCRMStore.store_customer_lead(data, channel=channel, raw_text=raw_text)
@@ -148,7 +148,7 @@ def match_and_dispatch():
 @omnichannel_bp.route('/followup/check', methods=['POST', 'GET'])
 def trigger_followup_job():
     """
-    فراخوانی کران جاب پیگیری ۲۴ ساعته (توسط نود Schedule در n8n یا کران لوکال)
+    فراخوانی پیگیری ۲۴ ساعته توسط زمان‌بند محلی
     """
     result = nurturing_engine.execute_24h_followup_job()
     return jsonify(result)

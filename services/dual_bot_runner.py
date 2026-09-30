@@ -16,7 +16,7 @@ from typing import Dict, Any
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from config import Config
-from telegram_bot.bot import get_bot, start_polling as start_tg_polling, get_webhook_info as get_tg_webhook_info
+from telegram_bot.bot import get_bot, start_polling as start_tg_polling, stop_polling as stop_tg_polling, get_webhook_info as get_tg_webhook_info
 from bale_bot.client import bale_client
 from bale_bot.bot import start_bale_polling, stop_bale_polling
 
@@ -99,16 +99,19 @@ def start_dual_polling(flask_app=None):
     print("   • پلتفرم ۲: بله (Bale Bot API)")
     print("=" * 60, flush=True)
 
-    # ۱. راه‌اندازی بله
-    try:
-        start_bale_polling(flask_app)
-        if Config.BALE_BOT_TOKEN:
-            print("✅ پروسه Polling بله با توکن رسمی فعال شد.")
-        else:
-            print("✅ پروسه بله در حالت آماده‌باش/شبیه‌سازی (BALE_BOT_TOKEN تنظیم نشده) فعال شد.")
-    except Exception as e:
-        logger.error(f"Failed to start Bale polling: {e}")
-        print(f"⚠️ خطای راه‌اندازی بله: {e}")
+    # ۱. راه‌اندازی بله در ترد اختصاصی
+    def _run_bale():
+        try:
+            start_bale_polling(flask_app)
+        except Exception as e:
+            logger.error(f"Bale polling thread error: {e}")
+
+    _bale_thread = threading.Thread(target=_run_bale, daemon=True)
+    _bale_thread.start()
+    if Config.BALE_BOT_TOKEN:
+        print("✅ پروسه Polling بله با توکن رسمی در پس‌زمینه فعال شد.")
+    else:
+        print("✅ پروسه بله در حالت آماده‌باش/شبیه‌سازی (BALE_BOT_TOKEN تنظیم نشده) فعال شد.")
 
     # ۲. راه‌اندازی تلگرام در ترد اختصاصی
     if Config.TELEGRAM_BOT_TOKEN:
@@ -129,7 +132,14 @@ def stop_dual_polling():
     """توقف ایمن حلقه‌های Polling"""
     global _runner_running
     _runner_running = False
-    stop_bale_polling()
+    try:
+        stop_bale_polling()
+    except Exception as e:
+        logger.error(f"Error stopping Bale polling: {e}")
+    try:
+        stop_tg_polling()
+    except Exception as e:
+        logger.error(f"Error stopping Telegram polling: {e}")
     logger.info("Dual bot runner stopped.")
 
 

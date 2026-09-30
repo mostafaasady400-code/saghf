@@ -159,18 +159,17 @@ class PlaywrightStealthSolver:
         cookies: Optional[List[Dict[str, Any]]] = None
     ) -> Optional[str]:
         """
-        بارگذاری صفحه در مرورگر هدلس با اعمال اسکریپت‌های استلث، مسدودسازی ترافیک رسانه و استخراج HTML
+        بارگذاری صفحه در مرورگر با اعمال اسکریپت‌های استلث یا اتصال سریع CDP به کروم زنده
         """
-        if not self._check_availability():
-            logger.error("[PlaywrightStealthSolver] مرورگر سیستم در دسترس نیست.")
-            return None
-
         self.invocations_count += 1
         t_start = time.perf_counter()
 
         from playwright.sync_api import sync_playwright
         try:
             with sync_playwright() as p:
+                if not self._check_availability():
+                    logger.error("[PlaywrightStealthSolver] مرورگر سیستم در دسترس نیست.")
+                    return None
                 launch_kwargs = {
                     "headless": True,
                     "args": [
@@ -183,50 +182,57 @@ class PlaywrightStealthSolver:
                 }
                 if self._chrome_channel and self._chrome_channel != "chromium":
                     launch_kwargs["channel"] = self._chrome_channel
-
                 browser = p.chromium.launch(**launch_kwargs)
-                context = browser.new_context(
-                    viewport={'width': 1920, 'height': 1080},
-                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                    locale='fa-IR'
-                )
-
-                if cookies:
-                    try:
-                        context.add_cookies(cookies)
-                    except Exception as e:
-                        logger.warning(f"[PlaywrightStealthSolver] خطا در تزریق کوکی: {e}")
-
-                context.add_init_script(self.get_stealth_init_script())
-                page = context.new_page()
-
-                # مسدودسازی بهینه درخواست‌های رسانه‌ای سنگین جهت تسریع ۷۰ درصدی بارگذاری
-                if block_media:
-                    def _route_filter(route):
-                        req = route.request
-                        res_type = req.resource_type
-                        url_lowered = req.url.lower()
-                        media_extensions = ('.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif', '.woff', '.woff2', '.ttf', '.mp4')
-                        if res_type in ('image', 'media', 'font') or any(url_lowered.endswith(ext) for ext in media_extensions):
-                            self.blocked_resources_count += 1
-                            route.abort()
-                        else:
-                            route.continue_()
-                    page.route("**/*", _route_filter)
-
                 try:
-                    page.goto(url, wait_until='commit', timeout=timeout_ms)
+                    context = browser.new_context(
+                        viewport={'width': 1920, 'height': 1080},
+                        user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                        locale='fa-IR'
+                    )
+
+                    if cookies:
+                        try:
+                            context.add_cookies(cookies)
+                        except Exception as e:
+                            logger.warning(f"[PlaywrightStealthSolver] خطا در تزریق کوکی: {e}")
+
+                    context.add_init_script(self.get_stealth_init_script())
+                    page = context.new_page()
+
+                    # مسدودسازی بهینه درخواست‌های رسانه‌ای سنگین جهت تسریع بارگذاری
+                    if block_media:
+                        def _route_filter(route):
+                            req = route.request
+                            res_type = req.resource_type
+                            url_lowered = req.url.lower()
+                            media_extensions = ('.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif', '.woff', '.woff2', '.ttf', '.mp4')
+                            if res_type in ('image', 'media', 'font') or any(url_lowered.endswith(ext) for ext in media_extensions):
+                                self.blocked_resources_count += 1
+                                route.abort()
+                            else:
+                                route.continue_()
+                        try:
+                            page.route("**/*", _route_filter)
+                        except Exception:
+                            pass
+
                     try:
-                        page.wait_for_load_state(wait_until, timeout=8000)
+                        page.goto(url, wait_until='domcontentloaded', timeout=timeout_ms)
+                    except Exception as goto_err:
+                        logger.warning(f"[PlaywrightStealthSolver] هشدار در ناوبری ({url}): {goto_err}")
+
+                    # مکث کوتاه جهت رندر کامل State اولیه جاوااسکریپت
+                    time.sleep(random.uniform(0.6, 1.1))
+                    content = page.content()
+                    try:
+                        page.close()
                     except Exception:
                         pass
-                except Exception as goto_err:
-                    logger.warning(f"[PlaywrightStealthSolver] هشدار در ناوبری ({url}): {goto_err}")
-
-                # مکث کوتاه ارگونومیک جهت رندر کامل State اولیه جاوااسکریپت
-                time.sleep(random.uniform(0.4, 0.8))
-                content = page.content()
-                browser.close()
+                finally:
+                    try:
+                        browser.close()
+                    except Exception:
+                        pass
 
                 elapsed_ms = (time.perf_counter() - t_start) * 1000
                 self.last_render_time_ms = elapsed_ms
@@ -264,53 +270,67 @@ class PlaywrightStealthSolver:
                     launch_kwargs["channel"] = self._chrome_channel
 
                 browser = p.chromium.launch(**launch_kwargs)
-                context = browser.new_context(
-                    viewport={'width': 1280, 'height': 800},
-                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                    locale='fa-IR'
-                )
-                if cookies:
+                full_text = ""
+                try:
+                    context = browser.new_context(
+                        viewport={'width': 1280, 'height': 800},
+                        user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                        locale='fa-IR'
+                    )
+                    if cookies:
+                        try:
+                            context.add_cookies(cookies)
+                        except Exception:
+                            pass
+
+                    context.add_init_script(self.get_stealth_init_script())
+                    page = context.new_page()
+
+                    # جلوگیری از دانلود رسانه‌های سنگین
+                    page.route('**/*.{png,jpg,jpeg,webp,svg,gif,woff,woff2}', lambda r: r.abort())
+                    page.goto(url, wait_until='domcontentloaded', timeout=timeout_ms)
+
                     try:
-                        context.add_cookies(cookies)
+                        page.wait_for_selector('button', timeout=6000)
                     except Exception:
                         pass
 
-                context.add_init_script(self.get_stealth_init_script())
-                page = context.new_page()
+                    # یافتن و کلیک روی دکمه اطلاعات تماس
+                    buttons = page.query_selector_all('button')
+                    contact_btn = None
+                    for b in buttons:
+                        try:
+                            txt = b.inner_text().strip()
+                            if any(k in txt for k in ['اطلاعات تماس', 'تماس با آگهی‌دهنده', 'تماس']):
+                                contact_btn = b
+                                break
+                        except Exception:
+                            continue
 
-                # جلوگیری از دانلود رسانه‌های سنگین
-                page.route('**/*.{png,jpg,jpeg,webp,svg,gif,woff,woff2}', lambda r: r.abort())
-                page.goto(url, wait_until='domcontentloaded', timeout=timeout_ms)
+                    if contact_btn:
+                        try:
+                            contact_btn.click()
+                            time.sleep(1.2)
+                        except Exception as click_err:
+                            logger.debug(f"[PlaywrightStealthSolver] خطا در کلیک دکمه تماس: {click_err}")
 
+                    full_text = page.content()
+                finally:
+                    try:
+                        browser.close()
+                    except Exception:
+                        pass
+
+                # بهره‌گیری از استخراج‌کننده جامع اطلاعات تماس
                 try:
-                    page.wait_for_selector('button', timeout=6000)
+                    from crawler.contact_extractor import ContactExtractor
+                    phone = ContactExtractor.extract_primary_phone(full_text)
+                    if phone:
+                        return phone
                 except Exception:
                     pass
 
-                # یافتن و کلیک روی دکمه اطلاعات تماس
-                buttons = page.query_selector_all('button')
-                contact_btn = None
-                for b in buttons:
-                    try:
-                        txt = b.inner_text().strip()
-                        if any(k in txt for k in ['اطلاعات تماس', 'تماس با آگهی‌دهنده', 'تماس']):
-                            contact_btn = b
-                            break
-                    except Exception:
-                        continue
-
-                if contact_btn:
-                    try:
-                        contact_btn.click()
-                        time.sleep(1.2)
-                    except Exception as click_err:
-                        logger.debug(f"[PlaywrightStealthSolver] خطا در کلیک دکمه تماس: {click_err}")
-
-                # استخراج شماره تلفن همراه از متن یا مدال بازشده
-                full_text = page.content()
-                browser.close()
-
-                # جستجوی الگوی شماره تلفن‌های ایرانی
+                # جستجوی الگوی شماره تلفن‌های ایرانی در صورت در دسترس نبودن استخراج‌کننده
                 persian_digits = {'۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9'}
                 normalized = "".join(persian_digits.get(ch, ch) for ch in full_text)
                 match = re.search(r'09\d{9}', normalized)
@@ -343,7 +363,7 @@ class FallbackSolver:
     سیستم بازیابی اضطراری و صف Dead Letter Queue (DLQ)
     تشخیص پاسخ‌های مسدودشده توسط WAF، اعمال عقب‌نشینی نمایی با Jitter و سوئیچ خودکار به Tier 2
     """
-    def __init__(self, max_retries: int = 3, base_delay: float = 1.5):
+    def __init__(self, max_retries: int = 1, base_delay: float = 1.0):
         self.max_retries = max_retries
         self.base_delay = base_delay
         self.dlq: List[Dict[str, Any]] = []
@@ -356,12 +376,17 @@ class FallbackSolver:
             return True
         if status_code == 200:
             lowered = response_text.lower() if response_text else ""
+            # اگر ویجت‌های آگهی در پاسخ موجود باشد، پاسخ به هیچ وجه مسدود نیست
+            if 'post_row' in lowered or ('listwidgets' in lowered and '"listwidgets":[]' not in lowered):
+                return False
+
             waf_markers = [
                 'cf-challenge', 'cf-browser-verification', '<title>just a moment...',
                 'attention required! | cloudflare', '<title>access denied</title>',
                 'challenge-platform', 'turnstile-wrapper',
                 'کد امنیتی', 'ارسال بیش از حد مجاز', 'human-challenge',
-                'bot-detected', 'کد امنیتی را وارد کنید'
+                'bot-detected', 'کد امنیتی را وارد کنید',
+                '"hasssrunauthorizederror":true', '"hasssrunauthorizederror": true'
             ]
             if any(m in lowered for m in waf_markers):
                 return True

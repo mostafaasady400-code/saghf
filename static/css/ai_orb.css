@@ -18,29 +18,29 @@
     --saghf-gold-glow: rgba(212, 175, 55, 0.45);
     --saghf-gold-glow-high: rgba(252, 231, 159, 0.75);
     --saghf-gold-border: rgba(212, 175, 55, 0.35);
-    /* AI Plasma palette (Orb) */
-    --orb-plasma-blue: #38bdf8;
-    --orb-plasma-violet: #a855f7;
-    --orb-plasma-cyan: #06b6d4;
-    --orb-plasma-indigo: #6366f1;
-    --orb-plasma-pink: #ec4899;
-    --orb-glow-blue: rgba(56, 189, 248, 0.65);
-    --orb-glow-violet: rgba(168, 85, 247, 0.55);
-    --orb-core-bg: radial-gradient(circle at 38% 32%, #1e1b4b 0%, #0f172a 40%, #020617 80%, #000000 100%);
+    /* AI Luxury Gold & Obsidian Palette (Orb) */
+    --orb-plasma-gold: #D4AF37;
+    --orb-plasma-gold-bright: #FFDF73;
+    --orb-plasma-gold-dark: #AA7C11;
+    --orb-plasma-gold-soft: #F5E6B8;
+    --orb-plasma-amber: #F59E0B;
+    --orb-glow-gold: rgba(212, 175, 55, 0.65);
+    --orb-glow-gold-bright: rgba(255, 223, 115, 0.55);
+    --orb-core-bg: radial-gradient(circle at 38% 32%, #261f0c 0%, #15120a 40%, #0a0a0c 80%, #000000 100%);
     --saghf-emerald: #10b981;
     --saghf-ruby: #ef4444;
 }
 
 /* ==========================================================================
-   ۱. گوی پلازمای هوش مصنوعی (AI Plasma Neural Orb — Cinematic Grade)
+   ۱. گوی هوشمند هوش مصنوعی سقف (AI Luxury Gold & Obsidian Sphere)
    ========================================================================== */
 .saghf-smart-sphere-floating {
     position: fixed;
-    bottom: 30px;
-    left: 30px;
+    bottom: 28px;
+    left: 28px;
     z-index: 1050;
-    width: 88px;
-    height: 88px;
+    width: 104px;
+    height: 104px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -50,33 +50,42 @@
     background: transparent;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    perspective: 1200px;
+    perspective: 1400px;
     transform-style: preserve-3d;
     animation: saghfSphereLevitate 5.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
-    filter: drop-shadow(0 8px 32px rgba(99, 102, 241, 0.5)) drop-shadow(0 0 20px rgba(56, 189, 248, 0.3));
+    filter:
+        drop-shadow(0 10px 38px rgba(212, 175, 55, 0.65))
+        drop-shadow(0 0 28px rgba(255, 223, 115, 0.4))
+        drop-shadow(0 0 60px rgba(212, 175, 55, 0.22));
 }
 
-/* هاله حجمی پلازمای آبی-بنفش (Volumetric Plasma Aura) */
+.saghf-smart-sphere-floating:hover {
+    transform: translateY(-4px) scale(1.05);
+    animation-play-state: paused;
+}
+
+
+/* هاله حجمی لوکس طلایی (Volumetric Gold Aura) */
 .saghf-sphere-halo {
     position: absolute;
-    inset: -20px;
+    inset: -28px;
     border-radius: 50%;
     background: radial-gradient(
         circle,
-        rgba(99, 102, 241, 0.45) 0%,
-        rgba(168, 85, 247, 0.25) 35%,
-        rgba(56, 189, 248, 0.15) 60%,
-        transparent 75%
+        rgba(212, 175, 55, 0.60) 0%,
+        rgba(255, 223, 115, 0.38) 30%,
+        rgba(170, 124, 17, 0.18) 58%,
+        transparent 72%
     );
-    filter: blur(16px);
+    filter: blur(20px);
     pointer-events: none;
     z-index: 1;
     animation: saghfHaloBreathe 3.5s ease-in-out infinite alternate;
     transition: all 0.5s ease;
 }
 
-/* حلقه‌های سه‌گانه ژیروسکوپ (Triple Gyroscopic Orbit Rings) */
+/* حلقه‌های سه‌گانه ژیروسکوپ طلایی (Triple Gyroscopic Orbit Rings) */
 .saghf-sphere-ring {
     position: absolute;
     border-radius: 50%;
@@ -87,53 +96,53 @@
 }
 
 .saghf-sphere-ring.ring-primary {
-    width: 96px;
-    height: 96px;
-    border-top-color: rgba(56, 189, 248, 0.9);
-    border-bottom-color: rgba(168, 85, 247, 0.5);
+    width: 114px;
+    height: 114px;
+    border-top-color: rgba(255, 223, 115, 1.0);
+    border-bottom-color: rgba(212, 175, 55, 0.65);
     box-shadow:
-        0 0 12px rgba(56, 189, 248, 0.6),
-        inset 0 0 6px rgba(56, 189, 248, 0.2);
+        0 0 18px rgba(212, 175, 55, 0.75),
+        inset 0 0 8px rgba(255, 223, 115, 0.4);
     transform: rotateX(70deg) rotateY(20deg);
     animation: saghfGyroSpin1 7s linear infinite;
 }
 
 .saghf-sphere-ring.ring-secondary {
-    width: 108px;
-    height: 108px;
-    border-right-color: rgba(168, 85, 247, 0.8);
-    border-left-color: rgba(99, 102, 241, 0.6);
-    box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
+    width: 128px;
+    height: 128px;
+    border-right-color: rgba(212, 175, 55, 0.95);
+    border-left-color: rgba(255, 223, 115, 0.75);
+    box-shadow: 0 0 18px rgba(212, 175, 55, 0.55);
     transform: rotateX(-50deg) rotateY(55deg);
     animation: saghfGyroSpin2 11s linear infinite reverse;
 }
 
 .saghf-sphere-ring.ring-tertiary {
-    width: 118px;
-    height: 118px;
-    border-top-color: rgba(236, 72, 153, 0.4);
-    border-left-color: rgba(56, 189, 248, 0.35);
-    box-shadow: 0 0 10px rgba(236, 72, 153, 0.3);
+    width: 142px;
+    height: 142px;
+    border-top-color: rgba(170, 124, 17, 0.65);
+    border-left-color: rgba(255, 223, 115, 0.55);
+    box-shadow: 0 0 14px rgba(212, 175, 55, 0.4);
     transform: rotateX(20deg) rotateY(-65deg);
     animation: saghfGyroSpin3 15s linear infinite;
 }
 
-/* هسته پلازمای آبسیدین (Plasma Neural Core) */
+/* هسته اوبسیدین با درخشش طلایی (Obsidian Gold Core) */
 .saghf-sphere-core {
     position: relative;
-    width: 70px;
-    height: 70px;
+    width: 84px;
+    height: 84px;
     border-radius: 50%;
     background: var(--orb-core-bg);
-    border: 1.5px solid rgba(99, 102, 241, 0.6);
+    border: 2px solid rgba(212, 175, 55, 0.75);
     box-shadow:
-        0 0 0 1px rgba(56, 189, 248, 0.12),
-        0 12px 40px rgba(0, 0, 0, 0.9),
-        0 0 30px rgba(99, 102, 241, 0.4),
-        0 0 60px rgba(56, 189, 248, 0.15),
-        inset 0 0 30px rgba(0, 0, 0, 0.98),
-        inset 0 1px 8px rgba(56, 189, 248, 0.35),
-        inset 0 -1px 4px rgba(168, 85, 247, 0.25);
+        0 0 0 1px rgba(255, 223, 115, 0.28),
+        0 14px 50px rgba(0, 0, 0, 0.97),
+        0 0 40px rgba(212, 175, 55, 0.55),
+        0 0 75px rgba(255, 223, 115, 0.28),
+        inset 0 0 35px rgba(0, 0, 0, 0.99),
+        inset 0 1px 10px rgba(255, 223, 115, 0.5),
+        inset 0 -1px 6px rgba(212, 175, 55, 0.4);
     overflow: hidden;
     z-index: 3;
     display: flex;
@@ -142,7 +151,7 @@
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* بوم رندر شبکه نورونی دینامیک (Neural Network Canvas) */
+/* بوم رندر ذرات طلایی (Neural Network Canvas) */
 .saghf-sphere-canvas {
     position: absolute;
     inset: 0;
@@ -153,7 +162,7 @@
     z-index: 1;
 }
 
-/* انعکاس نور بالایی کریستالی سرد (Cold Crystal Specular) */
+/* انعکاس نور کریستالی طلایی (Luxury Gold Specular Highlight) */
 .saghf-sphere-specular-highlight {
     position: absolute;
     top: 4px;
@@ -163,8 +172,8 @@
     border-radius: 50%;
     background: radial-gradient(
         ellipse at 40% 30%,
-        rgba(255, 255, 255, 0.75) 0%,
-        rgba(186, 230, 253, 0.5) 35%,
+        rgba(255, 255, 255, 0.85) 0%,
+        rgba(255, 223, 115, 0.6) 35%,
         transparent 70%
     );
     transform: rotate(-28deg);
@@ -174,15 +183,15 @@
     filter: blur(0.8px);
 }
 
-/* بازتاب پایینی (Rim Light — violet tint) */
+/* بازتاب ریم لایت پایینی (Rim Light — gold tint) */
 .saghf-sphere-rim-light {
     position: absolute;
     inset: 0;
     border-radius: 50%;
     background: radial-gradient(
         circle at 72% 82%,
-        rgba(168, 85, 247, 0.4) 0%,
-        rgba(99, 102, 241, 0.18) 40%,
+        rgba(212, 175, 55, 0.45) 0%,
+        rgba(170, 124, 17, 0.2) 40%,
         transparent 65%
     );
     pointer-events: none;
@@ -196,30 +205,31 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #bae6fd;
+    color: #FFDF73;
     filter:
-        drop-shadow(0 0 6px rgba(56, 189, 248, 0.9))
-        drop-shadow(0 0 14px rgba(99, 102, 241, 0.7));
+        drop-shadow(0 0 8px rgba(255, 223, 115, 1.0))
+        drop-shadow(0 0 18px rgba(212, 175, 55, 0.9))
+        drop-shadow(0 0 35px rgba(212, 175, 55, 0.5));
     transition: transform 0.3s ease, color 0.3s ease, filter 0.3s ease;
     animation: saghfOrbIconPulse 3s ease-in-out infinite;
 }
 
 .saghf-mic-svg {
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    stroke: url(#orbIconGrad) #bae6fd;
+    stroke: url(#orbIconGrad) #FFDF73;
 }
 
-/* بج وضعیت (Status Badge) */
+/* بج وضعیت لوکس (Status Badge) */
 .saghf-sphere-badge {
     position: absolute;
     top: -10px;
     right: -6px;
-    background: rgba(2, 6, 23, 0.92);
+    background: rgba(10, 10, 12, 0.94);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(99, 102, 241, 0.55);
+    border: 1px solid rgba(212, 175, 55, 0.5);
     box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.7),
-        0 0 12px rgba(99, 102, 241, 0.3);
+        0 4px 16px rgba(0, 0, 0, 0.8),
+        0 0 14px rgba(212, 175, 55, 0.3);
     border-radius: 9999px;
     padding: 0.2rem 0.6rem;
     display: flex;
@@ -235,26 +245,26 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #38bdf8;
-    box-shadow: 0 0 8px #38bdf8, 0 0 16px rgba(56, 189, 248, 0.5);
+    background: #D4AF37;
+    box-shadow: 0 0 8px #D4AF37, 0 0 16px rgba(255, 223, 115, 0.6);
     animation: saghfBadgeDotPulse 1.6s ease-in-out infinite alternate;
 }
 
 .saghf-badge-title {
     font-size: 0.62rem;
     font-weight: 700;
-    color: #bae6fd;
+    color: #FFDF73;
     letter-spacing: 0.3px;
 }
 
-/* امواج پالس پلازما (Plasma Pulse Ripples) */
+/* امواج پالس طلایی (Gold Pulse Ripples) */
 .saghf-sphere-pulse-wave {
     position: absolute;
-    width: 70px;
-    height: 70px;
+    width: 84px;
+    height: 84px;
     border-radius: 50%;
-    border: 1.5px solid rgba(99, 102, 241, 0.7);
-    box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    border: 2px solid rgba(212, 175, 55, 0.75);
+    box-shadow: 0 0 16px rgba(255, 223, 115, 0.5);
     opacity: 0;
     pointer-events: none;
     z-index: 0;
@@ -266,65 +276,65 @@
 .saghf-smart-sphere-floating:hover {
     transform: scale(1.14) translateY(-7px);
     filter:
-        drop-shadow(0 18px 40px rgba(0, 0, 0, 0.85))
-        drop-shadow(0 0 30px rgba(99, 102, 241, 0.75))
-        drop-shadow(0 0 50px rgba(56, 189, 248, 0.4));
+        drop-shadow(0 18px 40px rgba(0, 0, 0, 0.9))
+        drop-shadow(0 0 30px rgba(212, 175, 55, 0.75))
+        drop-shadow(0 0 50px rgba(255, 223, 115, 0.45));
 }
 
 .saghf-smart-sphere-floating:hover .saghf-sphere-halo {
     inset: -28px;
     background: radial-gradient(
         circle,
-        rgba(99, 102, 241, 0.6) 0%,
-        rgba(168, 85, 247, 0.35) 38%,
-        rgba(56, 189, 248, 0.18) 62%,
+        rgba(212, 175, 55, 0.6) 0%,
+        rgba(255, 223, 115, 0.35) 38%,
+        rgba(170, 124, 17, 0.18) 62%,
         transparent 80%
     );
     filter: blur(22px);
 }
 
 .saghf-smart-sphere-floating:hover .saghf-sphere-core {
-    border-color: rgba(56, 189, 248, 0.9);
+    border-color: rgba(255, 223, 115, 0.9);
     box-shadow:
-        0 0 0 2px rgba(56, 189, 248, 0.2),
-        0 16px 48px rgba(0, 0, 0, 0.9),
-        0 0 45px rgba(99, 102, 241, 0.7),
-        0 0 80px rgba(56, 189, 248, 0.3),
+        0 0 0 2px rgba(255, 223, 115, 0.25),
+        0 16px 48px rgba(0, 0, 0, 0.95),
+        0 0 45px rgba(212, 175, 55, 0.7),
+        0 0 80px rgba(255, 223, 115, 0.35),
         inset 0 0 30px rgba(0, 0, 0, 0.98),
-        inset 0 2px 10px rgba(56, 189, 248, 0.55),
-        inset 0 -2px 6px rgba(168, 85, 247, 0.4);
+        inset 0 2px 10px rgba(255, 223, 115, 0.6),
+        inset 0 -2px 6px rgba(212, 175, 55, 0.45);
 }
 
 .saghf-smart-sphere-floating:hover .saghf-sphere-ring.ring-primary {
-    border-top-color: #bae6fd;
-    border-bottom-color: rgba(168, 85, 247, 0.8);
-    box-shadow: 0 0 20px rgba(56, 189, 248, 0.9);
+    border-top-color: #FFF2B2;
+    border-bottom-color: rgba(212, 175, 55, 0.85);
+    box-shadow: 0 0 20px rgba(255, 223, 115, 0.9);
     animation-duration: 4s;
 }
 
 .saghf-smart-sphere-floating:hover .saghf-sphere-ring.ring-secondary {
-    border-right-color: #c084fc;
-    box-shadow: 0 0 22px rgba(168, 85, 247, 0.8);
+    border-right-color: #FFDF73;
+    box-shadow: 0 0 22px rgba(212, 175, 55, 0.8);
     animation-duration: 6.5s;
 }
 
 .saghf-smart-sphere-floating:hover .saghf-sphere-ring.ring-tertiary {
-    border-top-color: rgba(236, 72, 153, 0.7);
-    box-shadow: 0 0 16px rgba(236, 72, 153, 0.5);
+    border-top-color: rgba(212, 175, 55, 0.7);
+    box-shadow: 0 0 16px rgba(255, 223, 115, 0.5);
     animation-duration: 9s;
 }
 
 .saghf-smart-sphere-floating:hover .saghf-sphere-icon-wrap {
-    color: #e0f2fe;
+    color: #FFF2B2;
     filter:
-        drop-shadow(0 0 10px rgba(56, 189, 248, 1))
-        drop-shadow(0 0 22px rgba(99, 102, 241, 0.9));
+        drop-shadow(0 0 10px rgba(255, 223, 115, 1))
+        drop-shadow(0 0 22px rgba(212, 175, 55, 0.9));
     transform: scale(1.12);
 }
 
 .saghf-smart-sphere-floating:hover .saghf-sphere-badge {
-    border-color: rgba(56, 189, 248, 0.7);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8), 0 0 16px rgba(56, 189, 248, 0.4);
+    border-color: rgba(255, 223, 115, 0.7);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8), 0 0 16px rgba(212, 175, 55, 0.45);
 }
 
 .saghf-smart-sphere-floating:active {
@@ -334,22 +344,22 @@
 
 /* وضعیت شنود / Listening */
 .saghf-smart-sphere-floating.is-listening .saghf-sphere-core {
-    background: radial-gradient(circle at 38% 32%, #1e1240 0%, #0f0a2e 40%, #04031a 80%, #000000 100%);
-    border-color: #a78bfa;
+    background: radial-gradient(circle at 38% 32%, #3d2c08 0%, #201704 40%, #0a0a0c 80%, #000000 100%);
+    border-color: #FFDF73;
     box-shadow:
-        0 0 0 2px rgba(167, 139, 250, 0.25),
-        0 0 40px rgba(139, 92, 246, 0.9),
-        0 0 80px rgba(99, 102, 241, 0.6),
-        inset 0 0 35px rgba(139, 92, 246, 0.6);
+        0 0 0 2px rgba(255, 223, 115, 0.35),
+        0 0 40px rgba(212, 175, 55, 0.95),
+        0 0 80px rgba(255, 223, 115, 0.6),
+        inset 0 0 35px rgba(212, 175, 55, 0.65);
     animation: saghfListeningCorePulse 1.1s ease-in-out infinite alternate;
 }
 
 .saghf-smart-sphere-floating.is-listening .saghf-sphere-halo {
     background: radial-gradient(
         circle,
-        rgba(139, 92, 246, 0.65) 0%,
-        rgba(99, 102, 241, 0.35) 40%,
-        rgba(56, 189, 248, 0.15) 65%,
+        rgba(212, 175, 55, 0.7) 0%,
+        rgba(255, 223, 115, 0.4) 40%,
+        rgba(170, 124, 17, 0.18) 65%,
         transparent 80%
     );
     animation: saghfHaloBreathe 1.5s ease-in-out infinite alternate;
@@ -361,8 +371,8 @@
 }
 
 .saghf-smart-sphere-floating.is-listening .saghf-sphere-pulse-wave {
-    border-color: rgba(139, 92, 246, 0.6);
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+    border-color: rgba(212, 175, 55, 0.7);
+    box-shadow: 0 0 12px rgba(255, 223, 115, 0.55);
 }
 
 .saghf-smart-sphere-floating.is-listening .saghf-sphere-pulse-wave.wave-1 {
@@ -1156,18 +1166,18 @@
     0% {
         transform: scale(1);
         box-shadow:
-            0 0 0 2px rgba(139, 92, 246, 0.2),
-            0 0 35px rgba(139, 92, 246, 0.8),
-            0 0 65px rgba(99, 102, 241, 0.5),
-            inset 0 0 25px rgba(139, 92, 246, 0.5);
+            0 0 0 2px rgba(212, 175, 55, 0.3),
+            0 0 35px rgba(212, 175, 55, 0.85),
+            0 0 65px rgba(255, 223, 115, 0.5),
+            inset 0 0 25px rgba(212, 175, 55, 0.5);
     }
     100% {
         transform: scale(1.07);
         box-shadow:
-            0 0 0 3px rgba(167, 139, 250, 0.3),
-            0 0 55px rgba(139, 92, 246, 1),
-            0 0 90px rgba(99, 102, 241, 0.7),
-            inset 0 0 40px rgba(167, 139, 250, 0.8);
+            0 0 0 3px rgba(255, 223, 115, 0.4),
+            0 0 55px rgba(212, 175, 55, 1),
+            0 0 90px rgba(255, 223, 115, 0.7),
+            inset 0 0 40px rgba(255, 223, 115, 0.8);
     }
 }
 
@@ -1190,14 +1200,59 @@
 @keyframes saghfOrbIconPulse {
     0%, 100% {
         filter:
-            drop-shadow(0 0 6px rgba(56, 189, 248, 0.9))
-            drop-shadow(0 0 14px rgba(99, 102, 241, 0.7));
+            drop-shadow(0 0 6px rgba(255, 223, 115, 0.9))
+            drop-shadow(0 0 14px rgba(212, 175, 55, 0.7));
     }
     50% {
         filter:
-            drop-shadow(0 0 10px rgba(56, 189, 248, 1))
-            drop-shadow(0 0 22px rgba(168, 85, 247, 0.9));
+            drop-shadow(0 0 10px rgba(255, 223, 115, 1))
+            drop-shadow(0 0 22px rgba(212, 175, 55, 0.95));
     }
+}
+
+/* انیمیشن جدید: مدار سایبرنتیک حلقه‌ها هنگام شنود (Cybernetic Ring Overdrive) */
+@keyframes saghfCyberRingOverdrive {
+    0% {
+        border-color: rgba(212, 175, 55, 0.5);
+        box-shadow: 0 0 12px rgba(212, 175, 55, 0.4), 0 0 30px rgba(255, 223, 115, 0.2);
+    }
+    25% {
+        border-color: rgba(255, 223, 115, 0.9);
+        box-shadow: 0 0 20px rgba(255, 223, 115, 0.85), 0 0 50px rgba(212, 175, 55, 0.5);
+    }
+    50% {
+        border-color: rgba(212, 175, 55, 0.95);
+        box-shadow: 0 0 25px rgba(212, 175, 55, 1), 0 0 60px rgba(255, 223, 115, 0.6);
+    }
+    75% {
+        border-color: rgba(255, 223, 115, 0.7);
+        box-shadow: 0 0 18px rgba(255, 223, 115, 0.75), 0 0 45px rgba(212, 175, 55, 0.4);
+    }
+    100% {
+        border-color: rgba(212, 175, 55, 0.5);
+        box-shadow: 0 0 12px rgba(212, 175, 55, 0.4), 0 0 30px rgba(255, 223, 115, 0.2);
+    }
+}
+
+/* فعال‌سازی مدار سایبرنتیک روی حلقه‌ها هنگام شنود */
+.saghf-smart-sphere-floating.is-listening .saghf-sphere-ring.ring-primary {
+    animation: saghfGyroSpin1 3.5s linear infinite, saghfCyberRingOverdrive 2s ease-in-out infinite;
+    border-top-color: #FFDF73;
+    border-bottom-color: rgba(212, 175, 55, 0.95);
+}
+
+.saghf-smart-sphere-floating.is-listening .saghf-sphere-ring.ring-secondary {
+    animation: saghfGyroSpin2 5s linear infinite reverse, saghfCyberRingOverdrive 2.5s ease-in-out infinite;
+    animation-delay: 0s, 0.4s;
+    border-right-color: #FFDF73;
+    border-left-color: rgba(255, 223, 115, 0.9);
+}
+
+.saghf-smart-sphere-floating.is-listening .saghf-sphere-ring.ring-tertiary {
+    animation: saghfGyroSpin3 7s linear infinite, saghfCyberRingOverdrive 3s ease-in-out infinite;
+    animation-delay: 0s, 0.8s;
+    border-top-color: rgba(255, 223, 115, 0.8);
+    border-left-color: rgba(212, 175, 55, 0.75);
 }
 
 @keyframes saghfSoundWaveAnim {
@@ -2424,8 +2479,8 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #00d2ff;
-    box-shadow: 0 0 12px #00d2ff;
+    background: #D4AF37;
+    box-shadow: 0 0 12px #D4AF37, 0 0 4px #FFDF73;
     animation: luxuryPulse 2s infinite;
 }
 
@@ -2540,21 +2595,21 @@
     }
 }
 
-/* هاله‌های نوری شارپ آبی متالیک و بنفش نئونی بدون تاری کدر */
+/* هاله‌های نوری لوکس طلایی متالیک (Luxury Gold Aurora) */
 .saghf-orb-aurora-glow {
     position: absolute;
-    inset: -12px;
+    inset: -16px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(0, 210, 255, 0.28) 0%, rgba(155, 81, 224, 0.22) 50%, transparent 74%);
-    filter: blur(14px);
-    animation: orbGlowBreathe 3s ease-in-out infinite alternate;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.32) 0%, rgba(255, 223, 115, 0.18) 45%, transparent 72%);
+    filter: blur(16px);
+    animation: orbGlowBreathe 3.5s ease-in-out infinite alternate;
     pointer-events: none;
     z-index: 1;
 }
 
 @keyframes orbGlowBreathe {
-    0% { transform: scale(0.94); opacity: 0.7; }
-    100% { transform: scale(1.08); opacity: 1.0; }
+    0% { transform: scale(0.92); opacity: 0.65; }
+    100% { transform: scale(1.1); opacity: 1.0; }
 }
 
 /* حلقه‌های ژیروسکوپ هولوگرافیک سه‌بعدی دور گوی (3D Gyroscopic Rings) */
@@ -2565,62 +2620,66 @@
     z-index: 3;
 }
 
-.saghf-orb-gyro-ring.ring-cyan {
-    width: 325px;
-    height: 325px;
-    border: 1.5px solid rgba(0, 210, 255, 0.45);
-    border-top-color: #00d2ff;
-    border-bottom-color: rgba(0, 210, 255, 0.1);
-    box-shadow: 0 0 15px rgba(0, 210, 255, 0.35);
+.saghf-orb-gyro-ring.ring-cyan,
+.saghf-orb-gyro-ring.ring-gold {
+    width: 360px;
+    height: 360px;
+    border: 1.5px solid rgba(212, 175, 55, 0.45);
+    border-top-color: #D4AF37;
+    border-bottom-color: rgba(212, 175, 55, 0.1);
+    box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
     transform: rotateX(68deg) rotateY(15deg);
-    animation: spinRingCyan 9s linear infinite;
+    animation: spinRingGold 10s linear infinite;
 }
 
-.saghf-orb-gyro-ring.ring-violet {
-    width: 338px;
-    height: 338px;
-    border: 1.5px dashed rgba(155, 81, 224, 0.5);
-    border-left-color: #9b51e0;
-    border-right-color: rgba(155, 81, 224, 0.15);
-    box-shadow: 0 0 18px rgba(155, 81, 224, 0.35);
+.saghf-orb-gyro-ring.ring-violet,
+.saghf-orb-gyro-ring.ring-gold-light {
+    width: 375px;
+    height: 375px;
+    border: 1.5px dashed rgba(255, 223, 115, 0.45);
+    border-left-color: #FFDF73;
+    border-right-color: rgba(255, 223, 115, 0.12);
+    box-shadow: 0 0 18px rgba(255, 223, 115, 0.3);
     transform: rotateX(-58deg) rotateY(-22deg);
-    animation: spinRingViolet 12s linear infinite reverse;
+    animation: spinRingGoldLight 13s linear infinite reverse;
 }
 
-.saghf-orb-gyro-ring.ring-cyan-sm {
-    width: 230px;
-    height: 230px;
-    border: 1.5px solid rgba(0, 210, 255, 0.5);
+.saghf-orb-gyro-ring.ring-cyan-sm,
+.saghf-orb-gyro-ring.ring-gold-sm {
+    width: 250px;
+    height: 250px;
+    border: 1.5px solid rgba(212, 175, 55, 0.5);
     transform: rotateX(68deg);
-    animation: spinRingCyan 8s linear infinite;
+    animation: spinRingGold 9s linear infinite;
 }
 
-.saghf-orb-gyro-ring.ring-violet-sm {
-    width: 242px;
-    height: 242px;
-    border: 1.5px dashed rgba(155, 81, 224, 0.5);
+.saghf-orb-gyro-ring.ring-violet-sm,
+.saghf-orb-gyro-ring.ring-gold-light-sm {
+    width: 265px;
+    height: 265px;
+    border: 1.5px dashed rgba(255, 223, 115, 0.45);
     transform: rotateX(-58deg);
-    animation: spinRingViolet 10s linear infinite reverse;
+    animation: spinRingGoldLight 11s linear infinite reverse;
 }
 
-@keyframes spinRingCyan {
+@keyframes spinRingGold {
     0% { transform: rotateX(68deg) rotateZ(0deg); }
     100% { transform: rotateX(68deg) rotateZ(360deg); }
 }
 
-@keyframes spinRingViolet {
+@keyframes spinRingGoldLight {
     0% { transform: rotateX(-58deg) rotateZ(0deg); }
     100% { transform: rotateX(-58deg) rotateZ(360deg); }
 }
 
-/* سایه کف معلق و دیسک امواج صوتی */
+/* سایه کف معلق طلایی */
 .saghf-orb-shadow-base {
     position: absolute;
-    bottom: -22px;
-    width: 190px;
+    bottom: -24px;
+    width: 200px;
     height: 18px;
     border-radius: 50%;
-    background: radial-gradient(ellipse at center, rgba(0, 210, 255, 0.35) 0%, rgba(155, 81, 224, 0.2) 40%, transparent 75%);
+    background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.35) 0%, rgba(255, 223, 115, 0.18) 40%, transparent 75%);
     filter: blur(8px);
     animation: orbShadowPulse 4.5s ease-in-out infinite;
     pointer-events: none;
@@ -2634,18 +2693,18 @@
 
 .saghf-webgl-canvas {
     position: relative;
-    width: 280px;
-    height: 280px;
+    width: 340px;
+    height: 340px;
     border-radius: 50%;
     z-index: 2;
     background: transparent;
-    filter: drop-shadow(0 0 25px rgba(0, 210, 255, 0.35)) drop-shadow(0 0 45px rgba(155, 81, 224, 0.25));
+    filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.35)) drop-shadow(0 0 55px rgba(255, 223, 115, 0.2));
 }
 
 .saghf-webgl-canvas.active {
-    width: 210px;
-    height: 210px;
-    filter: drop-shadow(0 0 20px rgba(0, 210, 255, 0.45));
+    width: 240px;
+    height: 240px;
+    filter: drop-shadow(0 0 25px rgba(212, 175, 55, 0.45));
 }
 
 .saghf-orb-interactive-tag {
@@ -2654,13 +2713,13 @@
     left: 50%;
     transform: translateX(-50%);
     background: rgba(8, 10, 16, 0.94);
-    border: 1.5px solid rgba(0, 210, 255, 0.55);
+    border: 1.5px solid rgba(212, 175, 55, 0.55);
     color: #ffffff;
     font-size: 0.82rem;
     font-weight: 700;
     padding: 0.45rem 1.3rem;
     border-radius: 9999px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 210, 255, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 20px rgba(212, 175, 55, 0.35);
     white-space: nowrap;
     display: flex;
     align-items: center;
@@ -2671,8 +2730,8 @@
 }
 
 .saghf-webgl-orb-anchor:hover .saghf-orb-interactive-tag {
-    border-color: #00d2ff;
-    box-shadow: 0 8px 28px rgba(0, 210, 255, 0.65);
+    border-color: #FFDF73;
+    box-shadow: 0 8px 28px rgba(212, 175, 55, 0.65);
     transform: translateX(-50%) translateY(-3px);
 }
 
@@ -3314,5 +3373,149 @@
     font-size: 0.82rem;
     margin-top: 0.5rem;
 }
+
+/* ==========================================================================
+   سکو و پداستال سایبرنتیک هولوگرام هوش مصنوعی (Holographic Cybernetic Pedestal)
+   طراحی منطبق با رفرنس تصویر کاربر: سکوی مدور نورانی با پرتوهای بالا به پایین
+   ========================================================================== */
+.saghf-cyber-pedestal {
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 290px;
+    height: 60px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.pedestal-outer-halo {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 320px;
+    height: 48px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(0, 240, 255, 0.38) 0%, rgba(147, 51, 234, 0.25) 45%, transparent 75%);
+    filter: blur(14px);
+    animation: pedestalHaloPulse 4.5s ease-in-out infinite;
+}
+
+.pedestal-disc {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 240px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(2, 6, 23, 0.98) 100%);
+    border: 2px solid rgba(0, 240, 255, 0.65);
+    box-shadow: 
+        0 0 25px rgba(0, 240, 255, 0.45),
+        0 8px 30px rgba(0, 0, 0, 0.9),
+        inset 0 0 20px rgba(147, 51, 234, 0.4);
+}
+
+.pedestal-disc::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    border: 1px dashed rgba(0, 240, 255, 0.5);
+    animation: pedestalDiscSpin 20s linear infinite;
+}
+
+.pedestal-glow-beam {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 220px;
+    height: 120px;
+    background: radial-gradient(ellipse at bottom, rgba(0, 240, 255, 0.22) 0%, rgba(147, 51, 234, 0.12) 50%, transparent 80%);
+    filter: blur(12px);
+    pointer-events: none;
+    animation: beamBreathe 3s ease-in-out infinite alternate;
+}
+
+@keyframes pedestalHaloPulse {
+    0%, 100% { opacity: 0.65; transform: translateX(-50%) scale(1); }
+    50% { opacity: 1.0; transform: translateX(-50%) scale(1.08); }
+}
+
+@keyframes beamBreathe {
+    0% { opacity: 0.5; height: 100px; }
+    100% { opacity: 0.95; height: 140px; }
+}
+
+@keyframes pedestalDiscSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   نوار انتخاب سناریوی کنسول هوشمند داخل پنل بازشونده
+   ========================================================================== */
+.saghf-console-scenario-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1.5rem;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+    background: rgba(15, 23, 42, 0.75);
+    flex-wrap: wrap;
+}
+
+.saghf-console-tab {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #94a3b8;
+    padding: 0.5rem 1.15rem;
+    border-radius: 9999px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.saghf-console-tab:hover {
+    color: #ffffff;
+    background: rgba(0, 240, 255, 0.12);
+    border-color: rgba(0, 240, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+.saghf-console-tab.active {
+    color: #00f0ff;
+    background: rgba(0, 240, 255, 0.16);
+    border-color: #00f0ff;
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+}
+
+.saghf-console-close-btn {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+    padding: 0.45rem 0.95rem;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-right: auto;
+    transition: all 0.25s ease;
+}
+
+.saghf-console-close-btn:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
 
 

@@ -34,7 +34,7 @@ class TestTehranDistrictsAndSharedHousing(unittest.TestCase):
         self.assertIn("جنت‌آباد جنوبی", sub_names_5)
 
         # Test Divar slug mapping
-        self.assertEqual(get_divar_slug_for_district("پونک"), "poonak")
+        self.assertEqual(get_divar_slug_for_district("پونک"), "punak")
         self.assertEqual(get_divar_slug_for_district("سعادت آباد"), "saadat-abad")
         self.assertEqual(get_divar_slug_for_district("سعادت‌آباد"), "saadat-abad")
         self.assertEqual(get_divar_slug_for_district("نیاوران"), "niavaran")

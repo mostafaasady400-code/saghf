@@ -2,10 +2,17 @@
 Automated unit and integration test suite for Infrastructure & Service Health Monitoring.
 Validates zero-mock telemetry, hardware probe accuracy, REST APIs, and Admin UI rendering.
 """
+import os
+import sys
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 import pytest
 from app import create_app
 from services.system_health import SystemHealthService
+
 
 
 @pytest.fixture

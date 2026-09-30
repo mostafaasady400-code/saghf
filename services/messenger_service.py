@@ -148,7 +148,7 @@ class OmniMessengerService:
         """
         تهیه بسته کامل استعلام برای فرانت‌اند شامل متن، شماره، و دیپ‌لینک‌های ۵ پیام‌رسان
         """
-        prop = Property.query.get(property_id)
+        prop = db.session.get(Property, property_id)
         if not prop:
             return {'error': 'ملک یافت نشد'}
 
@@ -176,7 +176,7 @@ class OmniMessengerService:
         """
         ثبت ارسال پیام استعلام در سیستم و تغییر وضعیت به در انتظار پاسخ
         """
-        prop = Property.query.get(property_id)
+        prop = db.session.get(Property, property_id)
         if not prop:
             return False
 
@@ -204,7 +204,7 @@ class OmniMessengerService:
         - اگر ۱ یا available: تایید موجودی، صفر شدن تایمر ۷ روزه و بازگشت به فایل‌های فعال
         - اگر ۲ یا sold/archived: بایگانی قطعی ملک و خروج از چرخه فعال
         """
-        prop = Property.query.get(property_id)
+        prop = db.session.get(Property, property_id)
         if not prop:
             return {'success': False, 'error': 'ملک یافت نشد'}
 

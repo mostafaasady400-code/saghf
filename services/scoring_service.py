@@ -107,13 +107,18 @@ class PropertyScorer:
             reasons.append("👑 اولویت طلایی: اعلام صریح مالکیت مستقیم و شخصی (بی‌واسطه)")
 
         # ۲. تطابق مالی و بودجه با تلورانس (وزن ۳۵ نمره)
+        def _to_num(v, default=0):
+            try:
+                return float(v) if v not in [None, '', 'null'] else default
+            except Exception:
+                return default
+
         if p_deal == 'sale':
             total = int(get_val('total_price') or 0)
-            min_b = criteria.get('min_price')
-            max_b = criteria.get('max_price')
+            min_b = _to_num(criteria.get('min_price'), 0)
+            max_b = _to_num(criteria.get('max_price'), 0)
 
-            if max_b and max_b > 0:
-                min_b = min_b or 0
+            if max_b > 0:
                 if min_b <= total <= max_b:
                     score += 35
                     reasons.append("قیمت دقیقاً در بازه بودجه خریدار")
@@ -132,11 +137,11 @@ class PropertyScorer:
             # رهن و اجاره
             dep = int(get_val('deposit') or 0)
             rent = int(get_val('monthly_rent') or 0)
-            max_dep = criteria.get('max_deposit')
-            max_rent = criteria.get('max_rent')
+            max_dep = _to_num(criteria.get('max_deposit'), 0)
+            max_rent = _to_num(criteria.get('max_rent'), 0)
 
             budget_pts = 0
-            if max_dep and max_dep > 0:
+            if max_dep > 0:
                 if dep <= max_dep:
                     budget_pts += 18
                     reasons.append("ودیعه منطبق بر سقف بودجه")
@@ -148,7 +153,7 @@ class PropertyScorer:
             else:
                 budget_pts += 15
 
-            if max_rent and max_rent > 0:
+            if max_rent > 0:
                 if rent <= max_rent:
                     budget_pts += 17
                     reasons.append("اجاره ماهانه منطبق بر سقف بودجه")
@@ -164,10 +169,10 @@ class PropertyScorer:
 
         # ۳. تطابق متراژ و تعداد خواب (وزن ۱۵ نمره)
         area = int(get_val('area') or 0)
-        min_a = criteria.get('min_area')
-        max_a = criteria.get('max_area')
+        min_a = _to_num(criteria.get('min_area'), 0)
+        max_a = _to_num(criteria.get('max_area'), 0)
         area_pts = 8
-        if min_a and min_a > 0:
+        if min_a > 0:
             if area >= min_a * 0.9:
                 area_pts = 10
                 reasons.append(f"متراژ متناسب ({area} متر)")
@@ -176,8 +181,8 @@ class PropertyScorer:
         score += area_pts
 
         rooms = int(get_val('rooms') or 1)
-        req_rooms = criteria.get('rooms')
-        if req_rooms and int(req_rooms) > 0:
+        req_rooms = _to_num(criteria.get('rooms'), 0)
+        if req_rooms > 0:
             if rooms >= int(req_rooms):
                 score += 5
                 reasons.append(f"تعداد خواب مورد انتظار ({rooms} خواب)")

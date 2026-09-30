@@ -1,3 +1,5 @@
+import os
+import json
 import random
 import time
 import logging
@@ -36,6 +38,27 @@ FINGERPRINT_PROFILES: Dict[str, Dict[str, Any]] = {
         "impersonate": "chrome131",
         "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         "sec_ch_ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+        "sec_ch_ua_platform": '"Windows"',
+        "sec_ch_ua_mobile": "?0"
+    },
+    "chrome133": {
+        "impersonate": "chrome133",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        "sec_ch_ua": '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
+        "sec_ch_ua_platform": '"Windows"',
+        "sec_ch_ua_mobile": "?0"
+    },
+    "safari17_0": {
+        "impersonate": "safari17_0",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+        "sec_ch_ua": "",
+        "sec_ch_ua_platform": '"macOS"',
+        "sec_ch_ua_mobile": "?0"
+    },
+    "edge101": {
+        "impersonate": "edge101",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36 Edg/101.0.1210.47",
+        "sec_ch_ua": '"Not A;Brand";v="99", "Chromium";v="101", "Microsoft Edge";v="101"',
         "sec_ch_ua_platform": '"Windows"',
         "sec_ch_ua_mobile": "?0"
     }
@@ -94,6 +117,19 @@ class TLSImpersonatorClient:
                 self.session.cookies.update(old_cookies)
             except Exception:
                 pass
+
+        # بارگذاری خودکار کوکی‌های معتبر دیوار (شهر تهران، شناسه‌های مرورگر و توکن‌های نشست)
+        try:
+            cookie_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "divar_cookies.json")
+            if os.path.exists(cookie_path):
+                with open(cookie_path, 'r', encoding='utf-8') as cf:
+                    cdata = json.load(cf)
+                    if isinstance(cdata, dict) and hasattr(self.session, 'cookies'):
+                        self.session.cookies.update(cdata)
+            elif hasattr(self.session, 'cookies'):
+                self.session.cookies.update({"city": "tehran", "multi-city": "tehran|"})
+        except Exception:
+            pass
 
         self.session_request_count = 0
 
@@ -229,14 +265,24 @@ class TLSImpersonatorClient:
                 self.last_latency_ms = (time.time() - t_start) * 1000
                 self.glitch_retries += 1
                 if attempt < max_glitch_retries:
-                    # تاخیر تصادفی کوتاه در صورت خطای گذرا
-                    delay = random.uniform(0.2, 0.5) * (attempt + 1)
+                    # تاخیر افزایشی برای رفع خطاهای گذرا و بازنشانی نشست
+                    delay = (1.0 * (attempt + 1)) + random.uniform(0.2, 0.6)
                     time.sleep(delay)
-                    # بازنشانی سوکت نشست با حفظ کوکی‌ها
                     self._init_session(preserve_cookies=True)
                 else:
                     self._init_session(preserve_cookies=True)
-                    raise e
+                    # در صورت خطای curl_cffi، تلاش نهایی با پکیج استاندارد requests پایتون
+                    try:
+                        import requests as std_requests
+                        std_headers = {k: v for k, v in headers.items() if not k.startswith(':')}
+                        resp = std_requests.request(method=method, url=url, headers=std_headers, timeout=timeout, proxies=proxies, **kwargs)
+                        self.last_latency_ms = (time.time() - t_start) * 1000
+                        self.total_latency_ms += self.last_latency_ms
+                        self.total_requests += 1
+                        self.session_request_count += 1
+                        return resp
+                    except Exception:
+                        raise e
 
     def get(self, url: str, **kwargs):
         return self.request('GET', url, **kwargs)
@@ -260,4 +306,26 @@ class TLSImpersonatorClient:
             "proxy_active": bool(self.proxy),
             "auto_rotate_profile": self.auto_rotate_profile
         }
+
+    def test_connection(self, url: str = "https://divar.ir", timeout: int = 5) -> Dict[str, Any]:
+        """سنجش بلادرنگ سلامت اتصال، کد پاسخ و تاخیر پینگ هدف"""
+        t0 = time.perf_counter()
+        try:
+            resp = self.get(url, timeout=timeout)
+            latency = round((time.perf_counter() - t0) * 1000, 1)
+            return {
+                "ok": resp.status_code in (200, 301, 302, 304),
+                "status_code": resp.status_code,
+                "latency_ms": latency,
+                "profile": self.impersonate_target
+            }
+        except Exception as e:
+            latency = round((time.perf_counter() - t0) * 1000, 1)
+            return {
+                "ok": False,
+                "error": str(e),
+                "latency_ms": latency,
+                "profile": self.impersonate_target
+            }
+
 

@@ -29,13 +29,16 @@ agents.md
 # Temporary scratch & inspection files
 scratch/
 divar_token.json
+divar_cookies.json
 divar_parsed_sample.txt
 divar_rent_sample.json
 divar_sample_post.json
+browser_test_shots/
 .claude/
 .codex/
 instance/
-*.db
-*.sqlite
-*.sqlite3
-saghf_database.db
+*.db-shm
+*.db-wal
+*.db.bak
+*.db.backup*
+*.bak

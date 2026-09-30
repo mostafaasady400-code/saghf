@@ -1,7 +1,7 @@
 """
 =============================================================================
-درگاه وب‌هوک‌ها و API اتصال اتوماسیون n8n به سامانه‌های CRM سقف
-مسیر پیش‌فرض: /api/n8n
+درگاه وب‌هوک‌ها و API اتوماسیون بومی سامانه‌های CRM سقف
+مسیر پیش‌فرض: /api/automation
 پشتیبانی از هر ۸ درگاه ورودی + وب‌اپ تلگرام
 =============================================================================
 """
@@ -12,7 +12,7 @@ from flask import Blueprint, request, jsonify, render_template
 from services.stt_service import stt_processor
 from services.nlp_extractor import PropertyLeadNLPExtractor
 from services.voice_ai_engine import VoiceAiPipeline
-from services.n8n_crm_service import (
+from services.automation_crm_service import (
     PropertiesOwnersCRM, BuyersTenantsCRM, 
     SmartFollowupEngine, TelegramAdminNotifier, CHANNEL_NAMES_FA
 )
@@ -20,13 +20,13 @@ from database.models import Property, Owner, CustomerLead, OutreachLog
 
 logger = logging.getLogger(__name__)
 
-n8n_bp = Blueprint('n8n_gateway', __name__)
+automation_bp = Blueprint('automation_api', __name__)
 
 # =====================================================================
 # ۱. درگاه‌های ورودی چندکاناله و وب‌هوک‌ها (Omni-Channel Ingestion)
 # =====================================================================
 
-@n8n_bp.route('/api/n8n/ingest/<channel>', methods=['POST'])
+@automation_bp.route('/api/automation/ingest/<channel>', methods=['POST'])
 def ingest_channel(channel):
     """
     دریافت پیام‌ها و رویدادهای ورودی از هریک از ۸ کانال:
@@ -107,10 +107,10 @@ def ingest_channel(channel):
 # ۲. اندپوینت‌های روتر LLM و تفکیک موجودیت (LLM Router)
 # =====================================================================
 
-@n8n_bp.route('/api/n8n/router/classify-and-extract', methods=['POST'])
+@automation_bp.route('/api/automation/router/classify-and-extract', methods=['POST'])
 def router_classify_and_extract():
     """
-    گره تحلیل معنایی و تفکیک ساختاریافته JSON برای موتور n8n
+    تحلیل معنایی و تفکیک ساختاریافته JSON برای موتور بومی
     """
     data = request.get_json(silent=True) or request.form.to_dict() or {}
     text = data.get('text', '').strip()
@@ -137,7 +137,7 @@ def router_classify_and_extract():
 # ۳. ثبت مستقیم در دو پایگاه داده CRM مجزا
 # =====================================================================
 
-@n8n_bp.route('/api/n8n/crm/owner-property', methods=['POST'])
+@automation_bp.route('/api/automation/crm/owner-property', methods=['POST'])
 def crm_owner_property():
     """ثبت مستقیم در پایگاه داده CRM مالکین و املاک"""
     data = request.get_json(silent=True) or request.form.to_dict() or {}
@@ -148,7 +148,7 @@ def crm_owner_property():
         logger.error(f"Error in crm_owner_property: {e}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
-@n8n_bp.route('/api/n8n/crm/buyer-tenant', methods=['POST'])
+@automation_bp.route('/api/automation/crm/buyer-tenant', methods=['POST'])
 def crm_buyer_tenant():
     """ثبت مستقیم در پایگاه داده CRM مشتریان و متقاضیان"""
     data = request.get_json(silent=True) or request.form.to_dict() or {}
@@ -164,13 +164,13 @@ def crm_buyer_tenant():
 # ۴. پایپلاین فالوآپ ۲۴ ساعته و دریافت فیدبک (Follow-up Cron Job)
 # =====================================================================
 
-@n8n_bp.route('/api/n8n/cron/follow-up-24h', methods=['POST', 'GET'])
+@automation_bp.route('/api/automation/cron/follow-up-24h', methods=['POST', 'GET'])
 def cron_followup_24h():
     """اجرای کران‌جاب پیگیری هوشمند ۲۴ ساعته لیدها"""
     res = SmartFollowupEngine.run_daily_followup()
     return jsonify(res)
 
-@n8n_bp.route('/api/n8n/feedback/process', methods=['POST'])
+@automation_bp.route('/api/automation/feedback/process', methods=['POST'])
 def feedback_process():
     """پردازش فیدبک دریافتی از مشتری در پیام‌رسان و اعمال در CRM"""
     data = request.get_json(silent=True) or request.form.to_dict() or {}
@@ -199,7 +199,7 @@ def feedback_process():
 # ۵. لایه کنترل و مانیتورینگ ادمین در پوسته تلگرام (Telegram Mini App)
 # =====================================================================
 
-@n8n_bp.route('/admin/telegram-mini-app')
+@automation_bp.route('/admin/telegram-mini-app')
 def telegram_mini_app():
     """
     رابط کاربری ادمین مبتنی بر پوسته تلگرام (Telegram Mini App)
@@ -217,9 +217,9 @@ def telegram_mini_app():
         channel_names=CHANNEL_NAMES_FA
     )
 
-@n8n_bp.route('/api/n8n/admin/stats')
+@automation_bp.route('/api/automation/admin/stats')
 def admin_stats():
-    """آمار زنده برای مینی‌اپ و مانیتورینگ n8n"""
+    """آمار زنده برای مینی‌اپ و مانیتورینگ اتوماسیون بومی"""
     return jsonify({
         'total_direct_properties': Property.query.filter_by(source='direct_owner').count(),
         'total_leads': CustomerLead.query.count(),

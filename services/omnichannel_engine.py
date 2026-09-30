@@ -5,11 +5,7 @@
 فالوآپ خودکار و هشدارهای تفکیک‌شده طلایی و سبز در تلگرام
 """
 
-import os
-import json
 import logging
-import threading
-import urllib.request
 from typing import Dict, Any, Optional
 
 from database.db import db
@@ -27,9 +23,6 @@ class OmniChannelEngine:
     """
     موتور مستقل و دائمی پلتفرم سقف جهت پردازش رویدادهای چندکاناله
     """
-
-    def __init__(self):
-        self.n8n_webhook_url = os.getenv('N8N_OMNI_WEBHOOK_URL', '')
 
     @classmethod
     def ingest_interaction(
@@ -195,15 +188,6 @@ class OmniChannelEngine:
                 'bale_alert_sent': bale_alert_sent
             }
 
-        # ۵. فوروارد موازی و ناهمگام به n8n (در صورت فعال بودن وب‌هوک n8n)
-        self._async_forward_to_n8n({
-            'channel': channel,
-            'sender_id': sender_id,
-            'text': effective_text,
-            'classification': classification,
-            'result': result_details
-        })
-
         return {
             'success': True,
             'channel': channel,
@@ -213,29 +197,5 @@ class OmniChannelEngine:
             'classification': classification,
             'details': result_details
         }
-
-    def _async_forward_to_n8n(self, payload: Dict[str, Any]):
-        """
-        ارسال غیرمسدودکننده به n8n Cloud / Self-hosted
-        اگر سرور n8n در دسترس نباشد یا اشتراک منقضی شده باشد، هیچ تاثیری بر عملکرد سقف نخواهد گذاشت.
-        """
-        if not self.n8n_webhook_url:
-            return
-
-        def _worker():
-            try:
-                data_bytes = json.dumps(payload, ensure_ascii=False).encode('utf-8')
-                req = urllib.request.Request(
-                    self.n8n_webhook_url,
-                    data=data_bytes,
-                    headers={'Content-Type': 'application/json'},
-                    method='POST'
-                )
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    pass
-            except Exception as e:
-                logger.debug(f"n8n async forward skipped or failed: {e}")
-
-        threading.Thread(target=_worker, daemon=True).start()
 
 omnichannel_engine = OmniChannelEngine()

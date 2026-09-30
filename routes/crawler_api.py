@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app
 from crawler.crawler_manager import crawler_manager
-from database.models import Property
+from database.models import Property, SearchRun
 
 crawler_bp = Blueprint('crawler', __name__, url_prefix='/crawler')
 
@@ -10,19 +10,28 @@ def index():
 
 @crawler_bp.route('/live')
 def live_monitor():
+    # نمایش همه آگهی‌های استخراج‌شده با اولویت «مالک هستم» و ترتیب جدیدترین
     sale_properties = Property.query.filter(
         Property.source.in_(['divar', 'sheypoor']),
         Property.deal_type == 'sale'
-    ).order_by(Property.created_at.desc()).limit(30).all()
+    ).order_by(
+        Property.is_personal_owner.desc(),
+        Property.score.desc(),
+        Property.created_at.desc()
+    ).all()
 
     rent_properties = Property.query.filter(
         Property.source.in_(['divar', 'sheypoor']),
         Property.deal_type == 'rent'
-    ).order_by(Property.created_at.desc()).limit(30).all()
+    ).order_by(
+        Property.is_personal_owner.desc(),
+        Property.score.desc(),
+        Property.created_at.desc()
+    ).all()
 
     crawled_properties = Property.query.filter(
         Property.source.in_(['divar', 'sheypoor'])
-    ).order_by(Property.created_at.desc()).limit(20).all()
+    ).order_by(Property.created_at.desc()).all()
 
     return render_template(
         'crawler/live.html',
@@ -44,12 +53,155 @@ def get_districts():
         'regions': TEHRAN_REGIONS
     })
 
+
+def _normalize_accessible_criteria(raw):
+    """Map assistant/API values to strict nullable crawler criteria."""
+    allowed = {
+        'city', 'districts', 'deal_type', 'property_type', 'min_area', 'max_area',
+        'rooms', 'min_price', 'max_price', 'min_deposit', 'max_deposit',
+        'min_rent', 'max_rent', 'has_parking', 'has_elevator', 'has_warehouse',
+        'has_balcony', 'window_hours',
+    }
+    result = {key: raw.get(key) for key in allowed if key in raw}
+    districts = result.get('districts') or raw.get('district') or []
+    if isinstance(districts, str):
+        districts = [item.strip() for item in districts.split(',') if item.strip()]
+    result['districts'] = districts
+    result['city'] = result.get('city') or 'tehran'
+    if result.get('city') == 'تهران':
+        result['city'] = 'tehran'
+    if result.get('property_type') in (None, 'residential'):
+        result['property_type'] = 'apartment'
+    for key in (
+        'min_area', 'max_area', 'rooms', 'min_price', 'max_price',
+        'min_deposit', 'max_deposit', 'min_rent', 'max_rent', 'window_hours',
+    ):
+        if result.get(key) in ('', 0, '0'):
+            result[key] = None if key != 'window_hours' else 24
+    result['window_hours'] = max(1, min(168, int(result.get('window_hours') or 24)))
+    return result
+
+
+@crawler_bp.route('/search-runs', methods=['POST'])
+def create_search_run():
+    """Start a finite, resumable and auditable accessible-source search."""
+    from services.nlp_extractor import PropertyLeadNLPExtractor
+    from services.search_run_service import SearchRunService
+
+    data = request.get_json(silent=True) or request.form.to_dict(flat=True)
+    query_text = str(data.get('query') or data.get('query_text') or '').strip()
+    supplied = data.get('criteria') if isinstance(data.get('criteria'), dict) else {}
+    extracted = PropertyLeadNLPExtractor.extract_criteria(query_text) if query_text else {}
+    extracted.update(supplied)
+    # Explicit top-level fields win over NLP output.
+    extracted.update({key: value for key, value in data.items() if key not in {'query', 'query_text', 'criteria', 'start'}})
+    criteria = _normalize_accessible_criteria(extracted)
+    if criteria.get('deal_type') not in {'sale', 'rent'}:
+        return jsonify({
+            'success': False,
+            'error': 'clarification_required',
+            'question': 'قصد خرید دارید یا رهن و اجاره؟',
+            'criteria': criteria,
+        }), 400
+
+    try:
+        run = SearchRunService.create_run(criteria, query_text=query_text)
+        should_start = str(data.get('start', 'true')).lower() not in {'false', '0', 'no'}
+        if should_start:
+            runtime = max(10, min(900, int(data.get('max_runtime_seconds') or 180)))
+            SearchRunService.execute_async(current_app._get_current_object(), run.run_id, runtime)
+        return jsonify({
+            'success': True,
+            'run': run.to_dict(),
+            'status_url': url_for('crawler.search_run_status', run_id=run.run_id),
+            'results_url': url_for('crawler.search_run_view', run_id=run.run_id),
+        }), 202 if should_start else 201
+    except (TypeError, ValueError) as exc:
+        return jsonify({'success': False, 'error': 'invalid_criteria', 'message': str(exc)}), 400
+
+
+@crawler_bp.route('/search-runs/<run_id>', methods=['GET'])
+def search_run_status(run_id):
+    run = SearchRun.query.filter_by(run_id=run_id).first_or_404()
+    return jsonify({'success': True, 'run': run.to_dict()})
+
+
+@crawler_bp.route('/search-runs/<run_id>/results', methods=['GET'])
+def search_run_results(run_id):
+    from services.search_run_service import SearchRunService
+    try:
+        payload = SearchRunService.paginated_results(
+            run_id,
+            section=request.args.get('section', 'main'),
+            page=request.args.get('page', 1, type=int),
+            per_page=request.args.get('per_page', 20, type=int),
+        )
+        return jsonify({'success': True, **payload})
+    except ValueError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 404
+
+
+@crawler_bp.route('/search-runs/<run_id>/view', methods=['GET'])
+def search_run_view(run_id):
+    from services.search_run_service import SearchRunService
+    section = request.args.get('section', 'main')
+    try:
+        payload = SearchRunService.paginated_results(
+            run_id,
+            section=section,
+            page=request.args.get('page', 1, type=int),
+            per_page=request.args.get('per_page', 20, type=int),
+        )
+    except ValueError:
+        return ('اجرای جست‌وجو پیدا نشد.', 404)
+    return render_template('crawler/search_results.html', **payload)
+
+
+@crawler_bp.route('/search-runs/<run_id>/resume', methods=['POST'])
+def resume_search_run(run_id):
+    from services.search_run_service import SearchRunService
+    run = SearchRun.query.filter_by(run_id=run_id).first_or_404()
+    if run.status == 'running':
+        return jsonify({'success': True, 'message': 'اجرا هم‌اکنون در حال پردازش است.', 'run': run.to_dict()})
+    if not run.can_resume:
+        return jsonify({'success': False, 'message': 'این اجرا به پایان واقعی منبع رسیده و قابل ادامه نیست.'}), 409
+    runtime = max(10, min(900, int((request.get_json(silent=True) or {}).get('max_runtime_seconds') or 180)))
+    SearchRunService.execute_async(current_app._get_current_object(), run_id, runtime)
+    return jsonify({'success': True, 'message': 'ادامهٔ پیمایش از checkpoint آغاز شد.'}), 202
+
+
+@crawler_bp.route('/listings/<int:listing_id>/publisher-correction', methods=['POST'])
+def correct_listing_publisher(listing_id):
+    from services.search_run_service import SearchRunService
+    data = request.get_json(silent=True) or request.form
+    try:
+        listing = SearchRunService.apply_manual_correction(
+            listing_id,
+            str(data.get('category') or ''),
+            str(data.get('reason') or ''),
+            reviewer=str(data.get('reviewer') or '') or None,
+        )
+        return jsonify({'success': True, 'listing': listing.to_dict()})
+    except ValueError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+
+@crawler_bp.route('/search-runs/<run_id>/process-pending', methods=['POST'])
+def process_pending_run_classifications(run_id):
+    from services.search_run_service import SearchRunService
+    run = SearchRun.query.filter_by(run_id=run_id).first_or_404()
+    data = request.get_json(silent=True) or {}
+    max_items = max(1, min(200, int(data.get('max_items', 50))))
+    result = SearchRunService.process_pending_classifications(run_id=run.run_id, max_items=max_items)
+    return jsonify({'success': True, 'result': result})
+
+
 @crawler_bp.route('/start', methods=['POST'])
 def start_crawl():
+    """Backward-compatible entry point backed by the uncapped resumable core."""
+    from services.search_run_service import SearchRunService
+
     data = request.get_json(silent=True) or request.form
-    sources = data.getlist('sources') if hasattr(data, 'getlist') else data.get('sources', ['divar', 'sheypoor'])
     categories = data.getlist('categories') if hasattr(data, 'getlist') else data.get('categories', ['buy-apartment', 'rent-apartment'])
-    limit = int(data.get('limit', 8))
     city = data.get('city', 'tehran').strip() or 'tehran'
     district = data.get('district', '').strip() or None
     
@@ -70,24 +222,43 @@ def start_crawl():
     max_area = int(data.get('max_area', 0)) if data.get('max_area') else None
     min_year = int(data.get('min_year', 0)) if data.get('min_year') else None
 
-    success, msg = crawler_manager.start_crawl_task(
-        sources=sources if isinstance(sources, list) else [sources],
-        categories=categories if isinstance(categories, list) else [categories],
-        limit_per_cat=limit,
-        city=city,
-        district=district,
-        districts=districts,
-        min_price=min_price,
-        max_price=max_price,
-        min_deposit=min_deposit,
-        max_deposit=max_deposit,
-        min_rent=min_rent,
-        max_rent=max_rent,
-        min_area=min_area,
-        max_area=max_area,
-        min_year=min_year
-    )
-    return jsonify({'success': success, 'message': msg})
+    category_list = categories if isinstance(categories, list) else [categories]
+    run_payloads = []
+    for category in category_list:
+        deal_type = 'rent' if 'rent' in category else 'sale'
+        if any(item in category for item in ('commercial', 'office')):
+            property_type = 'commercial'
+        elif 'villa' in category:
+            property_type = 'villa'
+        else:
+            property_type = 'apartment'
+        criteria = _normalize_accessible_criteria({
+            'city': city,
+            'districts': districts,
+            'deal_type': deal_type,
+            'property_type': property_type,
+            'min_price': min_price,
+            'max_price': max_price,
+            'min_deposit': min_deposit,
+            'max_deposit': max_deposit,
+            'min_rent': min_rent,
+            'max_rent': max_rent,
+            'min_area': min_area,
+            'max_area': max_area,
+            'window_hours': 24,
+        })
+        run = SearchRunService.create_run(criteria, query_text='فرم مانیتورینگ کراولر')
+        SearchRunService.execute_async(current_app._get_current_object(), run.run_id, 180)
+        run_payloads.append({
+            'run_id': run.run_id,
+            'deal_type': deal_type,
+            'results_url': url_for('crawler.search_run_view', run_id=run.run_id),
+        })
+    return jsonify({
+        'success': True,
+        'message': 'پیمایش بدون سقف تعداد آغاز شد؛ پیشرفت و پوشش برای ادامه ذخیره می‌شود.',
+        'runs': run_payloads,
+    }), 202
 
 @crawler_bp.route('/status')
 def get_status():
@@ -307,13 +478,29 @@ def get_realtime_monitor_status():
 def start_realtime_monitor():
     from crawler.continuous_monitor import divar_monitor
     from flask import current_app
-    data = request.get_json(silent=True) or {}
-    target_district = data.get('district', 'منطقه ۵')
-    interval = int(data.get('interval', 75))
+    data = request.get_json(silent=True) or request.form or {}
+    target_district = data.get('district', 'منطقه ۲ و ۵ تهران')
+    
+    # استخراج محله‌ها
+    districts = data.getlist('districts') if hasattr(data, 'getlist') else data.get('districts', [])
+    if isinstance(districts, str):
+        districts = [d.strip() for d in districts.split(',') if d.strip()]
+
+    # پارامترهای هدفمند (متراژ، خواب و بازه زمانی ۱۲۰ تا ۱۸۰ ثانیه)
+    min_area = int(data.get('min_area')) if data.get('min_area') else None
+    max_area = int(data.get('max_area')) if data.get('max_area') else None
+    rooms = int(data.get('rooms')) if data.get('rooms') else None
+    interval = int(data.get('interval', 150))
+    interval = max(60, min(300, interval))
+
     success = divar_monitor.start(
         app=current_app._get_current_object(),
         target_district=target_district,
-        interval_seconds=interval
+        interval_seconds=interval,
+        districts=districts if districts else None,
+        min_area=min_area,
+        max_area=max_area,
+        rooms=rooms
     )
     return jsonify({
         'success': success,

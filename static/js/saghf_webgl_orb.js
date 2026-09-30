@@ -126,7 +126,7 @@
                 }
             `;
 
-            // Fragment Shader: ایجاد ساختار کاملاً شفاف، شارپ، با هسته ابسیدین درخشان و امواج صوتی نئونی واضح
+            // Fragment Shader: ساختار فوق‌لوکس مشکی آبسیدین با خطوط پردازشی بردهای طلایی و پالس‌های نوری متحرک
             const fsSource = `
                 precision mediump float;
 
@@ -140,70 +140,82 @@
                 uniform float uAudioLevel;
 
                 void main() {
-                    // هسته مشکی ابسیدین عمیق با ته‌رنگ کبالت لوکس
-                    vec3 coreObsidian = vec3(0.04, 0.05, 0.09);
+                    // هسته مشکی آبسیدین عمیق و متالیک (#0A0A0C تا #121212)
+                    vec3 coreObsidian = vec3(0.04, 0.04, 0.048);
 
-                    // پالت اختصاصی نئونی: آبی متالیک کریستالی (#00D2FF) و بنفش نئونی (#9B51E0)
-                    vec3 metallicCyan = vec3(0.0, 0.85, 1.0);   // #00D2FF
-                    vec3 neonViolet   = vec3(0.62, 0.28, 0.92);  // #9B51E0
-                    vec3 electricBlue = vec3(0.12, 0.38, 0.98);
+                    // پالت اختصاصی متالیک طلایی و کهربایی سقف
+                    vec3 metallicGold = vec3(0.831, 0.686, 0.216);  // #D4AF37 طلایی سلطنتی سقف
+                    vec3 radiantGold  = vec3(1.0, 0.843, 0.0);      // #FFD700 طلایی درخشان
+                    vec3 lightAmber   = vec3(1.0, 0.92, 0.65);       // #FFDF73 هایلایت طلایی
+                    vec3 deepBronze   = vec3(0.55, 0.40, 0.12);      // #8C661F برنز عمیق متالیک
+                    vec3 deepBlack    = vec3(0.012, 0.012, 0.015);
 
                     vec3 viewDir = normalize(-vPosition);
                     vec3 normal = normalize(vNormal);
 
-                    // ۱. افکت فرنل لبه‌های بیرونی (Rim Glow شارپ و خیره‌کننده)
+                    // ۱. افکت فرنل لبه‌های بیرونی با تناژ طلایی گرم (Warm Golden Fresnel Bloom)
                     float nDotV = max(dot(viewDir, normal), 0.0);
                     float fresnel = 1.0 - nDotV;
-                    float rimSharp = pow(fresnel, 2.4);
-                    float rimBroad = pow(fresnel, 1.2);
+                    float rimSharp = pow(fresnel, 2.6);
+                    float rimBroad = pow(fresnel, 1.3);
 
-                    // ۲. امواج صوتی سینوسی سه‌بعدی متحرک (Acoustic Sinusoidal Sound Waves)
-                    float waveSpeed = uTime * 3.5;
-                    float waveRibbon1 = pow(abs(sin(vPosition.y * 14.0 - waveSpeed + vDisplacement * 8.0)), 12.0);
-                    float waveRibbon2 = pow(abs(cos(vPosition.z * 10.0 + waveSpeed * 0.8 + vPosition.x * 6.0)), 10.0);
-                    float waveRibbon3 = pow(abs(sin((vPosition.x + vPosition.y) * 16.0 - waveSpeed * 1.2)), 16.0) * (0.4 + uAudioLevel * 0.8);
-                    float totalSoundWave = waveRibbon1 * 1.1 + waveRibbon2 * 0.8 + waveRibbon3 * 1.2;
+                    // ضریب شتاب زمان بر اساس وضعیت سامانه (پایش و جستجوی فایل = سرعت ۳×)
+                    float speedMult = (uState > 2.5) ? 3.4 : ((uState > 0.5) ? (2.2 + uAudioLevel * 2.5) : 1.0);
 
-                    // ۳. گردش و گرداب پلاسما میان آبی متالیک و بنفش نئونی
-                    float cycleSpeed = (uState > 2.5) ? 8.0 : 2.2;
-                    float plasmaCycle = sin(uTime * cycleSpeed + vPosition.y * 3.2 + atan(vPosition.z, vPosition.x) * 2.0) * 0.5 + 0.5;
-                    vec3 plasmaColor = mix(metallicCyan, neonViolet, plasmaCycle);
+                    // ۲. خطوط مدار الکتریکی سایبرنتیک و مسیرهای جریان داده (Electronic Circuit Board Traces)
+                    vec3 cp = vPosition * 4.4;
+                    vec3 fp = fract(cp);
 
-                    // ۴. بازتاب اسپکولار بلورین دوقلو (Dual Glossy Highlights شبیه شیشه کوارتز صیقلی)
+                    float trackX = smoothstep(0.06, 0.0, abs(fp.y - 0.5));
+                    float trackY = smoothstep(0.06, 0.0, abs(fp.x - 0.5));
+                    float trackZ = smoothstep(0.06, 0.0, abs(fp.z - 0.5));
+                    float diagTrace = smoothstep(0.05, 0.0, abs((fp.x + fp.y) - 1.0));
+
+                    // پدهای لحیم و اتصالات چیپست (Micro-Vias & Solder Nodes)
+                    float viaDist = length(fp - 0.5);
+                    float vias = smoothstep(0.18, 0.12, viaDist) * smoothstep(0.04, 0.08, viaDist);
+
+                    float circuitNetwork = max(trackX, max(trackY, trackZ)) * 0.75 + diagTrace * 0.6 + vias * 1.3;
+
+                    // ۳. پالس‌های نوری متحرک در طول مدارهای روی گوی بر اساس زمان (uTime)
+                    float flowAxis = (vPosition.x * 2.8 + vPosition.y * 3.6 + vPosition.z * 2.2);
+                    float pulse = pow(sin(flowAxis * 3.5 - uTime * speedMult * 2.8) * 0.5 + 0.5, 7.0);
+                    float microPulse = pow(sin(flowAxis * 7.0 + uTime * speedMult * 4.0) * 0.5 + 0.5, 12.0);
+
+                    // ۴. بازتاب اسپکولار بلورین دوقلو (Dual Glossy Metallic Gold Highlights)
                     vec3 lightDir1 = normalize(vec3(0.5, 0.8, 1.0));
                     vec3 halfDir1 = normalize(lightDir1 + viewDir);
-                    float spec1 = pow(max(dot(normal, halfDir1), 0.0), 64.0);
+                    float spec1 = pow(max(dot(normal, halfDir1), 0.0), 75.0);
 
                     vec3 lightDir2 = normalize(vec3(-0.6, -0.4, 0.7));
                     vec3 halfDir2 = normalize(lightDir2 + viewDir);
-                    float spec2 = pow(max(dot(normal, halfDir2), 0.0), 32.0);
+                    float spec2 = pow(max(dot(normal, halfDir2), 0.0), 36.0);
 
-                    // ۵. ترکیب لایه‌های رنگی: هسته ابسیدین + نور پلاسما + نوارهای موج صوتی نئونی + ریم‌لایت
+                    // ۵. ترکیب لایه‌های رنگی: هسته ابسیدین + خطوط مدار طلایی + پالس‌های درخشان + ریم‌لایت
                     vec3 finalColor = coreObsidian;
 
-                    // نورپردازی پایه پلاسما درون گوی
-                    finalColor += mix(electricBlue, plasmaColor, 0.7) * (0.35 + 0.45 * plasmaCycle);
+                    // اعمال رنگ طلایی روی خطوط پردازشی با پالس‌های درخشان
+                    vec3 circuitColor = mix(deepBronze, metallicGold, 0.6);
+                    circuitColor = mix(circuitColor, radiantGold, pulse * 0.85 + microPulse * 0.5);
+                    finalColor += circuitColor * circuitNetwork * (0.45 + pulse * 1.6 + microPulse * 1.2);
 
-                    // پرتوهای امواج صوتی شارپ نئونی (آبی متالیک و بنفش)
-                    finalColor += metallicCyan * totalSoundWave * 1.5;
-                    finalColor += neonViolet * (waveRibbon2 * 1.1);
+                    // هاله نورانی دور گوی (Warm Gold Fresnel / Rim Glow)
+                    vec3 rimColor = mix(metallicGold, radiantGold, rimSharp);
+                    finalColor += rimColor * (rimSharp * 2.4 + rimBroad * 0.5);
 
-                    // تقویت درخشش هنگام مکالمه صوتی
+                    // تقویت درخشش هنگام مکالمه صوتی و پردازش
                     if (uState > 0.5 && uState < 2.5) {
-                        finalColor += plasmaColor * (uAudioLevel * 1.3);
-                        finalColor += metallicCyan * (abs(vWaveIntensity) * 4.0);
+                        finalColor += radiantGold * (uAudioLevel * 0.9);
+                        finalColor += lightAmber * (abs(vWaveIntensity) * 3.5);
                     } else if (uState > 2.5) {
-                        finalColor += plasmaColor * 1.6;
+                        finalColor += radiantGold * 1.4;
                     }
 
-                    // ریم لایت لبه‌ها (Rim Lighting)
-                    finalColor += plasmaColor * (rimSharp * 1.8 + rimBroad * 0.4);
+                    // هایلایت‌های شفاف کریستالی طلایی
+                    finalColor += lightAmber * (spec1 * 1.4 + spec2 * 0.4);
 
-                    // هایلایت‌های شفاف کریستالی
-                    finalColor += vec3(0.95, 1.0, 1.0) * (spec1 * 1.2 + spec2 * 0.35);
-
-                    // آلفای قدرتمند و متراکم (برای اینکه در مرکز گوی مات و سیاه نشود و کاملاً حجم سه‌بعدی داشته باشد)
-                    float alpha = clamp(0.92 + rimSharp * 0.08, 0.9, 1.0);
+                    // آلفای متراکم و شارپ با عمق سه‌بعدی
+                    float alpha = clamp(0.94 + rimSharp * 0.06, 0.90, 1.0);
 
                     gl_FragColor = vec4(finalColor, alpha);
                 }
@@ -437,17 +449,17 @@
                 ctx.clearRect(0, 0, w, h);
 
                 const grad = ctx.createRadialGradient(w/2, h/2, 10, w/2, h/2, w*0.48);
-                grad.addColorStop(0, '#070A14');
-                grad.addColorStop(0.55, '#00D2FF');
-                grad.addColorStop(1, '#9B51E0');
+                grad.addColorStop(0, '#0A0A0C');
+                grad.addColorStop(0.55, '#D4AF37');
+                grad.addColorStop(1, '#FFDF73');
 
                 ctx.beginPath();
                 ctx.arc(w/2, h/2, w*0.4 + Math.sin(t)*5, 0, Math.PI*2);
                 ctx.fillStyle = grad;
                 ctx.fill();
 
-                // رسم خطوط موج صوتی فالبک
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                // رسم خطوط موج صوتی فالبک طلایی
+                ctx.strokeStyle = 'rgba(255, 223, 115, 0.85)';
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
                 for (let x = 0; x < w; x += 5) {

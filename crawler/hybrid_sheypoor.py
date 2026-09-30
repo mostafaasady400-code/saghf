@@ -78,9 +78,8 @@ class HybridSheypoorCrawler:
         has_balcony: Optional[bool] = None,
         on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None
     ) -> List[NormalizedPropertySchema]:
-        category_meta = self.CATEGORIES.get(category_key, self.CATEGORIES['buy-apartment'])
-        slug = category_meta['slug']
-        all_results: List[NormalizedPropertySchema] = []
+        # فاز ۱ سقف: تمرکز ۱۰۰٪ انحصاری بر پلتفرم دیوار (شیپور طبق سیاست پروژه غیرفعال گردید)
+        return []
 
         current_shamsi = 1403
         if max_age is not None:

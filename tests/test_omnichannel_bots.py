@@ -149,11 +149,17 @@ class TestOmnichannelBotsAudit(unittest.TestCase):
         recipients = ["09121111111", "09352222222", "09213333333"]
         test_msg = "🏛️ هشدار سامانه سقف: فایل جدید متناسب با بودجه شما ثبت گردید."
 
-        batch_res = omnichannel_dispatcher.batch_dispatch_direct(
-            recipients=recipients,
-            message=test_msg,
-            platform='telegram'
-        )
+        from unittest.mock import patch
+        with patch.object(
+            omnichannel_dispatcher.get_adapter('telegram'),
+            'send_text',
+            return_value={'success': True, 'platform': 'telegram', 'latency_ms': 15.0}
+        ):
+            batch_res = omnichannel_dispatcher.batch_dispatch_direct(
+                recipients=recipients,
+                message=test_msg,
+                platform='telegram'
+            )
 
         self.assertEqual(len(batch_res), 3)
         for br in batch_res:
@@ -291,7 +297,7 @@ class TestOmnichannelBotsAudit(unittest.TestCase):
         self.assertTrue(res_avail['success'])
         self.assertEqual(res_avail['status'], 'available')
 
-        refreshed_p = Property.query.get(prop_id)
+        refreshed_p = db.session.get(Property, prop_id)
         self.assertEqual(refreshed_p.status, 'available')
         self.assertIn(refreshed_p.inquiry_status, ['confirmed_available', 'confirmed'])
 
@@ -305,7 +311,8 @@ class TestOmnichannelBotsAudit(unittest.TestCase):
         self.assertTrue(res_sold['success'])
         self.assertEqual(res_sold['status'], 'archived')
 
-        archived_p = Property.query.get(prop_id)
+        archived_p = db.session.get(Property, prop_id)
+
         self.assertEqual(archived_p.status, 'archived')
         self.assertIn(archived_p.inquiry_status, ['confirmed_sold', 'sold'])
 

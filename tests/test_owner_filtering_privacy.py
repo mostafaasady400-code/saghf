@@ -84,7 +84,7 @@ class TestOwnerFilteringPrivacy(unittest.TestCase):
         res_factory = OwnerFilter.evaluate(
             platform='divar',
             title='آپارتمان ۸۵ متری نزدیک کارخانه قند',
-            description='واحد شخصی ساز بسیار تمیز با سند تک برگ شخصی',
+            description='مالک هستم؛ واحد شخصی ساز بسیار تمیز با سند تک برگ شخصی',
             widget_data={'bottom_description_text': 'دقایقی پیش در وردآورد'}
         )
         self.assertTrue(res_factory.is_personal)
@@ -132,6 +132,40 @@ class TestOwnerFilteringPrivacy(unittest.TestCase):
         self.assertFalse(res_rejected.is_personal)
         self.assertLessEqual(res_rejected.confidence_score, 40)
         self.assertEqual(res_rejected.risk_level, 'high')
+
+    def test_owner_evidence_required_and_promotional_ads_rejected(self):
+        agency_with_owner_claim = OwnerFilter.evaluate(
+            platform='divar',
+            title='آپارتمان ۸۰ متری پونک',
+            description='مالک هستم و مستقیم می‌فروشم.',
+            widget_data={'publisher': {'account_type': 'real_estate_agency'}},
+        )
+        self.assertFalse(agency_with_owner_claim.is_personal)
+        self.assertEqual(agency_with_owner_claim.status, 'rejected_account_type')
+
+        unknown = OwnerFilter.evaluate(
+            platform='divar',
+            title='آپارتمان ۸۰ متری پونک',
+            description='واحد نورگیر و آماده تحویل',
+            widget_data={'bottom_description_text': 'دقایقی پیش در پونک'},
+        )
+        self.assertFalse(unknown.is_personal)
+        self.assertEqual(unknown.status, 'rejected_unverified_owner')
+
+        marketing = OwnerFilter.evaluate(
+            platform='divar',
+            title='آپارتمان ۸۰ متری پونک',
+            description='مالک هستم، بیایید بخرید؛ فایل های متنوع داریم.',
+        )
+        self.assertFalse(marketing.is_personal)
+        self.assertEqual(marketing.status, 'rejected_forbidden_words')
+
+        direct = OwnerFilter.evaluate(
+            platform='divar',
+            title='آپارتمان ۸۰ متری پونک',
+            description='مالک مستقیم هستم؛ واحد خودم را می‌فروشم.',
+        )
+        self.assertTrue(direct.is_personal)
 
     def test_05_phone_masking_styles_and_robustness(self):
         """۵. آزمون ماسک‌گذاری هوشمند شماره‌های تماس در استایل‌های متنوع"""

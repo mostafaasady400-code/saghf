@@ -1,6 +1,6 @@
 """
 =============================================================================
-پایپلاین دوگانه CRM و اتوماسیون n8n پلتفرم سقف (Saghf n8n CRM Engine)
+پایپلاین بومی دوگانه CRM و اتوماسیون پلتفرم سقف
 تفکیک هوشمند به دو دیتابیس CRM مجزا:
   ۱. پایگاه داده CRM مالکین و املاک (Properties & Owners CRM)
   ۲. پایگاه داده CRM مشتریان و متقاضیان (Buyers & Tenants CRM)
@@ -112,7 +112,7 @@ class PropertiesOwnersCRM:
             has_warehouse='انباری' in features,
             has_balcony='بالکن' in features,
             features_json=json.dumps(features, ensure_ascii=False),
-            description=f"ثبت خودکار اتوماسیون n8n از {CHANNEL_NAMES_FA.get(channel, channel)}. مشخصات سندی: {deed_type}. وضعیت مدارک: {media_status}.",
+            description=f"ثبت خودکار اتوماسیون بومی از {CHANNEL_NAMES_FA.get(channel, channel)}. مشخصات سندی: {deed_type}. وضعیت مدارک: {media_status}.",
             images_json=json.dumps(media_urls if media_urls else ['/static/images/luxury/living_room.jpg']),
             status='verified',
             owner_id=owner.id

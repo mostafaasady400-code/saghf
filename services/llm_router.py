@@ -9,6 +9,7 @@
 import os
 import re
 import json
+import requests
 import logging
 from typing import Dict, Any, Optional
 
@@ -75,11 +76,6 @@ class SemanticLLMRouter:
             return None
 
         try:
-            from google import genai
-            from google.genai import types
-
-            client = genai.Client(api_key=api_key)
-
             system_instruction = (
                 "شما هوش مصنوعی ارشد تحلیل مکالمات و متون در سامانه مشاور املاک 'سقف' هستید. "
                 "وظیفه شما تفکیک هویت مخاطب به یکی از دو نقش زیر است:\n"
@@ -128,21 +124,39 @@ class SemanticLLMRouter:
             )
 
             prompt = f"متن پیام یا پیاده‌سازی صوت مکالمه مخاطب:\n«««\n{text}\n»»»\nشماره تماس: {sender_phone}"
+            headers = {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': api_key
+            }
+            body = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "system_instruction": {"parts": [{"text": system_instruction}]},
+                "generationConfig": {
+                    "temperature": 0.1,
+                    "responseMimeType": "application/json"
+                }
+            }
 
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    response_mime_type="application/json",
-                    temperature=0.1
-                )
-            )
+            preferred_model = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash').strip()
+            candidate_models = [preferred_model, 'gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-latest']
+            models_to_try = list(dict.fromkeys(m for m in candidate_models if m))
 
-            if response and response.text:
-                parsed = json.loads(response.text)
-                if isinstance(parsed, dict) and 'role' in parsed:
-                    return parsed
+            for model_name in models_to_try:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+                    res = requests.post(url, headers=headers, json=body, timeout=10)
+                    if res.status_code == 200:
+                        data = res.json()
+                        candidate = data.get('candidates', [{}])[0]
+                        text_part = candidate.get('content', {}).get('parts', [{}])[0].get('text', '')
+                        if text_part:
+                            parsed = json.loads(text_part)
+                            if isinstance(parsed, dict) and 'role' in parsed:
+                                return parsed
+                    else:
+                        logger.warning(f"Gemini model {model_name} HTTP {res.status_code}. Trying next fallback...")
+                except Exception as ex:
+                    logger.warning(f"Error querying model {model_name}: {ex}")
         except Exception as e:
             logger.warning(f"Gemini semantic classification failed: {e}. Moving to rule-based fallback.")
 
@@ -154,6 +168,7 @@ class SemanticLLMRouter:
         کلاسیفایر هوشمند محلی و کاملاً مستقل بدون نیاز به اینترنت
         تضمین‌کننده فعالیت مداوم سامانه تحت هر شرایط
         """
+        metadata = metadata or {}
         # الگوهای ساختاری قوی نقش مالک: داشتن ملک، قصد فروش یا اجاره دادن
         owner_patterns = [
             r'(?:یک واحد|واحد|آپارتمان|ملک|خونه|ساختمان|مغازه|زمین).*?دارم',

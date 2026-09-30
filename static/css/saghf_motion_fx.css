@@ -158,19 +158,19 @@ body:hover #ambient-cursor-glow {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #00f2fe;
-    box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7);
+    background: #FFDF73;
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7);
     animation: luxuryPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes luxuryPulse {
     0% {
-        box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7);
+        box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7);
     }
     70% {
-        box-shadow: 0 0 0 8px rgba(0, 242, 254, 0);
+        box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(0, 242, 254, 0);
+        box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
     }
 }

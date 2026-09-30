@@ -45,7 +45,7 @@ class TestAIOrbAndSpeed(unittest.TestCase):
             'd': {'area': 85, 'build_year': 1400}
         }
         post_details = {
-            'description': 'فایل شخصی تک برگ سند نوساز آماده تحویل',
+            'description': 'مالک هستم؛ واحد شخصی تک برگ سند نوساز آماده تحویل',
             'images': [],
             'is_agency_post': False
         }

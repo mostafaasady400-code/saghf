@@ -35,8 +35,11 @@ class Config:
         )
 
     _db_url = os.environ.get('DATABASE_URL')
-    if _db_url and _db_url.startswith('postgres://'):
-        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    if _db_url:
+        if _db_url.startswith('postgres://'):
+            _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+        elif _db_url == 'sqlite:///saghf_database.db':
+            _db_url = f"sqlite:///{BASE_DIR / 'saghf_database.db'}"
     SQLALCHEMY_DATABASE_URI = _db_url or f"sqlite:///{BASE_DIR / 'saghf_database.db'}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     if SQLALCHEMY_DATABASE_URI.startswith('postgresql'):
@@ -92,4 +95,8 @@ class Config:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0"
     ]
     CRAWL_DELAY = 1.5  # Polite delay between calls
+
+    # Google Gemini AI Assistant & LLM Router Settings
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', os.environ.get('GOOGLE_API_KEY', '')).strip()
+    GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash').strip()
 

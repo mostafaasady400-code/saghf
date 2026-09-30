@@ -1,3 +1,4 @@
+import sys
 import re
 import random
 import json
@@ -5,24 +6,35 @@ import time
 from typing import List, Dict, Any, Optional, Tuple, Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
+
+
+def _console(message: Any) -> None:
+    """Print without letting a legacy Windows console kill crawler threads."""
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+        safe_message = str(message).encode(encoding, errors="replace").decode(encoding)
+        print(safe_message)
+
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 from .network.impersonator import TLSImpersonatorClient
 from .network.rate_limiter import TokenBucketRateLimiter
 from .network.proxy_manager import ProxyManager
 from .dedup import dedup_engine
 from .fallback_solver import fallback_solver
-from .schemas import NormalizedPropertySchema, OwnerSchema, parse_price, persian_to_english_numbers, sanitize_property_financials
+from .schemas import NormalizedPropertySchema, OwnerSchema, parse_price, parse_area, persian_to_english_numbers, sanitize_property_financials
 
-from .owner_filter import OwnerFilter, extract_phone_number
+from .owner_filter import OwnerFilter, extract_phone_number, is_stale_ad, is_fresh_personal_time
+from .parsers.divar_dom_contact import DivarDOMContactParser
+from data.tehran_districts import DISTRICTS_2_AND_5_NAMES, DISTRICTS_2_AND_5_SLUGS, is_in_region_2_or_5, get_divar_slug_for_district
 
-def is_older_than_5_days(text: str) -> bool:
-    """بررسی اینکه آگهی متعلق به بیش از ۵ روز گذشته است یا خیر"""
-    if not text:
-        return False
-    older_markers = ['۶ روز پیش', '۷ روز پیش', 'هفته پیش', 'هفتهٔ پیش', '۲ هفته پیش', '۳ هفته پیش', 'ماه پیش']
-    for m in older_markers:
-        if m in text:
-            return True
-    return False
 
 class HybridDivarCrawler:
     """
@@ -47,13 +59,19 @@ class HybridDivarCrawler:
     MAX_CRAWL_DURATION = 18
     CONCURRENCY_WORKERS = 6
 
-    def __init__(self, city: str = 'tehran', proxy_manager: Optional[ProxyManager] = None):
+    def __init__(
+        self,
+        city: str = 'tehran',
+        proxy_manager: Optional[ProxyManager] = None,
+        use_proxy: bool = False,
+    ):
         self.city = city
         self.proxy_manager = proxy_manager or ProxyManager()
+        self.use_proxy = bool(use_proxy)
         self.rate_limiter = TokenBucketRateLimiter(capacity=4, fill_rate=2.0)
         self.client = TLSImpersonatorClient(
             impersonate="chrome120",
-            proxy=self.proxy_manager.get_proxy()
+            proxy=self.proxy_manager.get_proxy() if self.use_proxy else None
         )
 
     def fetch_listings(
@@ -129,7 +147,7 @@ class HybridDivarCrawler:
                 limit=limit
             )
             if op_res.get('success') and op_res.get('data'):
-                print(f"[HybridDivar] ✅ دریافت موفقیت‌آمیز آگهی‌ها از اندپوینت پلتفرم باز: {self.OPEN_PLATFORM_POST_URL}")
+                _console(f"[HybridDivar] ✅ دریافت موفقیت‌آمیز آگهی‌ها از اندپوینت پلتفرم باز: {self.OPEN_PLATFORM_POST_URL}")
                 parsed_op = self._parse_open_platform_response(op_res['data'], category_meta, limit, on_item_found=on_item_found)
                 if parsed_op:
                     results.extend(parsed_op)
@@ -138,9 +156,9 @@ class HybridDivarCrawler:
                         return results
             else:
                 status_code = op_res.get('status_code', 'unknown')
-                print(f"[HybridDivar] ℹ️ استعلام از اندپوینت OpenAPI Finder ({self.OPEN_PLATFORM_POST_URL}) وضعیت {status_code}: سوئیچ خودکار به موتور هیبریدی زنده...")
+                _console(f"[HybridDivar] ℹ️ استعلام از اندپوینت OpenAPI Finder ({self.OPEN_PLATFORM_POST_URL}) وضعیت {status_code}: سوئیچ خودکار به موتور هیبریدی زنده...")
         except Exception as e:
-            print(f"[HybridDivar] هشدار فراخوانی OpenAPI Finder: {e}")
+            _console(f"[HybridDivar] هشدار فراخوانی OpenAPI Finder: {e}")
 
         # آماده‌سازی کوئری پارامترهای فیلترینگ URL دیوار
         url_query_parts = []
@@ -148,19 +166,7 @@ class HybridDivarCrawler:
             from urllib.parse import quote
             url_query_parts.append(f"q={quote(query)}")
 
-        # استخراج slug رسمی محله‌های انتخابی با مرجع tehran_districts.json
-        if districts:
-            from data.tehran_districts import get_divar_slug_for_district
-            d_slugs = []
-            for d_name in districts:
-                dn = (d_name or '').strip()
-                if not dn or dn in ['all', 'تهران', 'کل شهر', 'همه']:
-                    continue
-                s = get_divar_slug_for_district(dn)
-                if s and s not in d_slugs:
-                    d_slugs.append(s)
-            if d_slugs:
-                url_query_parts.append(f"districts={','.join(d_slugs)}")
+        # فیلترهای مشخصات مالی و فیزیکی در کوئری پارامتر (محله‌ها مستقیماً در مسیر URL قرار می‌گیرند)
 
         if category_meta['deal_type'] == 'rent':
             if min_deposit or max_deposit:
@@ -186,57 +192,104 @@ class HybridDivarCrawler:
         if has_warehouse:
             url_query_parts.append("has-warehouse=true")
 
-        # ۲. پیمایش صفحات با پایپلاین همروند (حداکثر سقف زمانی ۱۵ تا ۲۰ ثانیه)
+        # ۲. ایجاد لیست اهداف پیمایش زنده برای دستیابی به حجم درخواستی فایل‌های شخصی
+        target_urls = []
+        
+        # استخراج اسلاگ محله‌های درخواستی با مرجع tehran_districts.json
+        specific_d_slugs = []
+        has_region_5_request = False
+        if districts:
+            from data.tehran_districts import get_divar_slug_for_district
+            for d_name in districts:
+                dn = (d_name or '').strip()
+                if not dn or dn in ['all', 'تهران', 'کل شهر', 'همه']:
+                    continue
+                if any(x in dn for x in ['منطقه ۵', 'منطقه 5']):
+                    has_region_5_request = True
+                    continue
+                s = get_divar_slug_for_district(dn)
+                if s and s not in specific_d_slugs:
+                    specific_d_slugs.append(s)
+
+        # اگر کاربر محله مشخصی (مانند پونک) را خواسته، مسیر استاندارد محله در دیوار را پیمایش کن
+        if specific_d_slugs:
+            q_str = f"?{'&'.join(url_query_parts)}" if url_query_parts else ""
+            for ds in specific_d_slugs:
+                target_u_path = f"{self.BASE_WEB_URL}/{self.city}/{slug}/{ds}{q_str}"
+                if target_u_path not in target_urls:
+                    target_urls.append(target_u_path)
+
+        elif has_region_5_request:
+            # پیمایش اختصاصی کانون‌های منطقه ۵ با اسلاگ‌های تفکیکی در مسیر
+            r5_slugs = ['punak', 'central-jannat-abad', 'bagh-e-feyz', 'shahran', 'sadeghiyeh', 'ferdows']
+            q_str = f"?{'&'.join(url_query_parts)}" if url_query_parts else ""
+            for r5 in r5_slugs:
+                r5_u = f"{self.BASE_WEB_URL}/{self.city}/{slug}/{r5}{q_str}"
+                if r5_u not in target_urls:
+                    target_urls.append(r5_u)
+        else:
+            # جستجوی عمومی کل تهران (فقط در صورت عدم تعیین محله یا منطقه)
+            primary_url = f"{self.BASE_WEB_URL}/{self.city}/{slug}"
+            if url_query_parts:
+                primary_url += f"?{'&'.join(url_query_parts)}"
+            target_urls.append(primary_url)
+            q_str = f"?{'&'.join(url_query_parts)}" if url_query_parts else ""
+            for kd in ['punak', 'saadat-abad', 'shahrak-e-gharb', 'marzdaran', 'ferdows', 'gisha']:
+                kd_query_url = f"{self.BASE_WEB_URL}/{self.city}/{slug}/{kd}{q_str}"
+                if kd_query_url not in target_urls:
+                    target_urls.append(kd_query_url)
+
         crawl_start_time = time.time()
-        MAX_CRAWL_DURATION = 18  # سقف زمانی ۱۸ ثانیه
-        empty_pages_count = 0
-        for page in range(1, max_pages + 1):
+        max_duration = getattr(self, 'MAX_CRAWL_DURATION', 65)
+        pages_per_target = max(1, min(max_pages or 5, 5))
+
+        for idx, base_target_url in enumerate(target_urls, 1):
             if len(results) >= limit:
                 break
-            if time.time() - crawl_start_time >= MAX_CRAWL_DURATION:
-                print(f"[HybridDivar] سقف زمانی {MAX_CRAWL_DURATION} ثانیه فرارسید؛ تحویل فوری نتایج استخراج‌شده.")
+            if time.time() - crawl_start_time >= max_duration:
+                _console(f"[HybridDivar] سقف زمانی {max_duration} ثانیه فرارسید؛ تحویل {len(results)} فایل شخصی استخراج‌شده.")
                 break
 
-            self.rate_limiter.acquire(1)
-            url = f"{self.BASE_WEB_URL}/{self.city}/{slug}"
-            page_query = list(url_query_parts)
-            if page > 1:
-                page_query.append(f"page={page}")
-            if page_query:
-                url += f"?{'&'.join(page_query)}"
-
-            def _do_request():
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'fa,en;q=0.9',
-                    'Referer': f"https://divar.ir/s/{self.city}/real-estate"
-                }
-                return self.client.get(url, headers=headers, timeout=12)
-
-            response = fallback_solver.execute_with_resilience(f"DivarSearchLive_P{page}", _do_request)
-            if response and response.status_code == 200:
-                page_items, reached_limit, total_raw = self._parse_html_state(
-                    response.text,
-                    category_meta,
-                    limit - len(results),
-                    filters=filters_dict,
-                    on_item_found=on_item_found
-                )
-                results.extend(page_items)
-                print(f"[HybridDivar] صفحه {page}: تعداد {len(page_items)} آگهی واجد شرایط شخصی از {total_raw} ویجت دریافت شد (مجموع: {len(results)}/{limit}).")
-                if reached_limit:
-                    print(f"[HybridDivar] رسیدن به مرز زمانی ۵ روز پیش در صفحه {page} دیوار؛ توقف صفحه‌بندی.")
+            current_url = base_target_url
+            for p_num in range(1, pages_per_target + 1):
+                if len(results) >= limit:
                     break
-                if total_raw == 0:
-                    empty_pages_count += 1
-                    if empty_pages_count >= 2:
-                        print(f"[HybridDivar] عدم وجود آگهی بیشتر در دیوار پس از صفحه {page}.")
+                if time.time() - crawl_start_time >= max_duration:
+                    break
+
+                self.rate_limiter.acquire(1)
+
+                def _do_request(*args, **kwargs):
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                        'Accept-Language': 'fa,en;q=0.9',
+                        'Referer': f"https://divar.ir/s/{self.city}/real-estate"
+                    }
+                    return self.client.get(current_url, headers=headers, timeout=12)
+
+                response = fallback_solver.execute_with_resilience(
+                    f"DivarSearch_{idx}_p{p_num}",
+                    _do_request,
+                    fallback_url=current_url
+                )
+                if response and response.status_code == 200:
+                    page_items, reached_limit, total_raw, next_lpd = self._parse_html_state(
+                        response.text,
+                        category_meta,
+                        limit - len(results),
+                        filters=filters_dict,
+                        on_item_found=on_item_found
+                    )
+                    results.extend(page_items)
+                    target_label = base_target_url.split('?')[0].split('/')[-1]
+                    _console(f"[HybridDivar] هدف {idx}/{len(target_urls)} ({target_label} ص{p_num}): دریافت {len(page_items)} فایل شخصی معتبر از {total_raw} آگهی (مجموع: {len(results)}/{limit}).")
+                    if not next_lpd or total_raw == 0:
                         break
+                    sep = '&' if '?' in base_target_url else '?'
+                    current_url = f"{base_target_url}{sep}last-post-date={next_lpd}&page={p_num + 1}"
                 else:
-                    empty_pages_count = 0
-            else:
-                break
+                    break
 
         # مرتب‌سازی نهایی بر اساس تاریخ/امتیاز (از جدیدترین به قدیمی‌ترین)
         results.sort(key=lambda x: x.score, reverse=True)
@@ -264,8 +317,30 @@ class HybridDivarCrawler:
 
                 # واکشی جزئیات عمیق و شماره تماس
                 post_details = self._fetch_post_details(token)
-                contact_phone = p.get('contact', {}).get('phone') or p.get('phone_number') or post_details.get('phone')
                 real_desc = post_details.get('description') or p.get('description') or title
+                if post_details.get('is_agency_post') or post_details.get('is_non_real_estate'):
+                    continue
+
+                owner_check = OwnerFilter.evaluate(
+                    platform='divar',
+                    title=title,
+                    description=real_desc,
+                    widget_data=p,
+                    raw_text=str(p.get('subtitle') or ''),
+                )
+                if not owner_check.is_personal:
+                    continue
+
+                area = post_details.get('area') or p.get('area')
+                if not area or parse_area(area) < 5:
+                    continue
+
+                raw_contact = (
+                    post_details.get('phone')
+                    or (p.get('contact') or {}).get('phone')
+                    or p.get('phone_number')
+                )
+                contact_phone = extract_phone_number(raw_contact, filter_dummy=True)
 
                 all_images = post_details.get('images') or p.get('images') or []
                 item_dict = {
@@ -282,11 +357,11 @@ class HybridDivarCrawler:
                     'meter_price': post_details.get('meter_price') or p.get('meter_price') or 0,
                     'deposit': post_details.get('deposit') or p.get('deposit') or 0,
                     'monthly_rent': post_details.get('monthly_rent') or p.get('monthly_rent') or 0,
-                    'area': post_details.get('area') or p.get('area') or 85,
-                    'rooms': post_details.get('rooms') or p.get('rooms') or 2,
-                    'floor': post_details.get('floor') or 1,
+                    'area': area,
+                    'rooms': post_details.get('rooms') if post_details.get('rooms') is not None else p.get('rooms', 0),
+                    'floor': post_details.get('floor') if post_details.get('floor') is not None else p.get('floor'),
                     'total_floors': post_details.get('total_floors'),
-                    'build_year': post_details.get('build_year') or 1400,
+                    'build_year': post_details.get('build_year'),
                     'has_elevator': post_details.get('has_elevator', False),
                     'has_parking': post_details.get('has_parking', False),
                     'has_warehouse': post_details.get('has_warehouse', False),
@@ -298,7 +373,7 @@ class HybridDivarCrawler:
                     'score': 85,
                     'is_personal_owner': True,
                     'owner_type': 'personal',
-                    'filter_log': 'OpenAPI Finder Post (شخصی)',
+                    'filter_log': f'OpenAPI Finder + DOM ({owner_check.status})',
                     'owner_info': {
                         'name': f"مالک آگهی دیوار ({p.get('district') or 'تهران'})",
                         'phone': contact_phone or '',
@@ -312,10 +387,73 @@ class HybridDivarCrawler:
                 if on_item_found:
                     on_item_found(schema)
             except Exception as ex:
-                print(f"[HybridDivar] خطا در پردازش پست OpenAPI: {ex}")
+                _console(f"[HybridDivar] خطا در پردازش پست OpenAPI: {ex}")
         return items
 
-    def _fetch_post_details(self, token: str) -> Dict[str, Any]:
+    @staticmethod
+    def normalize_post_token(token: Optional[str]) -> str:
+        """Normalize database/source URL forms to Divar's raw post token."""
+        raw = str(token or "").strip().rstrip("/").split("/")[-1]
+        raw = raw.split("?", 1)[0].split("#", 1)[0]
+        if raw.startswith("divar_"):
+            raw = raw[len("divar_") :]
+        return raw if re.fullmatch(r"[A-Za-z0-9_-]+", raw or "") else ""
+
+    def fetch_post_dom_details(
+        self,
+        token: str,
+        fallback_title: str = "",
+        fallback_description: str = "",
+        include_contact: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Fetch and parse the server-returned post DOM without Playwright/Chromium.
+
+        A dedicated TLS HTTP session is used because detail requests run concurrently;
+        JavaScript is never executed and browser fallback_solver is intentionally bypassed.
+        """
+        normalized_token = self.normalize_post_token(token)
+        if not normalized_token:
+            return DivarDOMContactParser.parse(
+                "",
+                fallback_title=fallback_title,
+                fallback_description=fallback_description,
+            )
+
+        try:
+            dom_client = TLSImpersonatorClient(
+                impersonate=self.client.target_key,
+                proxy=self.client.proxy,
+                max_requests_per_session=4,
+            )
+            response = dom_client.get(
+                f"https://divar.ir/v/{normalized_token}",
+                timeout=7,
+                allow_redirects=True,
+            )
+            if response is not None and response.status_code == 200:
+                html = response.text or ""
+                if len(html) <= 8_000_000:
+                    parsed = DivarDOMContactParser.parse(
+                        html,
+                        fallback_title=fallback_title,
+                        fallback_description=fallback_description,
+                    )
+                    if not include_contact:
+                        parsed['phone'] = None
+                        parsed['phone_source'] = None
+                        parsed['phone_confidence'] = 0
+                    return parsed
+        except Exception:
+            pass
+
+        return DivarDOMContactParser.parse(
+            "",
+            fallback_title=fallback_title,
+            fallback_description=fallback_description,
+        )
+
+    def _fetch_post_details(self, token: str, include_contact: bool = True) -> Dict[str, Any]:
         """
         دریافت بلادرنگ و عمیق کلیه جزئیات واقعی آگهی از API رسمی دیوار:
         متن کامل توضیحات، تمام تصاویر اصلی CDN دیوار، متراژ، سال ساخت، تعداد اتاق،
@@ -348,14 +486,41 @@ class HybridDivarCrawler:
                 'Accept': 'application/json, text/plain, */*',
                 'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8',
             }
-            resp = requests.get(url, headers=headers, timeout=6)
+            resp = requests.get(url, headers=headers, timeout=3)
             if resp and resp.status_code == 200:
                 data = resp.json()
+
+                # ممیزی ساختاری با متادیتای رسمی webengage دیوار
+                webengage = data.get('webengage', {})
+                if isinstance(webengage, dict):
+                    # ۱. گاردریل عدم پذیرش کالاهای غیرملکی (فرش، لوازم، خدمات و...)
+                    cat_1 = str(webengage.get('cat_1', '')).lower()
+                    if cat_1 and cat_1 != 'real-estate':
+                        details['is_non_real_estate'] = True
+                        return details
+
+                    # ۲. بررسی پرچم رسمی نوع حساب دیوار (personal vs business)
+                    biz_type = str(webengage.get('business_type', '')).lower()
+                    if biz_type and biz_type != 'personal':
+                        details['is_agency_post'] = True
+
+                    # ۳. استخراج مستقیم مقادیر مالی در صورت وجود
+                    if webengage.get('price'):
+                        details['total_price'] = int(webengage['price'])
+                    if webengage.get('credit'):
+                        details['deposit'] = int(webengage['credit'])
+                    if webengage.get('rent'):
+                        details['monthly_rent'] = int(webengage['rent'])
+
                 sections = data.get('sections', [])
                 images: List[str] = []
                 features: List[str] = []
 
                 for sec in sections:
+                    sec_name = str(sec.get('section_name', '')).upper()
+                    if any(bs in sec_name for bs in ['BUSINESS_SECTION', 'AGENCY_SECTION', 'SELLER_PROFILE', 'BUSINESS']):
+                        details['is_agency_post'] = True
+
                     for w in sec.get('widgets', []):
                         wt = w.get('widget_type', '')
                         wd = w.get('data', {})
@@ -366,14 +531,27 @@ class HybridDivarCrawler:
                             biz_type = str(req_data.get('post_business_type', '')).lower()
                             if biz_type in ['premium-panel', 'business', 'agency', 'consultant', 'real_estate_agency']:
                                 details['is_agency_post'] = True
-                        elif any(x in wt.lower() for x in ['agency_info', 'business_section', 'seller_profile']):
+                        elif any(x in wt.lower() for x in ['agency_info', 'business_section', 'seller_profile', 'consultant', 'agent_info']):
                             details['is_agency_post'] = True
+
+                        # بررسی تاریخ و عنوان در EXPANDABLE_SECTION (مثل: ۶ روز پیش در سعادت آباد)
+                        if wt == 'EXPANDABLE_SECTION':
+                            exp_title = wd.get('title', '')
+                            details['time_title'] = exp_title
+                            if is_stale_ad(exp_title):
+                                details['is_stale_post'] = True
+
+                        # ممیزی ویجت‌های تبلیغ‌کننده برای اصطلاحات دپارتمان، هلدینگ، مشاور و املاک (به استثنای ویجت‌های سیستمی دیوار)
+                        if wt not in ['SELECTOR_ROW', 'FEEDBACK_ROW', 'REPORT_ROW', 'SHARE_ROW', 'SAFETY_ROW', 'BREADCRUMB_ROW', 'TAG_ROW', 'DESCRIPTION_ROW', 'UNEXPANDABLE_ROW', 'GROUP_INFO_ROW', 'GROUP_FEATURE_ROW', 'IMAGE_CAROUSEL']:
+                            w_text = f"{wd.get('title', '')} {wd.get('subtitle', '')} {wd.get('text', '')}"
+                            if any(term in w_text for term in OwnerFilter.NON_PERSONAL_ACCOUNT_TERMS):
+                                details['is_agency_post'] = True
 
                         # ۱. شرح کامل آگهی
                         if wt == 'DESCRIPTION_ROW':
                             details['description'] = wd.get('text', '')
 
-                        # ۲. گالری تصاویر اصلی CDN (پشتیبانی کامل از تمامی ساختارهای تصویر دیوار از جمله IMAGE_CAROUSEL)
+                        # ۲. گالری تصاویر اصلی CDN با تضمین بالاترین وضوح (ارتقا به webp_post باکیفیت)
                         elif wt in ['IMAGE_CAROUSEL', 'IMAGE_SLIDER_ROW', 'IMAGES_ROW', 'IMAGE_SLIDER', 'IMAGE_ROW'] or 'IMAGE' in wt:
                             for item in wd.get('items', []):
                                 if isinstance(item, dict):
@@ -388,19 +566,25 @@ class HybridDivarCrawler:
                                 else:
                                     img_url = None
 
-                                if img_url and img_url not in images:
-                                    images.append(img_url)
+                                if img_url:
+                                    # ارتقای خودکار تامبنیل‌ها به رزولوشن اصلی دیوار (Full HD)
+                                    hi_res = (
+                                        img_url.replace('/webp_thumbnail/', '/webp_post/')
+                                               .replace('/thumbnail/', '/post/')
+                                               .replace('/webp_medium/', '/webp_post/')
+                                               .replace('/medium/', '/post/')
+                                    )
+                                    if hi_res not in images:
+                                        images.append(hi_res)
 
                         # ۳. اطلاعات سه‌گانه کلیدی بالای صفحه (متراژ، سال ساخت، تعداد اتاق)
-                        elif wt == 'UNEXPANDABLE_ROW' or wt == 'GROUP_INFO_ROW':
+                        if wt in ['GROUP_INFO_ROW', 'UNEXPANDABLE_ROW'] and wd.get('items'):
                             for item in wd.get('items', []):
                                 title = item.get('title', '')
                                 val = item.get('value', '')
                                 val_en = persian_to_english_numbers(val)
                                 if 'متراژ' in title:
-                                    m_a = re.search(r'\d+', val_en)
-                                    if m_a:
-                                        details['area'] = int(m_a.group(0))
+                                    details['area'] = parse_area(val_en)
                                 elif 'ساخت' in title:
                                     m_y = re.search(r'\d+', val_en)
                                     if m_y:
@@ -413,22 +597,25 @@ class HybridDivarCrawler:
                                         if m_r:
                                             details['rooms'] = int(m_r.group(0))
 
-                        # ۴. ردیف‌های مقداری و ویژگی‌ها (قیمت، ودیعه، اجاره، طبقه، سند و...)
-                        elif wt == 'TITLE_ROW' or wt == 'SUBTITLE_ROW':
-                            pass
-                        elif wt == 'LIST_DATA_ROW':
+                        # ۴. ردیف‌های مقداری ساختاریافته دیوار (ودیعه، اجاره، قیمت کل، قیمت هر متر، طبقه و قابلیت تبدیل)
+                        if wt in ['UNEXPANDABLE_ROW', 'LIST_DATA_ROW'] and (wd.get('title') or wd.get('value')):
                             t = wd.get('title', '')
                             v = wd.get('value', '')
                             v_en = persian_to_english_numbers(v)
 
-                            if 'ودیعه' in t or 'رهن' in t:
+                            if 'ودیعه و اجاره' in t or 'تبدیل' in t:
+                                details['conversion_note'] = v
+                                if 'قابل تبدیل' in v and 'غیر' not in v:
+                                    details['is_convertible'] = True
+                                features.append(f"ودیعه و اجاره: {v}")
+                            elif 'ودیعه' in t or 'رهن' in t:
                                 details['deposit'] = parse_price(v)
                             elif 'اجاره' in t:
                                 details['monthly_rent'] = parse_price(v)
-                            elif 'قیمت کل' in t:
-                                details['total_price'] = parse_price(v)
                             elif 'قیمت هر متر' in t:
                                 details['meter_price'] = parse_price(v)
+                            elif 'قیمت کل' in t or 'قیمت' in t:
+                                details['total_price'] = parse_price(v)
                             elif 'طبقه' in t:
                                 m_floors = re.search(r'(\d+)\s*از\s*(\d+)', v_en)
                                 if m_floors:
@@ -506,24 +693,54 @@ class HybridDivarCrawler:
                 details['images'] = images
                 details['features'] = features
 
-                # ۱. استخراج شماره واقعی از API رسمی اطلاعات تماس دیوار با سشن کاربر
-                try:
-                    from crawler.divar_session_manager import DivarSessionManager
-                    direct_phone = DivarSessionManager.fetch_contact_phone(token)
-                    if direct_phone:
-                        details['phone'] = direct_phone
-                except Exception:
-                    pass
-
-                # ۲. در صورت نبود سشن، استخراج شماره تلفن از متن با رگکس و دیکودر اعداد حروفی
-                if not details.get('phone'):
-                    ph = extract_phone_number(desc_text)
-                    if ph:
-                        details['phone'] = ph
-
-                return details
-        except Exception as e:
+        except Exception:
             pass
+
+        # اولویت نخست: DOM واقعی صفحه آگهی، بدون اجرای مرورگر یا جاوااسکریپت.
+        dom_details = self.fetch_post_dom_details(
+            token,
+            fallback_description=details.get('description') or '',
+            include_contact=include_contact,
+        )
+        if dom_details.get('description') and not details.get('description'):
+            details['description'] = dom_details['description']
+        if dom_details.get('is_agency_post'):
+            details['is_agency_post'] = True
+        details['dom_owner_filter_status'] = dom_details.get('owner_filter_status')
+        details['dom_owner_filter_reason'] = dom_details.get('owner_filter_reason')
+
+        if (
+            include_contact
+            and not details.get('is_agency_post')
+            and dom_details.get('is_personal_owner')
+            and dom_details.get('phone')
+        ):
+            details['phone'] = dom_details['phone']
+            details['phone_source'] = dom_details.get('phone_source') or 'dom'
+            details['phone_confidence'] = dom_details.get('phone_confidence', 0)
+
+        normalized_token = self.normalize_post_token(token)
+
+        # فال‌بک HTTP احراز‌شده دیوار؛ این مسیر نیز از Chromium استفاده نمی‌کند.
+        if include_contact and not details.get('phone') and not details.get('is_agency_post') and normalized_token:
+            try:
+                from crawler.divar_session_manager import DivarSessionManager
+                direct_phone = DivarSessionManager.fetch_contact_phone(normalized_token)
+                if direct_phone:
+                    details['phone'] = direct_phone
+                    details['phone_source'] = 'divar_authenticated_http_api'
+                    details['phone_confidence'] = 100
+            except Exception:
+                pass
+
+        # آخرین فال‌بک: شماره‌ای که خود مالک در توضیحات عمومی آگهی نوشته است.
+        if include_contact and not details.get('phone') and not details.get('is_agency_post'):
+            ph = extract_phone_number(details.get('description') or '', filter_dummy=True)
+            if ph:
+                details['phone'] = ph
+                details['phone_source'] = 'description_text'
+                details['phone_confidence'] = 72
+
         return details
 
     def _build_validated_item(
@@ -534,7 +751,11 @@ class HybridDivarCrawler:
         filters: Optional[Dict[str, Any]] = None
     ) -> Optional[NormalizedPropertySchema]:
         """اعتبارسنجی نهایی، فیلترینگ سخت‌گیرانه، محاسبه امتیاز و ساخت شیء نرمالایز شده"""
+        if post_details.get('is_non_real_estate'):
+            return None
         if post_details.get('is_agency_post'):
+            return None
+        if post_details.get('is_stale_post'):
             return None
 
         token = cand['token']
@@ -546,6 +767,30 @@ class HybridDivarCrawler:
         raw_img = cand.get('raw_img')
         d = cand.get('d', {})
 
+        # فیلترینگ جغرافیایی هوشمند (منطقه یا محله در صورت درخواست)
+        req_districts = (filters or {}).get('districts', [])
+        if req_districts:
+            matched_d = False
+            for rd in req_districts:
+                rd_clean = (rd or '').strip()
+                if not rd_clean or rd_clean in ['all', 'تهران', 'کل شهر', 'همه']:
+                    matched_d = True
+                    break
+                if any(x in rd_clean for x in ['منطقه ۵', 'منطقه 5', 'منطقه ۲', 'منطقه 2']):
+                    if is_in_region_2_or_5(district, f"{title} {middle_desc} {bottom_desc}"):
+                        matched_d = True
+                        break
+                elif rd_clean in district or rd_clean in title or rd_clean in middle_desc:
+                    matched_d = True
+                    break
+            if not matched_d:
+                return None
+
+        # رد قطعی آگهی‌های تاریخ‌گذشته (۲ روز پیش به بالا، ۶ روز پیش، هفته‌های قبل)
+        time_check_text = f"{bottom_desc} {middle_desc} {post_details.get('time_title', '')}"
+        if is_stale_ad(time_check_text):
+            return None
+
         deal_type = category_meta['deal_type']
         prop_type = category_meta['property_type']
 
@@ -554,7 +799,7 @@ class HybridDivarCrawler:
         if raw_img and raw_img not in all_images and 'divarcdn.com' in raw_img:
             all_images.insert(0, raw_img)
 
-        final_desc = real_desc if (real_desc and len(real_desc) > 10) else f"فایل استخراج شده از دیوار. {title}. در منطقه {district}. {middle_desc} {bottom_desc}."
+        final_desc = real_desc or ''
 
         # فیلتر مرحله دوم: بررسی سخت‌گیرانه روی متن کامل آگهی جهت حذف واسطه‌ها
         full_filter_res = OwnerFilter.evaluate(
@@ -578,11 +823,11 @@ class HybridDivarCrawler:
         monthly_rent = 0
 
         if deal_type == 'sale':
-            total_price = post_details.get('total_price') or parse_price(middle_desc) or parse_price(bottom_desc)
+            total_price = post_details.get('total_price') or (parse_price(middle_desc) if any(x in middle_desc for x in ['میلیارد', 'تومان', 'قیمت']) else 0)
             meter_price = post_details.get('meter_price') or 0
         else:
-            deposit = post_details.get('deposit') or parse_price(middle_desc)
-            monthly_rent = post_details.get('monthly_rent') or parse_price(bottom_desc)
+            deposit = post_details.get('deposit') or (parse_price(middle_desc) if any(x in middle_desc for x in ['ودیعه', 'رهن', 'میلیارد', 'میلیون']) else 0)
+            monthly_rent = post_details.get('monthly_rent') or (parse_price(bottom_desc) if 'اجاره' in bottom_desc else 0)
 
         total_price, deposit, monthly_rent = sanitize_property_financials(
             deal_type=deal_type,
@@ -592,27 +837,37 @@ class HybridDivarCrawler:
             property_type=prop_type
         )
 
+        features = list(post_details.get('features', []))
+        from crawler.schemas import calculate_mortgage_conversion
+        if deal_type == 'rent':
+            conv = calculate_mortgage_conversion(deposit, monthly_rent)
+            full_mortgage_val = conv.get('full_mortgage_equivalent', 0)
+            if full_mortgage_val > 0:
+                features.append(f"معادل رهن کامل: {int(full_mortgage_val / 1_000_000):,} میلیون تومان")
+                features.append("عرف تبدیل: هر ۱۰۰ میلیون رهن = ۳ میلیون اجاره")
+            if post_details.get('conversion_note'):
+                features.append(f"وضعیت تبدیل: {post_details['conversion_note']}")
+
         # ابعاد و مشخصات
         combined_text = f"{title} {middle_desc} {bottom_desc} {final_desc}"
-        area = post_details.get('area') or self._extract_area(combined_text) or 90
+        area = post_details.get('area') or d.get('area') or self._extract_area(combined_text)
+        if not area or parse_area(area) < 5:
+            return None
         rooms = post_details.get('rooms')
         if rooms is None:
-            rooms = self._extract_rooms(combined_text) or (1 if area < 70 else (2 if area < 130 else 3))
+            rooms = self._extract_rooms(combined_text) or 0
 
         if area > 0 and total_price > 0 and not meter_price:
             meter_price = int(total_price / area)
 
         floor = post_details.get('floor')
-        if floor is None:
-            floor = 1
         total_floors = post_details.get('total_floors')
-        build_year = post_details.get('build_year') or 1400
+        build_year = post_details.get('build_year') or d.get('build_year')
 
         has_elevator = post_details.get('has_elevator', False)
         has_parking = post_details.get('has_parking', False)
         has_warehouse = post_details.get('has_warehouse', False)
         has_balcony = post_details.get('has_balcony', False)
-        features = post_details.get('features', [])
 
         # بررسی انطباق دقیق با فیلترهای درخواستی کاربر
         if filters:
@@ -689,7 +944,10 @@ class HybridDivarCrawler:
                 return None
 
         # استخراج شماره تماس واقعی
-        extracted_phone = post_details.get('phone') or extract_phone_number(f"{final_desc} {title}")
+        extracted_phone = extract_phone_number(
+            post_details.get('phone') or f"{final_desc} {title}",
+            filter_dummy=True,
+        )
         owner_phone = extracted_phone if extracted_phone else ""
         source_url = f"https://divar.ir/v/{token}"
 
@@ -739,7 +997,10 @@ class HybridDivarCrawler:
                 'phone': owner_phone,
                 'urgency': 'high',
                 'flexibility': 'معمولی',
-                'notes': f"ثبت خودکار از کراولر دیوار برای منطقه {district}. {'(شماره تماس مستقیم از متن)' if extracted_phone else '(شماره در دیوار محفوظ است)'}"
+                'notes': (
+                    f"ثبت خودکار از کراولر دیوار برای منطقه {district}. "
+                    f"{'(منبع شماره: ' + str(post_details.get('phone_source') or 'متن عمومی') + ')' if extracted_phone else '(شماره در دیوار محفوظ است)'}"
+                )
             }
         }
 
@@ -748,18 +1009,25 @@ class HybridDivarCrawler:
         except Exception:
             return None
 
-    def _parse_html_state(self, html_text: str, category_meta: Dict[str, Any], limit: int, filters: Optional[Dict[str, Any]] = None, on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None) -> Tuple[List[NormalizedPropertySchema], bool, int]:
+    def _parse_html_state(self, html_text: str, category_meta: Dict[str, Any], limit: int, filters: Optional[Dict[str, Any]] = None, on_item_found: Optional[Callable[[NormalizedPropertySchema], None]] = None) -> Tuple[List[NormalizedPropertySchema], bool, int, Optional[str]]:
         results: List[NormalizedPropertySchema] = []
         reached_limit = False
         total_raw_widgets = 0
+        next_last_post_date = None
 
         # استخراج از window.__PRELOADED_STATE__
         match = re.search(r'window\.__PRELOADED_STATE__\s*=\s*(\{.*?\});', html_text)
         if match:
             try:
                 state_data = json.loads(match.group(1))
-                widgets = state_data.get('nb', {}).get('listWidgets', [])
+                nb = state_data.get('nb', {})
+                widgets = nb.get('listWidgets', [])
                 total_raw_widgets = len(widgets)
+                pag_data = nb.get('pagination', {})
+                if isinstance(pag_data, dict):
+                    next_last_post_date = pag_data.get('data', {}).get('last_post_date') or pag_data.get('last_post_date')
+                if not next_last_post_date:
+                    next_last_post_date = nb.get('last_post_date')
                 candidates: List[Dict[str, Any]] = []
 
                 for w in widgets:
@@ -785,17 +1053,39 @@ class HybridDivarCrawler:
                     middle_desc = d.get('middle_description_text', '')
                     bottom_desc = d.get('bottom_description_text', '')
 
-                    # بررسی بازه زمانی: توقف در صورت قدیمی‌تر بودن از ۵ روز گذشته
-                    if is_older_than_5_days(bottom_desc) or is_older_than_5_days(middle_desc):
-                        reached_limit = True
+                    # فیلترینگ جغرافیایی هوشمند بر اساس محله‌های درخواستی
+                    req_districts = (filters or {}).get('districts', [])
+                    if req_districts:
+                        matched_d = False
+                        for rd in req_districts:
+                            rd_clean = (rd or '').strip()
+                            if not rd_clean or rd_clean in ['all', 'تهران', 'کل شهر', 'همه']:
+                                matched_d = True
+                                break
+                            if any(x in rd_clean for x in ['منطقه ۵', 'منطقه 5', 'منطقه ۲', 'منطقه 2']):
+                                if is_in_region_2_or_5(district, f"{title} {bottom_desc} {middle_desc}"):
+                                    matched_d = True
+                                    break
+                            elif rd_clean in district or rd_clean in title or rd_clean in bottom_desc:
+                                matched_d = True
+                                break
+                        if not matched_d:
+                            continue
+
+                    # ۰. رد فوری و قطعی پنل‌ها و مشاوران املاک از متن توصیفی پایین ویجت
+                    if any(term in bottom_desc for term in ['مشاور', 'آژانس', 'املاک', 'دپارتمان', 'مسکن', 'هلدینگ', 'کارشناس', 'بنگاه', 'دفتر', 'گروه']):
                         continue
 
-                    # فیلتر سریع حذف آگهی‌های همخونه
+                    # ۱. بررسی بازه زمانی: رد فوری آگهی‌های تاریخ‌گذشته و غیرلحظه‌ای (اولویت با انتشار لحظه‌ای و روز جاری)
+                    if is_stale_ad(bottom_desc) or is_stale_ad(middle_desc):
+                        continue
+
+                    # ۲. فیلتر سریع حذف آگهی‌های همخونه
                     combined_initial_text = f"{title} {middle_desc} {bottom_desc}".lower()
                     if any(kw in combined_initial_text for kw in OwnerFilter.SHARED_HOUSING_NEGATIVE_KEYWORDS):
                         continue
 
-                    # فیلتر مرحله اول: بررسی متادیتای اولیه
+                    # ۳. فیلتر مرحله اول: بررسی متادیتای اولیه
                     filter_res = OwnerFilter.evaluate(
                         platform='divar',
                         title=title,
@@ -804,7 +1094,7 @@ class HybridDivarCrawler:
                         raw_text=bottom_desc
                     )
                     if not filter_res.is_personal:
-                        print(f"[DivarFilter] ❌ {token}: {title[:28]} -> {filter_res.reason} {filter_res.detected_terms}")
+                        _console(f"[DivarFilter] ❌ {token}: {title[:28]} -> {filter_res.reason} {filter_res.detected_terms}")
                         continue
 
                     raw_img = (
@@ -814,6 +1104,13 @@ class HybridDivarCrawler:
                         d.get('top_image_url') or
                         d.get('middle_description_image_url')
                     )
+                    if raw_img:
+                        raw_img = (
+                            raw_img.replace('/webp_thumbnail/', '/webp_post/')
+                                   .replace('/thumbnail/', '/post/')
+                                   .replace('/webp_medium/', '/webp_post/')
+                                   .replace('/medium/', '/post/')
+                        )
 
                     candidates.append({
                         'token': token,
@@ -855,7 +1152,7 @@ class HybridDivarCrawler:
             except Exception as e:
                 pass
 
-        return results, reached_limit, total_raw_widgets
+        return results, reached_limit, total_raw_widgets, next_last_post_date
 
     def _extract_area(self, text: str) -> int:
         match = re.search(r'(\d+)\s*(?:متر|متری|مترمربع)', persian_to_english_numbers(text))

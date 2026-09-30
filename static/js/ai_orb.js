@@ -90,13 +90,13 @@
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const W = canvas.width  || 140;
-        const H = canvas.height || 140;
+        const W = canvas.width  || 168;
+        const H = canvas.height || 168;
         const cx = W / 2, cy = H / 2;
         const R  = W * 0.43; // radius limit
 
         // --- شبکه نورونی: گره‌ها (Neural Nodes) ---
-        const NODE_COUNT = 14;
+        const NODE_COUNT = 20;
         const nodes = [];
         for (let i = 0; i < NODE_COUNT; i++) {
             const a = Math.random() * Math.PI * 2;
@@ -110,12 +110,12 @@
                 vy: (Math.random() - 0.5) * 0.28,
                 r:  1.0 + Math.random() * 1.8,
                 pulseOff: Math.random() * Math.PI * 2,
-                color: ['#bae6fd', '#a78bfa', '#38bdf8', '#818cf8', '#e879f9'][Math.floor(Math.random() * 5)]
+                color: ['#FFDF73', '#D4AF37', '#F5D061', '#E6C687', '#B8860B'][Math.floor(Math.random() * 5)]
             });
         }
 
         // --- ذرات پلازما (Plasma Particles) ---
-        const PART_COUNT = 28;
+        const PART_COUNT = 42;
         const parts = [];
         for (let i = 0; i < PART_COUNT; i++) {
             const a = Math.random() * Math.PI * 2;
@@ -126,7 +126,7 @@
                 speed: 0.008 + Math.random() * 0.018,
                 size:  0.6 + Math.random() * 1.6,
                 alpha: 0.25 + Math.random() * 0.55,
-                color: ['#bae6fd', '#a78bfa', '#7dd3fc', '#c084fc', '#f0abfc'][Math.floor(Math.random() * 5)],
+                color: ['#FFDF73', '#D4AF37', '#FCE79F', '#FFE885', '#AA7C11'][Math.floor(Math.random() * 5)],
                 pulseOff: Math.random() * Math.PI * 2
             });
         }
@@ -146,17 +146,17 @@
             const listening = isVoiceListening || isLeadListening;
             const speed = listening ? 2.8 : (sphereIsHovered ? 1.8 : 1.0);
 
-            // ── 1. هسته تابشی پلازما (Plasma Glow Core) ──
+            // ── 1. هسته تابشی طلایی (Luxury Gold Glow Core) ──
             const coreGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
             if (listening) {
-                coreGrad.addColorStop(0,    'rgba(139, 92, 246, 0.55)');
-                coreGrad.addColorStop(0.3,  'rgba(99, 102, 241, 0.3)');
-                coreGrad.addColorStop(0.65, 'rgba(56, 189, 248, 0.12)');
+                coreGrad.addColorStop(0,    'rgba(255, 223, 115, 0.65)');
+                coreGrad.addColorStop(0.3,  'rgba(212, 175, 55, 0.4)');
+                coreGrad.addColorStop(0.65, 'rgba(170, 124, 17, 0.15)');
                 coreGrad.addColorStop(1,    'transparent');
             } else {
-                coreGrad.addColorStop(0,    'rgba(99, 102, 241, 0.38)');
-                coreGrad.addColorStop(0.38, 'rgba(56, 189, 248, 0.18)');
-                coreGrad.addColorStop(0.72, 'rgba(168, 85, 247, 0.07)');
+                coreGrad.addColorStop(0,    'rgba(212, 175, 55, 0.45)');
+                coreGrad.addColorStop(0.38, 'rgba(255, 223, 115, 0.22)');
+                coreGrad.addColorStop(0.72, 'rgba(170, 124, 17, 0.08)');
                 coreGrad.addColorStop(1,    'transparent');
             }
             ctx.fillStyle = coreGrad;
@@ -187,17 +187,17 @@
                     const dy = nodes[i].y - nodes[j].y;
                     const d  = Math.sqrt(dx * dx + dy * dy);
                     if (d < connThreshold) {
-                        const a = (1 - d / connThreshold) * (listening ? 0.7 : 0.38);
+                        const a = (1 - d / connThreshold) * (listening ? 0.75 : 0.4);
                         const pulse = 0.5 + 0.5 * Math.sin(time * 2 + i + j);
                         ctx.save();
                         ctx.beginPath();
                         ctx.moveTo(nodes[i].x, nodes[i].y);
                         ctx.lineTo(nodes[j].x, nodes[j].y);
                         ctx.strokeStyle = listening
-                            ? `rgba(167, 139, 250, ${a * pulse})`
-                            : `rgba(99, 102, 241, ${a * pulse})`;
+                            ? `rgba(255, 223, 115, ${a * pulse})`
+                            : `rgba(212, 175, 55, ${a * pulse})`;
                         ctx.lineWidth = 0.8;
-                        ctx.shadowColor = listening ? '#a78bfa' : '#6366f1';
+                        ctx.shadowColor = listening ? '#FFDF73' : '#D4AF37';
                         ctx.shadowBlur  = 4;
                         ctx.stroke();
                         ctx.restore();
@@ -247,18 +247,18 @@
             // ── 6. حلقه‌های انرژی داخلی (Inner Energy Ellipses) ──
             ctx.save();
             ctx.strokeStyle = listening
-                ? `rgba(167, 139, 250, 0.5)`
-                : `rgba(99, 102, 241, 0.22)`;
+                ? `rgba(255, 223, 115, 0.55)`
+                : `rgba(212, 175, 55, 0.28)`;
             ctx.lineWidth = 0.9;
-            ctx.shadowColor = '#6366f1';
+            ctx.shadowColor = '#D4AF37';
             ctx.shadowBlur  = 6;
             ctx.beginPath();
             ctx.ellipse(cx, cy, R * 0.62, R * 0.32, time * 0.38, 0, Math.PI * 2);
             ctx.stroke();
 
             ctx.strokeStyle = listening
-                ? `rgba(56, 189, 248, 0.42)`
-                : `rgba(56, 189, 248, 0.16)`;
+                ? `rgba(255, 239, 160, 0.45)`
+                : `rgba(212, 175, 55, 0.18)`;
             ctx.beginPath();
             ctx.ellipse(cx, cy, R * 0.82, R * 0.42, -time * 0.22, 0, Math.PI * 2);
             ctx.stroke();
@@ -693,6 +693,9 @@
             return;
         }
 
+        if (window.speechSynthesis) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+        }
         if (speechRecognition) {
             try { speechRecognition.abort(); } catch (e) {}
             speechRecognition = null;
@@ -849,6 +852,32 @@
         }
     }
 
+    window.resetAssistantMemory = async function() {
+        try {
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            const resp = await fetch('/api/ai-orb/reset-memory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: aiSessionId })
+            });
+            const data = await resp.json();
+            aiSessionId = 'saghf_session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+            const box = document.getElementById('aiVoiceReplyBox');
+            if (box) {
+                box.textContent = 'حافظه گفتگو با موفقیت پاک شد. بفرمایید، در خدمت شما هستم.';
+                box.style.display = 'block';
+            }
+            const container = document.getElementById('aiVoiceItemsContainer');
+            if (container) container.style.display = 'none';
+            const transcriptBox = document.getElementById('aiTranscriptBox');
+            if (transcriptBox) transcriptBox.textContent = '';
+            showVoiceStatus('حافظه نشست بازنشانی شد.', '#10b981');
+            playAudioChime('success');
+        } catch (e) {
+            console.error('Reset memory error:', e);
+        }
+    };
+
     function displayVoiceReply(replyText) {
         const box = document.getElementById('aiVoiceReplyBox');
         if (box && replyText) {
@@ -899,7 +928,7 @@
                         <a href="${directLink}" class="ai-voice-item-link" target="_blank" rel="noopener noreferrer" title="مشاهده مستقیم آگهی اصلی در سایت منبع">
                             <span>🔗</span> لینک آگهی
                         </a>
-                        <a href="${p.detail_url}" class="ai-rec-btn ai-rec-btn-glass" target="_blank" title="مشاهده پرونده کامل در سامانه سقف">
+                        <a href="${p.detail_url}" class="ai-rec-btn ai-rec-btn-glass" title="مشاهده پرونده کامل در سامانه سقف">
                             🏛️ پرونده
                         </a>
                         <button type="button" class="ai-rec-btn ai-rec-btn-gold" onclick="window.scheduleVisitPrompt(${p.id}, '${p.title.replace(/'/g, "\\'")}')" title="هماهنگی بازدید حضوری">
@@ -1243,7 +1272,7 @@
                         <div class="ai-rec-price">${priceText}</div>
                     </div>
                     <div class="ai-rec-actions">
-                        <a href="${p.detail_url}" class="ai-rec-btn ai-rec-btn-gold" target="_blank" title="مشاهده پرونده کامل">
+                        <a href="${p.detail_url}" class="ai-rec-btn ai-rec-btn-gold" title="مشاهده پرونده کامل">
                             🏛️ پرزنت فوری
                         </a>
                         <button type="button" class="ai-rec-btn ai-rec-btn-glass" onclick="sendPropertyPhotosToTelegram(${p.id}, '${p.file_code}', event)" title="ارسال آلبوم به تلگرام">
@@ -1625,24 +1654,15 @@
     window.toggleAiScenarioMode = function(forcedMode = null) {
         activeScenarioMode = forcedMode || (activeScenarioMode === 'discovery' ? 'intake' : 'discovery');
 
-        const modeBadge = document.getElementById('aiModeBadge');
-        const scenarioIcon = document.getElementById('aiScenarioIcon');
-        const scenarioText = document.getElementById('aiScenarioText');
         const matchingPanel = document.getElementById('saghfMatchingPanel');
         const intakePanel = document.getElementById('saghfIntakePanel');
         const transcript = document.getElementById('saghfLiveTranscript');
 
         if (activeScenarioMode === 'discovery') {
-            if (modeBadge) modeBadge.textContent = 'کشف نیاز خریدار/مستأجر و انطباق زنده';
-            if (scenarioIcon) scenarioIcon.textContent = '🔍';
-            if (scenarioText) scenarioText.textContent = 'حالت: کشف نیاز مشتری';
             if (matchingPanel) matchingPanel.classList.remove('hidden');
             if (intakePanel) intakePanel.classList.add('hidden');
             if (transcript) transcript.textContent = '«آماده دریافت خواسته شما برای خرید، رهن یا اجاره ملک...»';
         } else {
-            if (modeBadge) modeBadge.textContent = 'ثبت خودکار فایل جدید و اتصال به پیام‌رسان‌ها';
-            if (scenarioIcon) scenarioIcon.textContent = '📝';
-            if (scenarioText) scenarioText.textContent = 'حالت: ثبت فایل جدید مالک';
             if (matchingPanel) matchingPanel.classList.add('hidden');
             if (intakePanel) intakePanel.classList.remove('hidden');
             const intakeMsg = "لطفاً مشخصات ملکتان مانند منطقه، متراژ، قیمت و شرایط واگذاری را بفرمایید تا مستقیماً ثبت شود.";
@@ -1650,6 +1670,23 @@
             speakPersianText(intakeMsg);
         }
     };
+
+    // سوئیچ تب‌های بالای کنسول هوشمند (کشف نیاز / ثبت خودکار فایل)
+    window.switchConsoleTab = function(tab) {
+        const tabMatch = document.getElementById('tabMatchBtn');
+        const tabIntake = document.getElementById('tabIntakeBtn');
+        if (tab === 'intake') {
+            window.toggleAiScenarioMode('intake');
+            if (tabIntake) tabIntake.classList.add('active');
+            if (tabMatch) tabMatch.classList.remove('active');
+        } else {
+            window.toggleAiScenarioMode('discovery');
+            if (tabMatch) tabMatch.classList.add('active');
+            if (tabIntake) tabIntake.classList.remove('active');
+        }
+    };
+
+
 
     // فعال‌سازی و توقف میکروفون برای شنود زنده
     window.toggleMicrophoneLive = function(forceStart = null) {
@@ -1820,17 +1857,22 @@
                     data.items.forEach(item => {
                         const card = document.createElement('div');
                         card.className = 'saghf-mini-property-card';
+                        const matchPct = item.match_percentage || 95;
                         card.innerHTML = `
                             <div class="saghf-mini-card-head">
                                 <img src="${item.image_url}" class="saghf-mini-thumb" onerror="this.src='/static/images/placeholder.png'" alt="ملک" />
                                 <div class="saghf-mini-info">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; margin-bottom: 0.25rem;">
+                                        <span class="saghf-mini-match-badge" style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 9999px;">🎯 ${toPersianDigits(matchPct)}٪ تطابق</span>
+                                        <span style="font-size: 0.68rem; color: #94a3b8;">کد: ${toPersianDigits(item.file_code || item.id)}</span>
+                                    </div>
                                     <div class="saghf-mini-title" title="${item.title}">${item.title}</div>
                                     <div class="saghf-mini-meta">📍 ${item.district} | 📐 ${toPersianDigits(item.area || 0)} متر (${toPersianDigits(item.rooms || 1)} خواب)</div>
                                 </div>
                             </div>
                             <div class="saghf-mini-price-box">${item.price_str}</div>
                             <div class="saghf-mini-card-actions">
-                                <a href="${item.detail_url}" target="_blank" class="saghf-card-btn-view">
+                                <a href="${item.detail_url}" class="saghf-card-btn-view">
                                     🏛️ پرونده ملک ↵
                                 </a>
                                 <a href="${item.source_url || item.detail_url}" target="_blank" rel="noopener noreferrer" class="saghf-card-source-link">

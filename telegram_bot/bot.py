@@ -780,7 +780,7 @@ def _register_handlers(bot: telebot.TeleBot):
             with app.app_context():
                 from crawler.crawler_manager import crawler_manager
                 success, msg = crawler_manager.start_crawl_task(
-                    sources=['divar', 'sheypoor'],
+                    sources=['divar'],
                     categories=['buy-apartment', 'rent-apartment'],
                     limit_per_cat=6
                 )
@@ -1250,7 +1250,7 @@ def _register_handlers(bot: telebot.TeleBot):
             with app.app_context():
                 from crawler.crawler_manager import crawler_manager
                 success, msg = crawler_manager.start_crawl_task(
-                    sources=['divar', 'sheypoor'],
+                    sources=['divar'],
                     categories=['buy-apartment', 'rent-apartment'],
                     limit_per_cat=6
                 )
@@ -1612,13 +1612,37 @@ def _register_handlers(bot: telebot.TeleBot):
 
         searching_msg = bot.send_message(
             chat_id,
-            f"⏳ <b>در حال استخراج و تحلیل فایل‌های متناظر از دیوار و شیپور...</b>\n\n"
+            f"⏳ <b>در حال پیمایش محدود و قابل‌دسترسی دیوار در ۲۴ ساعت گذشته...</b>\n\n"
             f"📍 منطقه: <b>{district or 'تهران'}</b> | معامله: <b>{'خرید و فروش' if deal_type == 'sale' else 'رهن و اجاره'}</b>\n"
-            f"ربات در حال اتصال به سرورهای مبدأ با فینگرپرینت امن است. لطفاً چند لحظه شکیبا باشید...",
+            f"بدون دورزدن ورود، کپچا یا محدودیت منبع؛ لطفاً چند لحظه شکیبا باشید...",
             parse_mode='HTML'
         )
 
         app = get_flask_app()
+        # مسیر مشترک وب/تلگرام/بله: بدون سقف استخراج، مرورگر یا دریافت انبوه تماس.
+        with app.app_context():
+            try:
+                from services.messenger_search_run import execute_wizard_search, format_summary
+                accessible_result = execute_wizard_search(session)
+                for message_text in accessible_result['messages']:
+                    bot.send_message(chat_id, message_text, parse_mode='HTML', disable_web_page_preview=True)
+                bot.send_message(
+                    chat_id,
+                    format_summary(accessible_result),
+                    reply_markup=_build_start_keyboard(),
+                    parse_mode='HTML',
+                    disable_web_page_preview=True,
+                )
+            except Exception as err:
+                logger.exception("Accessible Telegram wizard search failed: %s", err)
+                bot.send_message(
+                    chat_id,
+                    "⚠️ پیمایش متوقف شد و وضعیت قابل ادامه ذخیره گردید. هیچ نتیجهٔ ساختگی اضافه نشد.",
+                    reply_markup=_build_start_keyboard(),
+                )
+        wizard_sessions.pop(chat_id, None)
+        return
+
         with app.app_context():
             from database.models import Property, Owner, db
             from crawler.crawler_manager import crawler_manager
@@ -1991,3 +2015,14 @@ def start_polling(flask_app=None):
     except Exception as e:
         logger.error(f"Telegram polling terminated: {e}")
         print(f"⚠️ خطای توقف Polling ربات تلگرام: {e}", flush=True)
+
+def stop_polling():
+    """Stops Telegram bot long polling safely."""
+    try:
+        bot = get_bot()
+        if bot:
+            bot.stop_polling()
+            logger.info("Telegram polling successfully stopped.")
+    except Exception as e:
+        logger.error(f"Error stopping Telegram polling: {e}")
+

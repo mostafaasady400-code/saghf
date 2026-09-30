@@ -19,13 +19,44 @@ def list_clients():
     if search:
         query = query.filter(Client.full_name.contains(search) | Client.phone_number.contains(search) | Client.notes.contains(search))
 
-    clients = query.order_by(Client.created_at.desc()).all()
+    import math
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    if per_page not in (5, 10, 20, 50):
+        per_page = 10
+
+    total_clients = query.count()
+    total_pages = max(1, math.ceil(total_clients / per_page))
+    if page < 1:
+        page = 1
+    elif page > total_pages:
+        page = total_pages
+
+    clients = query.order_by(Client.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
     agents = Agent.query.filter_by(is_active=True).all()
+
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + len(clients)
+
+    pagination = {
+        'page': page,
+        'per_page': per_page,
+        'total': total_clients,
+        'total_pages': total_pages,
+        'has_prev': page > 1,
+        'has_next': page < total_pages,
+        'prev_num': page - 1,
+        'next_num': page + 1,
+        'start_index': (start_idx + 1) if total_clients > 0 else 0,
+        'end_index': end_idx,
+        'pages': list(range(max(1, page - 2), min(total_pages + 1, page + 3)))
+    }
 
     return render_template(
         'clients/list.html',
         clients=clients,
         agents=agents,
+        pagination=pagination,
         selected_status=lead_status or 'all',
         selected_deal_type=deal_type or 'all',
         search_query=search or ''

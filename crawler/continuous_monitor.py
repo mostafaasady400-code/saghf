@@ -9,8 +9,19 @@ SAGHF REAL-TIME CONTINUOUS DIVAR MONITOR (پایش مداوم و زنده دیو
 
 import threading
 import time
+import sys
 from datetime import datetime
 from typing import Dict, Any, List, Optional
+
+
+def _console(message: Any) -> None:
+    """Keep the monitor alive on Windows consoles without Persian/emoji support."""
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+        safe_message = str(message).encode(encoding, errors="replace").decode(encoding)
+        print(safe_message)
 
 class DivarContinuousMonitor:
     def __init__(self):
@@ -21,8 +32,12 @@ class DivarContinuousMonitor:
         self.lock = threading.Lock()
 
         # تنظیمات و وضعیت
-        self.target_district = "منطقه ۵"
-        self.interval_seconds = 75  # پایش هر ۷۵ ثانیه
+        self.target_district = "منطقه ۲ و ۵ تهران"
+        self.interval_seconds = 150  # پایش زنده هر ۱۲۰ تا ۱۸۰ ثانیه (پیش‌فرض ۱۵۰ ثانیه)
+        self.min_area: Optional[int] = None
+        self.max_area: Optional[int] = None
+        self.rooms: Optional[int] = None
+        self.custom_districts: List[str] = []
         self.total_checked = 0
         self.new_owners_today = 0
         self.last_check_time = None
@@ -34,20 +49,34 @@ class DivarContinuousMonitor:
     def init_app(self, app):
         self.app = app
 
-    def start(self, app=None, target_district: str = "منطقه ۵", interval_seconds: int = 75):
+    def start(self, app=None, target_district: str = "منطقه ۲ و ۵ تهران", interval_seconds: int = 150,
+              districts: Optional[List[str]] = None, min_area: Optional[int] = None,
+              max_area: Optional[int] = None, rooms: Optional[int] = None):
         if app:
             self.app = app
         if not self.app:
-            print("[ContinuousMonitor] ❌ خطا: Flask App مقداردهی نشده است.")
+            _console("[ContinuousMonitor] ❌ خطا: Flask App مقداردهی نشده است.")
             return False
 
         with self.lock:
             if self.is_running:
-                print("[ContinuousMonitor] ℹ️ مانیتور پایش زنده از قبل در حال اجرا است.")
+                # به‌روزرسانی پارامترهای فعال در صورت فراخوانی مجدد
+                self.target_district = target_district
+                self.interval_seconds = max(60, min(300, interval_seconds))
+                self.min_area = min_area
+                self.max_area = max_area
+                self.rooms = rooms
+                if districts:
+                    self.custom_districts = districts
+                _console(f"[ContinuousMonitor] ℹ️ پارامترهای مانیتور پایش زنده به‌روزرسانی شد: {target_district} | متراژ={min_area}-{max_area} | خواب={rooms}")
                 return True
 
             self.target_district = target_district
-            self.interval_seconds = max(30, interval_seconds)
+            self.interval_seconds = max(60, min(300, interval_seconds))
+            self.min_area = min_area
+            self.max_area = max_area
+            self.rooms = rooms
+            self.custom_districts = districts or []
             self._stop_event.clear()
             self.is_running = True
 
@@ -57,7 +86,7 @@ class DivarContinuousMonitor:
                 name="SaghfDivarContinuousMonitor"
             )
             self.thread.start()
-            print(f"[ContinuousMonitor] 🚀 پایش مداوم دیوار آغاز شد: هدف={self.target_district}، بازه={self.interval_seconds} ثانیه")
+            _console(f"[ContinuousMonitor] 🚀 پایش مداوم دیوار آغاز شد: هدف={self.target_district}، بازه={self.interval_seconds} ثانیه، خواب={rooms}، متراژ={min_area}-{max_area}")
             return True
 
     def stop(self):
@@ -66,7 +95,7 @@ class DivarContinuousMonitor:
                 return True
             self.is_running = False
             self._stop_event.set()
-            print("[ContinuousMonitor] 🛑 دستور توقف پایش مداوم صادر شد.")
+            _console("[ContinuousMonitor] 🛑 دستور توقف پایش مداوم صادر شد.")
             return True
 
     def get_status(self) -> Dict[str, Any]:
@@ -77,6 +106,10 @@ class DivarContinuousMonitor:
                 "is_running": self.is_running,
                 "target_district": self.target_district,
                 "interval_seconds": self.interval_seconds,
+                "min_area": self.min_area,
+                "max_area": self.max_area,
+                "rooms": self.rooms,
+                "custom_districts": self.custom_districts,
                 "total_checked": self.total_checked,
                 "new_owners_today": self.new_owners_today,
                 "last_check_time": self.last_check_time or "در انتظار اولین پایش...",
@@ -87,22 +120,20 @@ class DivarContinuousMonitor:
             }
 
     def _run_monitor_loop(self):
-        """حلقه مداوم پایش در پس‌زمینه"""
+        """حلقه مداوم پایش در پس‌زمینه با تمرکز ۱۰۰٪ روی مناطق ۲ و ۵ تهران و پارامترهای هدفمند"""
         from crawler.hybrid_divar import HybridDivarCrawler
-        from crawler.owner_filter import OwnerFilter
+        from crawler.owner_filter import OwnerFilter, is_stale_ad
         from crawler.dedup import dedup_engine
         from database.db import db
         from database.models import Property, PropertyListing, Owner
-        from data.tehran_districts import get_region_districts
+        from data.tehran_districts import get_region_districts, is_in_region_2_or_5
 
         crawler = HybridDivarCrawler()
 
-        # استخراج نام تمام محله‌های منطقه ۵
+        # استخراج نام تمام محله‌های مناطق ۲ و ۵ تهران
+        reg2_districts = [d['name'] for d in get_region_districts('2')]
         reg5_districts = [d['name'] for d in get_region_districts('5')]
-        if not reg5_districts:
-            reg5_districts = ['پونک', 'جنت آباد', 'صادقیه', 'شهران', 'بلوار فردوس', 'باغ فیض', 'اکباتان']
-
-        print(f"[ContinuousMonitor] 🎯 محله‌های هدف منطقه ۵: {', '.join(reg5_districts[:5])} و...")
+        default_districts = list(set(reg2_districts + reg5_districts))
 
         while not self._stop_event.is_set():
             cycle_start = time.time()
@@ -116,15 +147,21 @@ class DivarContinuousMonitor:
                     cycle_new_saved = 0
                     categories_to_check = ['rent-apartment', 'buy-apartment']
 
+                    active_districts = self.custom_districts if self.custom_districts else default_districts
+                    _console(f"[ContinuousMonitor] 🎯 چرخه پایش {now_str}: بازه={self.interval_seconds}s | هدف={self.target_district} | محله‌ها={len(active_districts)}")
+
                     for cat in categories_to_check:
                         if self._stop_event.is_set():
                             break
 
-                        # استخراج صفحه اول (جدیدترین آگهی‌های همین لحظه)
+                        # استخراج با فیلترهای هدفمند (متراژ، خواب، محله)
                         results = crawler.fetch_listings(
                             category_key=cat,
                             limit=20,
-                            districts=reg5_districts
+                            districts=active_districts,
+                            min_area=self.min_area,
+                            max_area=self.max_area,
+                            rooms=self.rooms
                         )
 
                         self.total_checked += len(results)
@@ -144,7 +181,19 @@ class DivarContinuousMonitor:
                                 item_phone = item.contact_phone
                                 item_name = getattr(item, 'contact_name', "مالک شخصی")
 
-                            # گیت بازرسی ۱: بررسی تکراری
+                            # گیت بازرسی ۰: بررسی مستقیم در دیتابیس برای جلوگیری از ثبت تکراری
+                            if item.source_id and Property.query.filter_by(source_id=item.source_id).first():
+                                continue
+
+                            # گیت بازرسی ۰.۵: انطباق دقیق متراژ و تعداد خواب درخواستی
+                            if self.min_area and item.area and item.area < self.min_area:
+                                continue
+                            if self.max_area and item.area and item.area > self.max_area:
+                                continue
+                            if self.rooms and item.rooms and item.rooms != self.rooms:
+                                continue
+
+                            # گیت بازرسی ۱: بررسی تکراری در موتور بهینه‌شده
                             if dedup_engine.is_duplicate(
                                 title=item.title,
                                 description=item.description,
@@ -169,6 +218,14 @@ class DivarContinuousMonitor:
                             if not filter_res.is_personal:
                                 continue
 
+                            # بررسی انطباق جغرافیایی با منطقه ۲ و ۵ تهران
+                            if not is_in_region_2_or_5(item.district, f"{item.title} {item.description}"):
+                                continue
+
+                            # بررسی تازگی آگهی و حذف قطعی موارد تاریخ‌گذشته
+                            if is_stale_ad(f"{item.title} {item.description}"):
+                                continue
+
                             # بررسی اعلان صریح مالکیت
                             is_direct_owner = OwnerFilter.is_direct_owner_declared(item.title, item.description)
                             item_score = 99 if is_direct_owner else max(item.score, 88)
@@ -177,13 +234,14 @@ class DivarContinuousMonitor:
                             # ایجاد مالک در دیتابیس در صورت نیاز
                             owner_id = None
                             if item_phone and item_phone != 'نامشخص':
-                                existing_owner = Owner.query.filter_by(phone=item_phone).first()
+                                existing_owner = Owner.query.filter_by(phone_number=item_phone).first()
                                 if not existing_owner:
                                     new_owner = Owner(
-                                        name=item_name or "مالک شخصی",
-                                        phone=item_phone,
-                                        is_verified=True,
-                                        notes=f"استخراج زنده دیوار: {item.district or 'منطقه ۵'}"
+                                        full_name=item_name or "مالک شخصی",
+                                        phone_number=item_phone,
+                                        urgency='high',
+                                        flexibility='معمولی',
+                                        notes=f"استخراج زنده دیوار: {item.district or 'تهران'}"
                                     )
                                     db.session.add(new_owner)
                                     db.session.flush()
@@ -277,7 +335,7 @@ class DivarContinuousMonitor:
                                 if len(self.recent_items) > 30:
                                     self.recent_items.pop(0)
 
-                            print(f"[ContinuousMonitor] 🎯 آگهی جدید استخراج و ثبت شد: [{owner_badge}] {prop.title[:45]}... ({prop.source_url})")
+                            _console(f"[ContinuousMonitor] 🎯 آگهی جدید استخراج و ثبت شد: [{owner_badge}] {prop.title[:45]}... ({prop.source_url})")
 
                     db.session.commit()
 
@@ -286,12 +344,12 @@ class DivarContinuousMonitor:
                         self.last_run_timestamp = time.time()
 
                     if cycle_new_saved > 0:
-                        print(f"[ContinuousMonitor] ✅ پایان چرخه {now_str}: تعداد {cycle_new_saved} فایل جدید مالک در منطقه ۵ ثبت شد.")
+                        _console(f"[ContinuousMonitor] ✅ پایان چرخه {now_str}: تعداد {cycle_new_saved} فایل جدید مالک در منطقه ۵ ثبت شد.")
 
             except Exception as ex:
                 self.error_count += 1
                 self.last_error = str(ex)
-                print(f"[ContinuousMonitor] ⚠️ خطا در چرخه پایش دیوار: {ex}")
+                _console(f"[ContinuousMonitor] ⚠️ خطا در چرخه پایش دیوار: {ex}")
                 try:
                     with self.app.app_context():
                         db.session.rollback()
@@ -304,7 +362,7 @@ class DivarContinuousMonitor:
             if self._stop_event.wait(timeout=sleep_time):
                 break
 
-        print("[ContinuousMonitor] ⏹️ حلقه پایش مداوم متوقف شد.")
+        _console("[ContinuousMonitor] ⏹️ حلقه پایش مداوم متوقف شد.")
 
 
 # نمونه سراسری (Singleton)

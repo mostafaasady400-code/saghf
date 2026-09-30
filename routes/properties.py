@@ -1,5 +1,9 @@
+import re
+import time
+import math
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from sqlalchemy import func
 from database.db import db
 from database.models import Property, Owner, Agent, Client, MatchRecord, Interaction
 from services.matching_service import MatchingEngine
@@ -8,6 +12,60 @@ from data.tehran_districts import get_all_tehran_regions, get_divar_slug_for_dis
 from crawler.owner_filter import OwnerFilter
 
 properties_bp = Blueprint('properties', __name__, url_prefix='/properties')
+
+# فیلتر واژگان ممنوعه واسطه‌ها و اسکان اشتراکی با کامپایل یکپارچه برای پردازش با سرعت میکروثانیه
+_FORBIDDEN_WORDS = [
+    'املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس'
+]
+_FORBIDDEN_REGEX = re.compile(
+    '|'.join(re.escape(w) for w in (_FORBIDDEN_WORDS + OwnerFilter.SHARED_HOUSING_NEGATIVE_KEYWORDS))
+)
+
+# حافظه کش محلی برای محله‌ها و شمارنده‌های سربرگ جهت حذف کوئری‌های تکراری
+_districts_cache = {'data': None, 'time': 0}
+_counts_cache = {'data': None, 'time': 0}
+
+def get_cached_districts():
+    now_ts = time.time()
+    if now_ts - _districts_cache['time'] < 60 and _districts_cache['data'] is not None:
+        return _districts_cache['data']
+    try:
+        res = [d[0] for d in db.session.query(Property.district).distinct().all() if d[0]]
+        _districts_cache['time'] = now_ts
+        _districts_cache['data'] = res
+        return res
+    except Exception:
+        return _districts_cache.get('data') or []
+
+def get_cached_property_counts(cutoff_7days):
+    now_ts = time.time()
+    if now_ts - _counts_cache['time'] < 20 and _counts_cache['data'] is not None:
+        return _counts_cache['data']
+    try:
+        deal_counts = dict(
+            db.session.query(Property.deal_type, func.count(Property.id))
+            .filter(
+                Property.is_personal_owner == True,
+                Property.created_at >= cutoff_7days,
+                Property.status.notin_(['archived', 'sold', 'needs_followup'])
+            )
+            .group_by(Property.deal_type).all()
+        )
+        sale_cnt = deal_counts.get('sale', 0)
+        rent_cnt = deal_counts.get('rent', 0)
+
+        exp_cnt = Property.query.filter(
+            Property.is_personal_owner == True,
+            (Property.created_at < cutoff_7days) | (Property.status == 'needs_followup'),
+            Property.status.notin_(['archived', 'sold'])
+        ).count()
+
+        counts = {'sale': sale_cnt, 'rent': rent_cnt, 'expired': exp_cnt}
+        _counts_cache['time'] = now_ts
+        _counts_cache['data'] = counts
+        return counts
+    except Exception:
+        return _counts_cache.get('data') or {'sale': 0, 'rent': 0, 'expired': 0}
 
 @properties_bp.route('/')
 def list_properties():
@@ -43,7 +101,7 @@ def list_properties():
     has_warehouse = request.args.get('has_warehouse')
     has_balcony = request.args.get('has_balcony')
 
-    query = Property.query
+    query = Property.query.filter(Property.is_personal_owner == True)
 
     # 1. Lifecycle management: 7-Day filter rule
     if lifecycle == 'active':
@@ -61,20 +119,6 @@ def list_properties():
     elif lifecycle == 'all':
         # همه به جز بایگانی شده‌ها
         query = query.filter(Property.status != 'archived')
-
-    # 0. فیلتر قطعی و بلادرنگ حذف هرگونه آگهی املاکی یا واسطه
-    for forbidden in ['املاک', 'املاکی', 'املاك', 'مسکن', 'مسكن', 'مشاور', 'مشاوره', 'آژانس', 'دپارتمان', 'بنگاه', 'کارشناس']:
-        query = query.filter(
-            Property.title.notilike(f'%{forbidden}%'),
-            Property.description.notilike(f'%{forbidden}%')
-        )
-
-    # 0.1 فیلتر سخت‌گیرانه حذف هرگونه آگهی همخونه، هم‌اتاقی و پانسیون
-    for sh_kw in OwnerFilter.SHARED_HOUSING_NEGATIVE_KEYWORDS:
-        query = query.filter(
-            Property.title.notilike(f'%{sh_kw}%'),
-            Property.description.notilike(f'%{sh_kw}%')
-        )
 
     # 2. Filters
     if deal_type and deal_type != 'all':
@@ -128,7 +172,12 @@ def list_properties():
     if has_balcony == '1':
         query = query.filter(Property.has_balcony == True)
 
-    properties = query.order_by(Property.created_at.desc()).all()
+    # اجرای فوق‌سریع با ایندکس‌های کامپوزیت + پاک‌سازی فوری کلمات ممنوعه با ریجکس بافر
+    raw_properties = query.order_by(Property.created_at.desc()).all()
+    properties = [
+        p for p in raw_properties
+        if not _FORBIDDEN_REGEX.search(f"{p.title or ''} {p.description or ''}")
+    ]
 
     # Active clients for automated client-matching assistant
     active_clients = Client.query.filter(Client.lead_status.notin_(['contract_won', 'lost'])).order_by(Client.created_at.desc()).all()
@@ -169,29 +218,54 @@ def list_properties():
                 'reasons': getattr(p, 'match_reasons', [])
             }
 
-    districts = db.session.query(Property.district).distinct().all()
-    districts = [d[0] for d in districts if d[0]]
+    # دریافت محله‌ها و شمارنده‌ها از کش رم فوق‌سریع
+    districts = get_cached_districts()
 
     # All Tehran municipal regions and sub-districts from master reference
     all_regions = get_all_tehran_regions()
 
-    # Count expired for quick tab badge
-    expired_count = Property.query.filter(
-        (Property.created_at < cutoff_7days) | (Property.status == 'needs_followup'),
-        Property.status.notin_(['archived', 'sold'])
-    ).count()
+    # شمارنده‌های آماری با کوئری کش‌شده یکپارچه
+    cached_counts = get_cached_property_counts(cutoff_7days)
+    sale_count = cached_counts['sale']
+    rent_count = cached_counts['rent']
+    expired_count = cached_counts['expired']
 
-    # Active sale and rent counts for distinct tabs
-    base_active_query = Property.query.filter(
-        Property.created_at >= cutoff_7days,
-        Property.status.notin_(['archived', 'sold', 'needs_followup'])
-    )
-    sale_count = base_active_query.filter(Property.deal_type == 'sale').count()
-    rent_count = base_active_query.filter(Property.deal_type == 'rent').count()
+    # ── ۵. صفحه‌بندی هوشمند و خلوت‌سازی محتوا (Smart Luxury Pagination) ──
+    import math
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 9, type=int)
+    if per_page not in (6, 9, 12, 18, 24):
+        per_page = 9
+
+    total_properties_count = len(properties)
+    total_pages = max(1, math.ceil(total_properties_count / per_page))
+    if page < 1:
+        page = 1
+    elif page > total_pages:
+        page = total_pages
+
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    paginated_properties = properties[start_idx:end_idx]
+
+    pagination = {
+        'page': page,
+        'per_page': per_page,
+        'total': total_properties_count,
+        'total_pages': total_pages,
+        'has_prev': page > 1,
+        'has_next': page < total_pages,
+        'prev_num': page - 1,
+        'next_num': page + 1,
+        'start_index': (start_idx + 1) if total_properties_count > 0 else 0,
+        'end_index': min(end_idx, total_properties_count),
+        'pages': list(range(max(1, page - 2), min(total_pages + 1, page + 3)))
+    }
 
     return render_template(
         'properties/list.html',
-        properties=properties,
+        properties=paginated_properties,
+        pagination=pagination,
         districts=districts,
         all_regions=all_regions,
         active_clients=active_clients,
@@ -465,34 +539,9 @@ def update_phone(id):
 @properties_bp.route('/<int:id>/fetch-divar-phone', methods=['POST'])
 def fetch_divar_phone(id):
     prop = Property.query.get_or_404(id)
-    from crawler.divar_session_manager import DivarSessionManager
-    token = prop.source_id or ''
-    if not token and prop.source_url:
-        token = prop.source_url.rstrip('/').split('/')[-1]
+    from services.divar_contact_service import DivarContactService
 
-    phone = DivarSessionManager.fetch_contact_phone(token)
-    if phone:
-        if prop.owner:
-            prop.owner.phone_number = phone
-        else:
-            owner = Owner.query.filter_by(phone_number=phone).first()
-            if not owner:
-                owner = Owner(full_name='مالک استخراج‌شده از دیوار', phone_number=phone)
-                db.session.add(owner)
-                db.session.flush()
-            prop.owner_id = owner.id
-        db.session.commit()
-        return jsonify({
-            'success': True,
-            'phone': phone,
-            'message': f'شماره واقعی مالک ({phone}) با موفقیت از API دیوار استخراج شد.'
-        })
-
-    return jsonify({
-        'success': False,
-        'is_auth_needed': not DivarSessionManager.is_authenticated(),
-        'message': 'جهت استخراج خودکار، لطفاً ابتدا نشست احراز هویت دیوار را با وارد کردن شماره همراه خود فعال نمایید یا از دکمه «دریافت شماره از دیوار» استفاده کنید.'
-    })
+    return jsonify(DivarContactService.fetch_for_property(prop))
 
 def _property_to_json(prop):
     """
@@ -678,8 +727,35 @@ def api_on_demand_search():
     crawler_status = crawler_manager.get_status()
     crawler_running = crawler_status.get('is_running', False)
 
-    # اگر فایلی مطابق فیلتر یافت نشد (یا کاربر درخواست استخراج زنده داده باشد)، فوراً کراولر را استارت بزن
-    if (len(properties) == 0 or force_crawl) and not crawler_running:
+    # اگر فایلی مطابق فیلتر یافت نشد (یا کاربر درخواست استخراج زنده داده باشد)، فوراً استخراج آنلاین زنده در لحظه انجام بده
+    if (len(properties) == 0 or force_crawl):
+        try:
+            from services.on_demand_extractor import instant_extractor
+            def _p_int_val(k):
+                try:
+                    return int(data.get(k)) if data.get(k) not in [None, '', 'null'] else None
+                except Exception:
+                    return None
+
+            live_items = instant_extractor.scrape_and_persist_live(
+                deal_type=deal_type,
+                districts=[district_clean] if district_clean else None,
+                min_area=_p_int_val('min_area'),
+                max_area=_p_int_val('max_area'),
+                max_budget=_p_int_val('max_price'),
+                max_deposit=_p_int_val('max_deposit'),
+                max_rent=_p_int_val('max_rent'),
+                limit=5,
+                max_duration_seconds=5.0
+            )
+            fresh_items = _apply_property_filters(Property.query, data).order_by(Property.created_at.desc()).limit(50).all()
+            if fresh_items:
+                properties = fresh_items
+        except Exception as e:
+            current_app.logger.error(f"[On-Demand Search] خطای استخراج زنده آنلاین: {e}")
+
+    # فعال‌سازی پایشگر تکمیلی در پس‌زمینه در صورت نیاز
+    if (len(properties) < 3 or force_crawl) and not crawler_running:
         categories = []
         if deal_type == 'sale':
             if property_type == 'villa':
@@ -707,7 +783,7 @@ def api_on_demand_search():
         districts_param = [divar_slug] if divar_slug else ([district_clean] if district_clean else None)
 
         crawler_manager.start_crawl_task(
-            sources=['divar', 'sheypoor'],
+            sources=['divar'],
             categories=categories,
             limit_per_cat=30,
             city='tehran',
@@ -733,17 +809,6 @@ def api_on_demand_search():
             property_type=property_type if property_type != 'all' else None
         )
         crawler_running = True
-
-        # تحویل سریع ۵ تا ۱۰ آگهی اول به فرانت‌اند بدون معطلی (سقف انتظار ۲.۲ ثانیه)
-        wait_start = time.time()
-        while time.time() - wait_start < 2.2:
-            time.sleep(0.3)
-            fresh_items = _apply_property_filters(Property.query, data).order_by(Property.created_at.desc()).limit(50).all()
-            if len(fresh_items) >= 5:
-                properties = fresh_items
-                break
-            elif len(fresh_items) > len(properties):
-                properties = fresh_items
 
     # سورت نتایج بر اساس Match Score از بیشترین به کمترین
     ranked_properties = PropertyScorer.sort_properties(properties, data)
@@ -846,7 +911,32 @@ def api_ai_voice_search():
 
     matched_props = query.order_by(Property.created_at.desc()).limit(15).all()
 
-    # ۳. فعال‌سازی کراولر بلادرنگ در صورت کمبود فایل یا درخواست اجباری
+    # ۳. استخراج آنلاین زنده در لحظه در صورت کمبود فایل، درخواست مستقیم محله یا تقاضای صریح
+    live_scraped = []
+    if len(matched_props) < 3 or force_crawl or districts or min_area:
+        try:
+            from services.on_demand_extractor import instant_extractor
+            live_scraped = instant_extractor.scrape_and_persist_live(
+                deal_type=deal_type,
+                districts=districts,
+                min_area=min_area,
+                max_area=max_area,
+                max_budget=max_budget,
+                max_deposit=max_deposit,
+                max_rent=max_rent,
+                limit=5,
+                max_duration_seconds=5.0
+            )
+            if live_scraped:
+                fresh_db_matches = query.order_by(Property.created_at.desc()).limit(15).all()
+                for lp in live_scraped:
+                    if lp not in fresh_db_matches:
+                        fresh_db_matches.insert(0, lp)
+                matched_props = fresh_db_matches
+        except Exception as e:
+            current_app.logger.error(f"[AI Voice Search] خطای استخراج زنده: {e}")
+
+    # فعال‌سازی پایش تکمیلی در پس‌زمینه در صورت نیاز
     crawler_status = crawler_manager.get_status()
     crawler_running = crawler_status.get('is_running', False)
 
@@ -854,7 +944,7 @@ def api_ai_voice_search():
         categories = ['buy-apartment'] if deal_type == 'sale' else ['rent-apartment']
         target_district = districts[0] if districts else None
         crawler_manager.start_crawl_task(
-            sources=['divar', 'sheypoor'],
+            sources=['divar'],
             categories=categories,
             limit_per_cat=4,
             city='tehran',
@@ -944,5 +1034,41 @@ def api_voice_turn():
 
     result = voice_ai_pipeline.process_turn(session_id, user_speech)
     return jsonify(result)
+
+@properties_bp.route('/api/tts-audio', methods=['GET', 'POST'])
+def api_tts_audio():
+    """
+    سرویس استریم صوت طبیعی فارسی هوش مصنوعی با صدای فرید مایکروسافت
+    تولید بلادرنگ فایل MP3 با کیفیت استودیویی
+    """
+    from flask import Response
+    from services.tts_service import synthesize_speech
+    
+    if request.method == 'POST':
+        data = request.get_json(silent=True) if request.is_json else request.form.to_dict()
+        text = (data.get('text') if data else '') or request.args.get('text', '')
+        voice = (data.get('voice') if data else '') or request.args.get('voice', 'fa-IR-FaridNeural')
+    else:
+        text = request.args.get('text', '')
+        voice = request.args.get('voice', 'fa-IR-FaridNeural')
+        
+    text = (text or '').strip()
+    if not text:
+        return jsonify({'error': 'متن ورودی ارائه نشده است.'}), 400
+        
+    audio_bytes = synthesize_speech(text, voice=voice)
+    if not audio_bytes:
+        return jsonify({'error': 'خطا در سنتز صوت فارسی.'}), 500
+        
+    return Response(
+        audio_bytes,
+        mimetype="audio/mpeg",
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "Content-Length": str(len(audio_bytes)),
+            "Accept-Ranges": "bytes"
+        }
+    )
+
 
 

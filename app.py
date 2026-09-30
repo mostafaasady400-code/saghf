@@ -11,6 +11,7 @@ if sys.platform == 'win32':
 from flask import Flask
 from config import Config
 from database.db import db
+import database.models
 from crawler.crawler_manager import crawler_manager
 
 # Import Blueprints
@@ -25,22 +26,28 @@ from routes.telegram_api import telegram_bp
 from routes.bale_api import bale_bp
 from routes.admin import admin_bp
 from routes.telephony_api import telephony_bp
-from routes.n8n_gateway import n8n_bp
+from routes.automation_api import automation_bp
 from routes.ai_orb_api import ai_orb_bp
 from routes.auth import auth_bp
 from routes.omnichannel_api import omnichannel_bp
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_compress import Compress
 
 csrf = CSRFProtect()
+compress = Compress()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
-    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.config['TEMPLATES_AUTO_RELOAD'] = False if not app.debug else True
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 604800  # 7 days static asset caching
+    app.config['COMPRESS_ALGORITHM'] = ['brotli', 'gzip', 'deflate']
+    app.config['COMPRESS_MIN_SIZE'] = 500
 
     # Initialize extensions
     db.init_app(app)
     csrf.init_app(app)
+    compress.init_app(app)
     crawler_manager.init_app(app)
 
     # Exempt Telegram, Bale webhooks, Telephony webhooks, AI Orb API, Auth, and Omnichannel from CSRF protection
@@ -48,16 +55,18 @@ def create_app(config_class=Config):
     csrf.exempt(bale_bp)
     csrf.exempt(messenger_bp)
     csrf.exempt(telephony_bp)
-    csrf.exempt(n8n_bp)
+    csrf.exempt(automation_bp)
     csrf.exempt(ai_orb_bp)
     csrf.exempt(auth_bp)
     csrf.exempt(omnichannel_bp)
     csrf.exempt(crawler_bp)
-    from routes.properties import api_ai_voice_search, api_on_demand_search, api_voice_turn
+    from routes.properties import api_ai_voice_search, api_on_demand_search, api_voice_turn, api_tts_audio
     from routes.crm import api_sales_assistant_onboard, api_sales_assistant_turn, api_sales_assistant_feedback
     csrf.exempt(api_ai_voice_search)
     csrf.exempt(api_on_demand_search)
     csrf.exempt(api_voice_turn)
+    # Stateless media response; POST is equivalent to GET and does not mutate data.
+    csrf.exempt(api_tts_audio)
     csrf.exempt(api_sales_assistant_onboard)
     csrf.exempt(api_sales_assistant_turn)
     csrf.exempt(api_sales_assistant_feedback)
@@ -85,7 +94,7 @@ def create_app(config_class=Config):
     app.register_blueprint(bale_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(telephony_bp)
-    app.register_blueprint(n8n_bp)
+    app.register_blueprint(automation_bp)
     app.register_blueprint(ai_orb_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(omnichannel_bp)
@@ -130,19 +139,28 @@ def create_app(config_class=Config):
             return send_from_directory(assets_dir, filename)
         return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 
+    _stats_cache = {'time': 0, 'count': 0}
+
     @app.context_processor
     def inject_global_stats():
+        import time
+        now = time.time()
+        if now - _stats_cache['time'] < 20:
+            return {'expired_properties_count': _stats_cache['count']}
         try:
             from database.models import Property
             from datetime import datetime, timedelta
             cutoff = datetime.utcnow() - timedelta(days=7)
             expired_count = Property.query.filter(
+                Property.is_personal_owner == True,
                 (Property.created_at < cutoff) | (Property.status == 'needs_followup'),
                 Property.status.notin_(['archived', 'sold'])
             ).count()
+            _stats_cache['time'] = now
+            _stats_cache['count'] = expired_count
             return {'expired_properties_count': expired_count}
         except Exception:
-            return {'expired_properties_count': 0}
+            return {'expired_properties_count': _stats_cache.get('count', 0)}
 
     # Jinja Filters
     @app.template_filter('toman')
@@ -257,8 +275,8 @@ def create_app(config_class=Config):
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
         try:
             from crawler.continuous_monitor import divar_monitor
-            divar_monitor.start(app=app, target_district="منطقه ۵", interval_seconds=80)
-            print("[Saghf App] 🟢 سرویس پایش مداوم و زنده دیوار برای منطقه ۵ با موفقیت آغاز به کار کرد.")
+            divar_monitor.start(app=app, target_district="منطقه ۲ و ۵ تهران", interval_seconds=150)
+            print("[Saghf App] 🟢 سرویس پایش مداوم و زنده دیوار (بازه ۱۵۰ ثانیه‌ای) با موفقیت آغاز به کار کرد.")
         except Exception as e:
             print(f"[Saghf App] هشدار در شروع پایش مداوم دیوار: {e}")
 
@@ -277,4 +295,23 @@ if __name__ == '__main__':
     print(f"🔑 گذرواژه:   {Config.ADMIN_PASSWORD}")
     print("🌐 ورود به پنل مدیریت: http://127.0.0.1:5000/admin/login")
     print(f"🤖 شناسه ادمین تلگرام: {Config.ADMIN_TELEGRAM_ID or 'تعریف نشده در .env'}")
-    app.run(host='127.0.0.1', port=5000, debug=False, threaded=True)
+    # اجرای فوق‌سریع و بهینه‌سازی شده با سرور چندنخی صنعتی Waitress
+    try:
+        from waitress import serve
+        threads = int(os.environ.get('SERVER_THREADS', 16))
+        print(f"⚡ اجرای سرور با موتور پرسرعت چندنخی Waitress ({threads} پردازش موازی)")
+        print("⚡ وضعیت دیتابیس: موتور SQLite WAL با حافظه کش رم ۶۴ مگابایت فعال است")
+        print("==================================================")
+        serve(
+            app,
+            host='127.0.0.1',
+            port=5000,
+            threads=threads,
+            channel_timeout=60,
+            connection_limit=300,
+            _quiet=False
+        )
+    except ImportError:
+        print("⚡ اجرای سرور با موتور استاندارد Flask (Threaded)")
+        print("==================================================")
+        app.run(host='127.0.0.1', port=5000, debug=False, threaded=True)

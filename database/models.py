@@ -137,7 +137,7 @@ class Property(db.Model):
     monthly_rent = db.Column(db.BigInteger, default=0) # اجاره
     
     # Physical specs
-    area = db.Column(db.Integer, nullable=False, index=True)
+    area = db.Column(db.Float, nullable=False, index=True)
     rooms = db.Column(db.Integer, default=1)
     floor = db.Column(db.Integer, default=1)
     total_floors = db.Column(db.Integer, nullable=True)
@@ -172,6 +172,12 @@ class Property(db.Model):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('ix_properties_deal_status_created', 'deal_type', 'status', 'created_at'),
+        db.Index('ix_properties_personal_status_created', 'is_personal_owner', 'status', 'created_at'),
+        db.Index('ix_properties_district_deal', 'district', 'deal_type'),
+    )
 
     matches = db.relationship('MatchRecord', backref='property', lazy='dynamic', cascade="all, delete-orphan")
     visits = db.relationship('Visit', backref='property', lazy=True)
@@ -767,6 +773,267 @@ class FilterProfile(db.Model):
             'is_auto_crawl_active': self.is_auto_crawl_active,
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
         }
+
+
+# =====================================================================
+# Auditable 24-hour Divar search models
+# =====================================================================
+
+class AccessibleListing(db.Model):
+    """A source-faithful listing; nullable fields remain unknown, never fabricated."""
+    __tablename__ = 'accessible_listings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    source = db.Column(db.String(30), nullable=False, default='divar', index=True)
+    source_id = db.Column(db.String(120), nullable=False, unique=True, index=True)
+    source_url = db.Column(db.String(500), nullable=False)
+    title = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    city = db.Column(db.String(80), nullable=True, index=True)
+    district = db.Column(db.String(120), nullable=True, index=True)
+    deal_type = db.Column(db.String(20), nullable=True, index=True)
+    property_type = db.Column(db.String(40), nullable=True, index=True)
+    area = db.Column(db.Float, nullable=True, index=True)
+    rooms = db.Column(db.Integer, nullable=True)
+    total_price = db.Column(db.BigInteger, nullable=True)
+    deposit = db.Column(db.BigInteger, nullable=True)
+    monthly_rent = db.Column(db.BigInteger, nullable=True)
+    has_parking = db.Column(db.Boolean, nullable=True)
+    has_elevator = db.Column(db.Boolean, nullable=True)
+    has_warehouse = db.Column(db.Boolean, nullable=True)
+    has_balcony = db.Column(db.Boolean, nullable=True)
+    features_json = db.Column(db.Text, default='[]')
+    images_json = db.Column(db.Text, default='[]')
+
+    published_at = db.Column(db.DateTime, nullable=True, index=True)
+    publication_earliest_at = db.Column(db.DateTime, nullable=True)
+    publication_latest_at = db.Column(db.DateTime, nullable=True)
+    publication_accuracy = db.Column(db.String(30), default='unknown', index=True)
+    publication_source_text = db.Column(db.String(250), nullable=True)
+    source_updated_at = db.Column(db.DateTime, nullable=True)
+    first_seen_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    last_seen_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    publisher_category = db.Column(db.String(40), default='unknown', index=True)
+    publisher_confidence = db.Column(db.Float, default=0.5)
+    publisher_reason = db.Column(db.String(500), nullable=True)
+    publisher_evidence_json = db.Column(db.Text, default='[]')
+    publisher_classifier_version = db.Column(db.String(80), nullable=True)
+    publisher_checked_at = db.Column(db.DateTime, nullable=True)
+    classification_model_status = db.Column(db.String(30), default='not_required', index=True)
+    manual_publisher_category = db.Column(db.String(40), nullable=True, index=True)
+    manual_review_reason = db.Column(db.String(500), nullable=True)
+    manual_reviewed_at = db.Column(db.DateTime, nullable=True)
+    content_hash = db.Column(db.String(64), nullable=True, index=True)
+
+    __table_args__ = (
+        db.Index('ix_accessible_listing_time_category', 'published_at', 'publisher_category'),
+        db.Index('ix_accessible_listing_filters', 'deal_type', 'district', 'area', 'rooms'),
+    )
+
+    @property
+    def effective_publisher_category(self):
+        return self.manual_publisher_category or self.publisher_category or 'unknown'
+
+    @property
+    def features(self):
+        try:
+            value = json.loads(self.features_json or '[]')
+            return value if isinstance(value, list) else []
+        except Exception:
+            return []
+
+    @features.setter
+    def features(self, value):
+        self.features_json = json.dumps(value or [], ensure_ascii=False)
+
+    @property
+    def images(self):
+        try:
+            value = json.loads(self.images_json or '[]')
+            return value if isinstance(value, list) else []
+        except Exception:
+            return []
+
+    @images.setter
+    def images(self, value):
+        safe_urls = [
+            item for item in (value or [])
+            if isinstance(item, str) and item.startswith(('https://', 'http://'))
+        ]
+        self.images_json = json.dumps(safe_urls, ensure_ascii=False)
+
+    @property
+    def publisher_evidence(self):
+        try:
+            value = json.loads(self.publisher_evidence_json or '[]')
+            return value if isinstance(value, list) else []
+        except Exception:
+            return []
+
+    @publisher_evidence.setter
+    def publisher_evidence(self, value):
+        self.publisher_evidence_json = json.dumps(value or [], ensure_ascii=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'source': self.source,
+            'source_id': self.source_id,
+            'source_url': self.source_url,
+            'title': self.title,
+            'description': self.description,
+            'city': self.city,
+            'district': self.district,
+            'deal_type': self.deal_type,
+            'property_type': self.property_type,
+            'area': self.area,
+            'rooms': self.rooms,
+            'total_price': self.total_price,
+            'deposit': self.deposit,
+            'monthly_rent': self.monthly_rent,
+            'has_parking': self.has_parking,
+            'has_elevator': self.has_elevator,
+            'has_warehouse': self.has_warehouse,
+            'has_balcony': self.has_balcony,
+            'features': self.features,
+            'images': self.images,
+            'published_at': self.published_at.isoformat() if self.published_at else None,
+            'publication_earliest_at': self.publication_earliest_at.isoformat() if self.publication_earliest_at else None,
+            'publication_latest_at': self.publication_latest_at.isoformat() if self.publication_latest_at else None,
+            'publication_accuracy': self.publication_accuracy,
+            'publication_source_text': self.publication_source_text,
+            'source_updated_at': self.source_updated_at.isoformat() if self.source_updated_at else None,
+            'first_seen_at': self.first_seen_at.isoformat() if self.first_seen_at else None,
+            'last_seen_at': self.last_seen_at.isoformat() if self.last_seen_at else None,
+            'publisher_category': self.publisher_category,
+            'effective_publisher_category': self.effective_publisher_category,
+            'publisher_confidence': self.publisher_confidence,
+            'publisher_reason': self.publisher_reason,
+            'publisher_evidence': self.publisher_evidence,
+            'publisher_classifier_version': self.publisher_classifier_version,
+            'publisher_checked_at': self.publisher_checked_at.isoformat() if self.publisher_checked_at else None,
+            'classification_model_status': self.classification_model_status,
+            'manual_publisher_category': self.manual_publisher_category,
+            'manual_review_reason': self.manual_review_reason,
+        }
+
+
+class SearchRun(db.Model):
+    """Persistent crawl progress and evidence-backed coverage report."""
+    __tablename__ = 'search_runs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    query_text = db.Column(db.Text, nullable=True)
+    criteria_json = db.Column(db.Text, nullable=False, default='{}')
+    reference_time = db.Column(db.DateTime, nullable=False, index=True)
+    window_start = db.Column(db.DateTime, nullable=False)
+    timezone_name = db.Column(db.String(50), default='Asia/Tehran')
+    status = db.Column(db.String(30), default='pending', index=True)
+    coverage_status = db.Column(db.String(30), default='unknown', index=True)
+    source_status = db.Column(db.String(40), default='not_started')
+    classification_status = db.Column(db.String(40), default='pending')
+    stop_reason = db.Column(db.String(500), nullable=True)
+    checkpoint_json = db.Column(db.Text, default='{}')
+    report_json = db.Column(db.Text, default='{}')
+    can_resume = db.Column(db.Boolean, default=True)
+    started_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @property
+    def criteria(self):
+        try:
+            return json.loads(self.criteria_json or '{}')
+        except Exception:
+            return {}
+
+    @criteria.setter
+    def criteria(self, value):
+        self.criteria_json = json.dumps(value or {}, ensure_ascii=False)
+
+    @property
+    def checkpoint(self):
+        try:
+            return json.loads(self.checkpoint_json or '{}')
+        except Exception:
+            return {}
+
+    @checkpoint.setter
+    def checkpoint(self, value):
+        self.checkpoint_json = json.dumps(value or {}, ensure_ascii=False)
+
+    @property
+    def report(self):
+        try:
+            return json.loads(self.report_json or '{}')
+        except Exception:
+            return {}
+
+    @report.setter
+    def report(self, value):
+        self.report_json = json.dumps(value or {}, ensure_ascii=False)
+
+    def to_dict(self):
+        return {
+            'run_id': self.run_id,
+            'query_text': self.query_text,
+            'criteria': self.criteria,
+            'reference_time': self.reference_time.isoformat() if self.reference_time else None,
+            'window_start': self.window_start.isoformat() if self.window_start else None,
+            'timezone_name': self.timezone_name,
+            'status': self.status,
+            'coverage_status': self.coverage_status,
+            'source_status': self.source_status,
+            'classification_status': self.classification_status,
+            'stop_reason': self.stop_reason,
+            'checkpoint': self.checkpoint,
+            'report': self.report,
+            'can_resume': self.can_resume,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
+class SearchRunItem(db.Model):
+    __tablename__ = 'search_run_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.String(64), db.ForeignKey('search_runs.run_id'), nullable=False, index=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey('accessible_listings.id'), nullable=False, index=True)
+    temporal_status = db.Column(db.String(30), default='uncertain', index=True)
+    criteria_match = db.Column(db.Boolean, default=False, index=True)
+    discovered_after_reference = db.Column(db.Boolean, default=False, index=True)
+    publisher_category_snapshot = db.Column(db.String(40), default='unknown', index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('run_id', 'listing_id', name='uq_search_run_listing'),
+    )
+
+
+class ListingRevision(db.Model):
+    __tablename__ = 'listing_revisions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey('accessible_listings.id'), nullable=False, index=True)
+    changed_fields_json = db.Column(db.Text, default='[]')
+    snapshot_json = db.Column(db.Text, default='{}')
+    observed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class PublisherClassificationCorrection(db.Model):
+    __tablename__ = 'publisher_classification_corrections'
+
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey('accessible_listings.id'), nullable=False, index=True)
+    previous_category = db.Column(db.String(40), nullable=False)
+    corrected_category = db.Column(db.String(40), nullable=False)
+    reason = db.Column(db.String(500), nullable=False)
+    reviewer = db.Column(db.String(120), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 class CallRecord(db.Model):
     """

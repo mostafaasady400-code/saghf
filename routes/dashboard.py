@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, jsonify
+from sqlalchemy.orm import joinedload
 from services.analytics_service import AnalyticsService
 from database.models import Property, MatchRecord, Client
 
@@ -13,8 +14,11 @@ def index():
     # Latest crawled properties
     recent_properties = Property.query.order_by(Property.created_at.desc()).limit(6).all()
     
-    # Top matching opportunities
-    top_matches = MatchRecord.query.order_by(MatchRecord.match_score.desc()).limit(5).all()
+    # Top matching opportunities with eager loading
+    top_matches = MatchRecord.query.options(
+        joinedload(MatchRecord.property),
+        joinedload(MatchRecord.client)
+    ).order_by(MatchRecord.match_score.desc()).limit(5).all()
 
     # Department Counts
     sale_count = Property.query.filter(Property.deal_type == 'sale', Property.status.notin_(['archived', 'sold'])).count()

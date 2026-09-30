@@ -5,57 +5,10 @@
      تعامل‌پذیر، همراه با انیمیشن‌های تنفس، معلق بودن (Levitation) و پالس صوتی
      ========================================================================== -->
 
-<!-- ۱. المان شناور مدرن گوی هوشمند (Floating Smart AI Sphere) -->
-<div id="saghfSmartSphereFloating" class="saghf-smart-sphere-floating" role="button" aria-label="دستیار صوتی و هوش مصنوعی سقف" title="کلیک کنید: دستیار صوتی و هوش مصنوعی سقف">
-    <!-- SVG Gradient Defs for Icon -->
-    <svg width="0" height="0" style="position:absolute;">
-        <defs>
-            <linearGradient id="orbIconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#bae6fd"/>
-                <stop offset="50%" stop-color="#a78bfa"/>
-                <stop offset="100%" stop-color="#38bdf8"/>
-            </linearGradient>
-        </defs>
-    </svg>
-
-    <!-- هاله حجمی پلازما (Volumetric Plasma Aura) -->
-    <div class="saghf-sphere-halo"></div>
-
-    <!-- سه حلقه ژیروسکوپ (Triple Gyroscopic Orbit Rings) -->
-    <div class="saghf-sphere-ring ring-primary"></div>
-    <div class="saghf-sphere-ring ring-secondary"></div>
-    <div class="saghf-sphere-ring ring-tertiary"></div>
-
-    <!-- هسته پلازمای نورونی (Plasma Neural Core) -->
-    <div class="saghf-sphere-core" id="saghfSphereCore">
-        <!-- بوم رندر شبکه نورونی (Neural Network Canvas) -->
-        <canvas id="saghfSphereCanvas" class="saghf-sphere-canvas" width="140" height="140"></canvas>
-        
-        <!-- انعکاس نور بالایی سرد (Cold Crystal Specular) -->
-        <div class="saghf-sphere-specular-highlight"></div>
-        <div class="saghf-sphere-rim-light"></div>
-        
-        <!-- آیکون مرکزی پویا (Dynamic AI Core Icon) -->
-        <div class="saghf-sphere-icon-wrap" id="saghfSphereIconWrap">
-            <svg class="saghf-mic-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="url(#orbIconGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="22"/>
-            </svg>
-        </div>
-    </div>
-
-    <!-- بج وضعیت (Status Badge) -->
-    <div class="saghf-sphere-badge" id="saghfSphereBadge">
-        <span class="saghf-badge-dot"></span>
-        <span class="saghf-badge-title" id="saghfSphereBadgeText">هوش مصنوعی سقف</span>
-    </div>
-
-    <!-- امواج پالس پلازما (Plasma Pulse Ripples) -->
-    <div class="saghf-sphere-pulse-wave wave-1"></div>
-    <div class="saghf-sphere-pulse-wave wave-2"></div>
-    <div class="saghf-sphere-pulse-wave wave-3"></div>
-</div>
+<!-- ==========================================================================
+     SAGHF SMART AI ASSISTANT MODAL (کنسول شیشه‌ای هوش مصنوعی سقف)
+     المان گوشه صفحه حذف شده و کنترل مستقیماً به گوی اصلی درون صفحه متصل است.
+     ========================================================================== -->
 
 <!-- ۲. پنل شیشه‌ای دستیار هوشمند و کنسول تعاملی (AI HUD Assistant Modal) -->
 <div class="ai-orb-hud-backdrop" id="aiOrbHudModal">
@@ -165,9 +118,12 @@
                 </div>
 
                 <!-- دکمه قطع مکالمه صوتی و بستن کامل -->
-                <div style="margin-top: 0.9rem; text-align: center;">
+                <div style="margin-top: 0.9rem; display: flex; justify-content: center; gap: 0.6rem; flex-wrap: wrap;">
                     <button type="button" class="ai-disconnect-call-btn" id="aiDisconnectCallBtn" onclick="cleanupAndCloseVoiceAgent()">
-                        🔴 قطع مکالمه صوتی و خروج
+                        🔴 قطع مکالمه و بستن
+                    </button>
+                    <button type="button" id="aiResetMemoryBtn" onclick="resetAssistantMemory()" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); color: #cbd5e1; border-radius: 9999px; padding: 0.45rem 1rem; font-size: 0.78rem; cursor: pointer; transition: all 0.2s;" title="پاکسازی حافظه این نشست و بازنشانی کامل گفتگو">
+                        🔄 پاکسازی حافظه
                     </button>
                 </div>
             </div>
