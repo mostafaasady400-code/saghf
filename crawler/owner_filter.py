@@ -158,7 +158,12 @@ class OwnerFilter:
         r'سکونت\s+(?:خودم\s+بوده|شخصی)',
         r'سند\s+دست\s+اول',
         r'تخلیه\s+شخصی',
-        r'شخصی\s*ساز'
+        r'شخصی\s*ساز',
+        r'(?:لطفا\s+|خواهشا\s+|اکیدا\s+)?(?:از\s+)?(?:دفاتر\s+|دفتر\s+)?(?:مشاور|مشاوران|مشاورین|املاک|همکار|همکاران)(?:[^\.\n،,!؟?]*?)تماس\s*(?:حاصل\s*)?(?:نفرمایید|نگیر(?:د|ند|ید|ین|ه)?|ممنوع)',
+        r'(?:همکاری\s+با\s+)?(?:دفاتر\s+|دفتر\s+)?(?:مشاور|مشاوران|مشاورین|املاک|همکار|همکاران)\s+(?:نداریم|ندارم|نمیکنیم|نمیکنم)',
+        r'بدون\s+(?:واسطه|مشاور|کمیسیون)',
+        r'مستقیم\s+و\s+بی\s*واسطه',
+        r'فقط\s+(?:به\s+)?مصرف\s*کننده',
     ]
 
     # الگوهای ترکیبی مشاوران در متن
@@ -310,7 +315,12 @@ class OwnerFilter:
             'مالک واحد هستم', 'مالک آپارتمان', 'مالک مستقیم',
             'صاحبخانه هستم', 'صاحب خانه هستم', 'فروشنده واقعی هستم'
         ]
-        return any(m in text for m in owner_markers)
+        if any(m in text for m in owner_markers):
+            return True
+        for odp in cls.OWNER_DISCLAIMER_PATTERNS:
+            if re.search(odp, text):
+                return True
+        return False
 
     @classmethod
     def _check_advertiser_account_type(cls, platform: str, widget_data: Dict[str, Any], raw_text: str, title: str = "") -> Tuple[bool, str, List[str]]:

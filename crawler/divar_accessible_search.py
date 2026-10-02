@@ -23,7 +23,7 @@ from crawler.publisher_classifier import (
     PublisherClassifier,
 )
 from crawler.schemas import parse_area, parse_price, persian_to_english_numbers
-from data.tehran_districts import get_divar_slug_for_district
+from data.tehran_districts import get_divar_slug_for_district, get_divar_district_ids
 
 
 @dataclass
@@ -93,9 +93,9 @@ class DivarAccessibleSearchCrawler:
     ):
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "Saghf-Local-Property-Search/2.0",
-            "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
-            "Accept-Language": "fa-IR,fa;q=0.9,en;q=0.5",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7",
         })
         self.page_fetcher = page_fetcher or self._fetch_page
         self._detail_crawler = HybridDivarCrawler(city="tehran", use_proxy=False)
@@ -464,8 +464,12 @@ class DivarAccessibleSearchCrawler:
         temporal_status = publication.membership(reference_time, criteria.window_hours)
 
         structured = dict(candidate.get("structured") or {})
+        if details.get("business_type"):
+            structured["business_type"] = details["business_type"]
         if details.get("is_agency_post"):
             structured["is_business"] = True
+        elif details.get("is_personal_account"):
+            structured["is_business"] = False
 
         decision = PublisherClassifier.classify(
             title=candidate["title"],
@@ -673,21 +677,32 @@ class DivarAccessibleSearchCrawler:
         targets: List[Dict[str, str]] = []
         districts = criteria.districts or [""]
         for district in districts:
+            district_ids = get_divar_district_ids(district) if district else []
             slug = get_divar_slug_for_district(district) if district else None
             path = f"{self.BASE_URL}/{criteria.city}/{category}"
-            if slug:
+            if district_ids:
+                params_for_target = params + [("districts", ",".join(map(str, district_ids)))]
+                query = urlencode(params_for_target)
+                targets.append({"district": district, "category": category, "url": f"{path}?{query}"})
+            elif slug:
                 path += f"/{slug}"
+                query = urlencode(params)
+                targets.append({
+                    "district": district,
+                    "category": category,
+                    "url": f"{path}?{query}" if query else path,
+                })
             elif district:
                 params_for_target = params + [("q", district)]
                 query = urlencode(params_for_target)
                 targets.append({"district": district, "category": category, "url": f"{path}?{query}"})
-                continue
-            query = urlencode(params)
-            targets.append({
-                "district": district,
-                "category": category,
-                "url": f"{path}?{query}" if query else path,
-            })
+            else:
+                query = urlencode(params)
+                targets.append({
+                    "district": district,
+                    "category": category,
+                    "url": f"{path}?{query}" if query else path,
+                })
         return targets
 
     def _fetch_with_retry(

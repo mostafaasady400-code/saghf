@@ -503,6 +503,10 @@ class HybridDivarCrawler:
                     biz_type = str(webengage.get('business_type', '')).lower()
                     if biz_type and biz_type != 'personal':
                         details['is_agency_post'] = True
+                        details['business_type'] = biz_type
+                    elif biz_type == 'personal':
+                        details['business_type'] = 'personal'
+                        details['is_personal_account'] = True
 
                     # ۳. استخراج مستقیم مقادیر مالی در صورت وجود
                     if webengage.get('price'):
@@ -706,6 +710,8 @@ class HybridDivarCrawler:
             details['description'] = dom_details['description']
         if dom_details.get('is_agency_post'):
             details['is_agency_post'] = True
+        if dom_details.get('is_personal_owner'):
+            details['is_personal_owner'] = True
         details['dom_owner_filter_status'] = dom_details.get('owner_filter_status')
         details['dom_owner_filter_reason'] = dom_details.get('owner_filter_reason')
 

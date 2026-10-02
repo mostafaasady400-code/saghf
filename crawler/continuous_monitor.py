@@ -119,14 +119,101 @@ class DivarContinuousMonitor:
                 "error_count": self.error_count
             }
 
+    def _dispatch_owner_notification(self, prop, owner=None) -> None:
+        """
+        اطلاع‌رسانی فوری و چندکاناله به دفتر املاک و مشاورین به محض کشف فایل واقعی مالک شخصی
+        منطبق بر الزامات AGENTS.md:
+        - عدم استفاده از دیتای ماک
+        - درج مستقیم تگ <a href="...">لینک آگهی</a>
+        - ارسال امن و بدون بلاک کردن چرخه پایش
+        """
+        # ۱. تلگرام
+        try:
+            from telegram_bot.admin_alerts import send_gold_property_alert
+            from telegram_bot.notifier import send_property_alert
+            from config import Config
+            from database.models import User
+
+            tg_sent = False
+            try:
+                tg_sent = send_gold_property_alert(prop, owner)
+            except Exception:
+                pass
+
+            if not tg_sent:
+                try:
+                    tg_sent = send_property_alert(prop)
+                except Exception:
+                    pass
+
+            # ارسال به مشاورین و کاربران فعال دفتر
+            try:
+                admin_tg = Config.TELEGRAM_CHANNEL_ID or Config.ADMIN_TELEGRAM_ID
+                active_users = User.query.filter_by(is_active=True).all()
+                for u in active_users:
+                    if u.telegram_id and str(u.telegram_id).strip() != str(admin_tg).strip():
+                        try:
+                            send_property_alert(prop, target_chat_id=u.telegram_id)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+            if tg_sent:
+                _console(f"[ContinuousMonitor] 🔔 پیام هشدار به تلگرام دفتر ارسال شد: فایل {prop.id} ({prop.title[:30]})")
+        except Exception:
+            pass
+
+        # ۲. بله (پیام‌رسان بومی)
+        try:
+            from bale_bot.admin_alerts import send_bale_gold_property_alert
+            from bale_bot.notifier import send_property_bale_alert
+            from config import Config
+            from database.models import User
+
+            bale_sent = False
+            try:
+                bale_sent = send_bale_gold_property_alert(prop, owner)
+            except Exception:
+                pass
+
+            if not bale_sent:
+                try:
+                    bale_sent = send_property_bale_alert(prop)
+                except Exception:
+                    pass
+
+            # ارسال به کاربران فعال بله
+            try:
+                admin_bale = Config.BALE_ADMIN_ID
+                active_users = User.query.filter_by(is_active=True).all()
+                for u in active_users:
+                    if u.bale_id and str(u.bale_id).strip() != str(admin_bale).strip():
+                        try:
+                            send_property_bale_alert(prop, target_chat_id=u.bale_id)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+            if bale_sent:
+                _console(f"[ContinuousMonitor] 🔔 پیام هشدار به بله دفتر ارسال شد: فایل {prop.id} ({prop.title[:30]})")
+        except Exception:
+            pass
+
     def _run_monitor_loop(self):
         """حلقه مداوم پایش در پس‌زمینه با تمرکز ۱۰۰٪ روی مناطق ۲ و ۵ تهران و پارامترهای هدفمند"""
         from crawler.hybrid_divar import HybridDivarCrawler
         from crawler.owner_filter import OwnerFilter, is_stale_ad
         from crawler.dedup import dedup_engine
         from database.db import db
-        from database.models import Property, PropertyListing, Owner
-        from data.tehran_districts import get_region_districts, is_in_region_2_or_5
+        from database.models import Property, PropertyListing, Owner, FilterProfile, User
+        from data.tehran_districts import (
+            get_region_districts,
+            is_in_region_2_or_5,
+            is_in_target_districts,
+            get_region_for_district
+        )
 
         crawler = HybridDivarCrawler()
 
@@ -147,8 +234,32 @@ class DivarContinuousMonitor:
                     cycle_new_saved = 0
                     categories_to_check = ['rent-apartment', 'buy-apartment']
 
-                    active_districts = self.custom_districts if self.custom_districts else default_districts
-                    _console(f"[ContinuousMonitor] 🎯 چرخه پایش {now_str}: بازه={self.interval_seconds}s | هدف={self.target_district} | محله‌ها={len(active_districts)}")
+                    items_to_notify = []
+
+                    # واکشی داینامیک محله‌های فعال دفتر املاک
+                    profile_districts = []
+                    try:
+                        active_profiles = FilterProfile.query.filter_by(is_auto_crawl_active=True).all()
+                        for prof in active_profiles:
+                            if prof.active_districts:
+                                profile_districts.extend(prof.active_districts)
+                    except Exception:
+                        pass
+
+                    if self.custom_districts:
+                        active_districts = self.custom_districts
+                        effective_target = self.target_district or "، ".join(self.custom_districts[:3])
+                    elif profile_districts:
+                        active_districts = list(dict.fromkeys(profile_districts))
+                        effective_target = "پروفایل‌های دفتر: " + "، ".join(active_districts[:3])
+                    else:
+                        active_districts = default_districts
+                        effective_target = self.target_district or "منطقه ۲ و ۵ تهران"
+
+                    with self.lock:
+                        self.target_district = effective_target
+
+                    _console(f"[ContinuousMonitor] 🎯 چرخه پایش {now_str}: بازه={self.interval_seconds}s | هدف={effective_target} | محله‌ها={len(active_districts)}")
 
                     for cat in categories_to_check:
                         if self._stop_event.is_set():
@@ -218,8 +329,10 @@ class DivarContinuousMonitor:
                             if not filter_res.is_personal:
                                 continue
 
-                            # بررسی انطباق جغرافیایی با منطقه ۲ و ۵ تهران
-                            if not is_in_region_2_or_5(item.district, f"{item.title} {item.description}"):
+                            # بررسی انطباق جغرافیایی با محله‌های هدف دفتر املاک
+                            has_custom_target = bool(self.custom_districts or profile_districts)
+                            target_check_districts = active_districts if has_custom_target else None
+                            if not is_in_target_districts(item.district, f"{item.title} {item.description}", target_districts=target_check_districts):
                                 continue
 
                             # بررسی تازگی آگهی و حذف قطعی موارد تاریخ‌گذشته
@@ -231,8 +344,14 @@ class DivarContinuousMonitor:
                             item_score = 99 if is_direct_owner else max(item.score, 88)
                             owner_badge = "👑 مالک مستقیم (شخصی)" if is_direct_owner else "مالک شخصی"
 
+                            # تعیین داینامیک منطقه شهرداری و محله جهت حفظ اصالت داده
+                            item_region = get_region_for_district(item.district) or '5'
+                            resolved_district = item.district or (active_districts[0] if active_districts else 'تهران')
+                            resolved_address = item.address or f"تهران، منطقه {item_region}، {resolved_district}"
+
                             # ایجاد مالک در دیتابیس در صورت نیاز
                             owner_id = None
+                            created_or_found_owner = None
                             if item_phone and item_phone != 'نامشخص':
                                 existing_owner = Owner.query.filter_by(phone_number=item_phone).first()
                                 if not existing_owner:
@@ -241,13 +360,15 @@ class DivarContinuousMonitor:
                                         phone_number=item_phone,
                                         urgency='high',
                                         flexibility='معمولی',
-                                        notes=f"استخراج زنده دیوار: {item.district or 'تهران'}"
+                                        notes=f"استخراج زنده دیوار: {resolved_district}"
                                     )
                                     db.session.add(new_owner)
                                     db.session.flush()
                                     owner_id = new_owner.id
+                                    created_or_found_owner = new_owner
                                 else:
                                     owner_id = existing_owner.id
+                                    created_or_found_owner = existing_owner
 
                             # ذخیره ملک واقعی با لینک مستقیم معتبر دیوار
                             prop = Property(
@@ -264,8 +385,8 @@ class DivarContinuousMonitor:
                                 total_floors=item.total_floors,
                                 build_year=item.build_year or 1400,
                                 city='تهران',
-                                district=item.district or 'پونک (منطقه ۵)',
-                                address=item.address or f"تهران، منطقه ۵، {item.district or 'پونک'}",
+                                district=resolved_district,
+                                address=resolved_address,
                                 has_parking=item.has_parking,
                                 has_elevator=item.has_elevator,
                                 has_warehouse=item.has_warehouse,
@@ -291,8 +412,8 @@ class DivarContinuousMonitor:
                                 title=item.title,
                                 description=item.description,
                                 city='تهران',
-                                region='5',
-                                district=item.district or 'پونک',
+                                region=item_region,
+                                district=resolved_district,
                                 deal_type=item.deal_type,
                                 deposit=prop.deposit,
                                 monthly_rent=prop.monthly_rent,
@@ -319,6 +440,7 @@ class DivarContinuousMonitor:
 
                             cycle_new_saved += 1
                             self.new_owners_today += 1
+                            items_to_notify.append((prop, created_or_found_owner))
 
                             # ذخیره در تاریخچه موارد اخیر
                             with self.lock:
@@ -339,12 +461,19 @@ class DivarContinuousMonitor:
 
                     db.session.commit()
 
+                    # ارسال نوتیفیکیشن فوری به دفتر املاک برای هر آگهی کشف‌شده
+                    for p, o in items_to_notify:
+                        try:
+                            self._dispatch_owner_notification(p, o)
+                        except Exception as n_err:
+                            _console(f"[ContinuousMonitor] ⚠️ خطا در فراخوانی اطلاع‌رسانی: {n_err}")
+
                     with self.lock:
                         self.last_check_time = now_str
                         self.last_run_timestamp = time.time()
 
                     if cycle_new_saved > 0:
-                        _console(f"[ContinuousMonitor] ✅ پایان چرخه {now_str}: تعداد {cycle_new_saved} فایل جدید مالک در منطقه ۵ ثبت شد.")
+                        _console(f"[ContinuousMonitor] ✅ پایان چرخه {now_str}: تعداد {cycle_new_saved} فایل جدید مالک در {effective_target} ثبت شد.")
 
             except Exception as ex:
                 self.error_count += 1

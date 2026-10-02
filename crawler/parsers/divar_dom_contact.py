@@ -105,13 +105,14 @@ class DivarDOMContactParser:
             widget_data=account_meta,
             raw_text=seller_context,
         )
-        is_agency = bool(agency_evidence) or not filter_result.is_personal
+        is_agency = bool(agency_evidence) or filter_result.owner_type == "agency" or filter_result.status in {"rejected_account_type", "rejected_forbidden_words"}
+        is_personal_owner = filter_result.is_personal and not bool(agency_evidence) and not is_agency
 
         result.update(
             {
                 "title": title,
                 "description": description,
-                "is_personal_owner": not is_agency,
+                "is_personal_owner": is_personal_owner,
                 "is_agency_post": is_agency,
                 "owner_filter_status": filter_result.status,
                 "owner_filter_reason": filter_result.reason,
@@ -120,7 +121,7 @@ class DivarDOMContactParser:
         )
 
         # Never attach a contact number to a post rejected by the owner gate.
-        if is_agency:
+        if is_agency or not is_personal_owner:
             return result
 
         candidates: List[Tuple[int, str, str]] = []

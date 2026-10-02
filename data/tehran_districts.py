@@ -147,6 +147,62 @@ def get_region_2_and_5_districts() -> List[str]:
     """دریافت لیست تمام محله‌های مناطق ۲ و ۵ تهران به صورت یکجا"""
     return list(set(DISTRICTS_2_AND_5_NAMES))
 
+def get_region_for_district(district_name: Optional[str]) -> Optional[str]:
+    """یافتن شماره منطقه شهرداری تهران بر اساس نام محله"""
+    if not district_name:
+        return None
+    _load_data()
+    clean_d = _clean_persian_str(district_name)
+    compact_d = _clean_compact_str(clean_d)
+
+    # اولویت جستجو با مناطق ۲ و ۵
+    if is_in_region_2_or_5(district_name, ""):
+        for name in REGION_5_DISTRICT_NAMES:
+            c = _clean_compact_str(name)
+            if len(c) >= 2 and (c in compact_d or compact_d in c):
+                return '5'
+        for name in REGION_2_DISTRICT_NAMES:
+            c = _clean_compact_str(name)
+            if len(c) >= 2 and (c in compact_d or compact_d in c):
+                return '2'
+
+    # جستجو در تمام مناطق ۲۲ گانه
+    for reg_id, reg in _CACHE_REGIONS.items():
+        for d in reg.get('districts', []):
+            d_name = d.get('name', '')
+            c_name = _clean_compact_str(d_name)
+            if len(c_name) >= 2 and (c_name in compact_d or compact_d in c_name):
+                return str(reg_id)
+            for kw in d.get('keywords', []):
+                c_kw = _clean_compact_str(kw)
+                if len(c_kw) >= 3 and (c_kw in compact_d or compact_d in c_kw):
+                    return str(reg_id)
+    return None
+
+def is_in_target_districts(district_name: Optional[str], text: Optional[str] = "", target_districts: Optional[List[str]] = None) -> bool:
+    """
+    بررسی انطباق محله یا متن آگهی با لیست محله‌های هدف دفتر املاک.
+    اگر target_districts مشخص نشده یا خالی باشد، به عنوان رفتار پیش‌فرض منطقه ۲ و ۵ تهران بررسی می‌شود.
+    """
+    if not target_districts:
+        return is_in_region_2_or_5(district_name, text)
+
+    clean_d = _clean_persian_str(district_name or '')
+    clean_t = _clean_persian_str(text or '')
+    compact_d = _clean_compact_str(clean_d)
+    compact_t = _clean_compact_str(clean_t)
+
+    for target in target_districts:
+        c_target = _clean_compact_str(target)
+        if len(c_target) < 2:
+            continue
+        if compact_d and (c_target in compact_d or compact_d in c_target):
+            return True
+        if compact_t and len(c_target) >= 3 and c_target in compact_t:
+            return True
+
+    return False
+
 def get_divar_slug_for_district(district_name: str) -> Optional[str]:
     """تبدیل نام محله فارسی به slug معادل در دیوار"""
     if not district_name:
@@ -200,3 +256,77 @@ def find_matched_district(text: str) -> Optional[str]:
                     if kw_clean in normalized or (len(kw_compact) >= 4 and kw_compact in norm_compact):
                         return d['name']
     return None
+
+
+OFFICIAL_DIVAR_JSON = os.path.join(os.path.dirname(__file__), 'divar_official_districts.json')
+_OFFICIAL_DISTRICTS = []
+
+def _load_official_districts():
+    global _OFFICIAL_DISTRICTS
+    if not _OFFICIAL_DISTRICTS and os.path.exists(OFFICIAL_DIVAR_JSON):
+        try:
+            with open(OFFICIAL_DIVAR_JSON, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                _OFFICIAL_DISTRICTS = data.get('districts', [])
+        except Exception:
+            pass
+
+DISTRICT_ALIASES_TO_IDS = {
+    'پونک': [82],
+    'شهران': [151, 152],
+    'شهران شمالی': [151],
+    'شهران جنوبی': [152],
+    'سعادت آباد': [76],
+    'سعادت‌آباد': [76],
+    'شهرک غرب': [78],
+    'جنت آباد': [143, 144, 145],
+    'جنت‌آباد': [143, 144, 145],
+    'جنت آباد مرکزی': [144],
+    'جنت‌آباد مرکزی': [144],
+    'جنت آباد جنوبی': [145],
+    'جنت‌آباد جنوبی': [145],
+    'جنت آباد شمالی': [143],
+    'جنت‌آباد شمالی': [143],
+    'صادقیه': [84],
+    'آریاشهر': [84],
+    'مرزداران': [139],
+    'ستارخان': [205],
+    'گیشا': [88],
+    'کوی نصر': [88],
+    'فردوس': [170],
+    'بلوار فردوس': [170],
+    'باغ فیض': [83],
+    'باغ‌فیض': [83],
+    'سازمان برنامه': [171, 172],
+    'سازمان برنامه شمالی': [171],
+    'سازمان برنامه جنوبی': [172],
+    'اکباتان': [177],
+    'شهرک اکباتان': [177],
+    'شاهین': [150],
+    'شاهین شمالی': [150],
+    'شهرزیبا': [153],
+    'شهر زیبا': [153],
+    'اباذر': [170],
+    'کوهسار': [151],
+    'کن': [154],
+}
+
+def get_divar_district_ids(district_name: str) -> list:
+    """دریافت شناسه‌های عددی رسمی محله در دیوار جهت جستجوی مستقیم"""
+    if not district_name:
+        return []
+    cleaned = _clean_persian_str(district_name).strip()
+    compact = _clean_compact_str(district_name)
+    for alias, ids in DISTRICT_ALIASES_TO_IDS.items():
+        if _clean_persian_str(alias) == cleaned or _clean_compact_str(alias) == compact:
+            return ids
+    _load_official_districts()
+    matched_ids = []
+    for d in _OFFICIAL_DISTRICTS:
+        d_name = _clean_persian_str(d.get('name', ''))
+        d_compact = _clean_compact_str(d.get('name', ''))
+        if d_name == cleaned or d_compact == compact:
+            return [int(d['id'])]
+        if cleaned and len(cleaned) >= 4 and cleaned in d_name:
+            matched_ids.append(int(d['id']))
+    return matched_ids
