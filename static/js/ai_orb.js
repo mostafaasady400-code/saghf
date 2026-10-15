@@ -1853,28 +1853,61 @@
                     if (hasEntities) entitiesBox.classList.remove('hidden');
                 }
 
+                // متغیر استریم زنده ایجنت
+                let currentTotalCount = (data.items || []).length;
+
                 // رندر همزمان کارت‌های ملکی منطبق در پنل اسلایدی (سناریوی ۱)
                 if (data.items && data.items.length > 0 && matchContainer) {
                     matchContainer.innerHTML = '';
                     if (countBadge) countBadge.textContent = `${toPersianDigits(data.items.length)} فایل`;
 
+                    // افزودن بنر وضعیت پایش زنده
+                    const liveBanner = document.createElement('div');
+                    liveBanner.id = 'saghfLiveCrawlBanner';
+                    liveBanner.className = 'saghf-live-crawl-banner';
+                    liveBanner.innerHTML = `
+                        <span id="saghfLiveCrawlMsg"><span class="saghf-live-spinner">⚡</span> در حال استخراج لحظه‌ای جدیدترین فایل‌ها از دیوار...</span>
+                        <span id="saghfLiveCrawlDot" style="width: 8px; height: 8px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 8px #38bdf8; display: inline-block;"></span>
+                    `;
+                    matchContainer.appendChild(liveBanner);
+
                     data.items.forEach(item => {
                         const card = document.createElement('div');
                         card.className = 'saghf-mini-property-card';
                         const matchPct = item.match_percentage || 95;
+                        const badgeStyle = item.is_suggestion
+                            ? 'background: rgba(99, 102, 241, 0.18); border: 1px solid rgba(99, 102, 241, 0.4); color: #a5b4fc;'
+                            : 'background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399;';
+                        const badgeLabel = item.is_suggestion ? '💡 پیشنهاد هوشمند' : `🎯 ${toPersianDigits(matchPct)}٪ تطابق`;
+                        const timeBadge = item.priority === 1
+                            ? `<span style="font-size: 0.65rem; color: #f97316; font-weight: 700;">🔥 ${item.time_label || 'تازه'}</span>`
+                            : `<span style="font-size: 0.65rem; color: #60a5fa;">📦 ۷ روز اخیر</span>`;
+
+                        const sugHtml = item.is_suggestion && item.suggestion_reason
+                            ? `<div style="font-size: 0.67rem; color: #c7d2fe; margin-top: 2px;">${item.suggestion_reason}</div>`
+                            : '';
+
+                        const phoneHtml = item.owner_phone && item.owner_phone !== 'موجود در لینک آگهی'
+                            ? `<span style="font-size: 0.68rem; color: #34d399; font-weight: 600;">📞 مالک: ${toPersianDigits(item.owner_phone)}</span>`
+                            : '';
+
                         card.innerHTML = `
                             <div class="saghf-mini-card-head">
                                 <img src="${item.image_url}" class="saghf-mini-thumb" onerror="this.src='/static/images/placeholder.png'" alt="ملک" />
                                 <div class="saghf-mini-info">
                                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; margin-bottom: 0.25rem;">
-                                        <span class="saghf-mini-match-badge" style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 9999px;">🎯 ${toPersianDigits(matchPct)}٪ تطابق</span>
-                                        <span style="font-size: 0.68rem; color: #94a3b8;">کد: ${toPersianDigits(item.file_code || item.id)}</span>
+                                        <span class="saghf-mini-match-badge" style="${badgeStyle} font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 9999px;">${badgeLabel}</span>
+                                        ${timeBadge}
                                     </div>
                                     <div class="saghf-mini-title" title="${item.title}">${item.title}</div>
-                                    <div class="saghf-mini-meta">📍 ${item.district} | 📐 ${toPersianDigits(item.area || 0)} متر (${toPersianDigits(item.rooms || 1)} خواب)</div>
+                                    <div class="saghf-mini-meta">📍 ${item.district || 'تهران'} | 📐 ${toPersianDigits(item.area || 0)} متر (${toPersianDigits(item.rooms || 1)} خواب)</div>
+                                    ${sugHtml}
                                 </div>
                             </div>
-                            <div class="saghf-mini-price-box">${item.price_str}</div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem;">
+                                <div class="saghf-mini-price-box">${item.price_str}</div>
+                                ${phoneHtml}
+                            </div>
                             <div class="saghf-mini-card-actions">
                                 <a href="${item.detail_url}" class="saghf-card-btn-view">
                                     🏛️ پرونده ملک ↵
@@ -1886,6 +1919,95 @@
                         `;
                         matchContainer.appendChild(card);
                     });
+
+                    // فعال‌سازی استریم زنده استخراج لحظه‌ای دیوار
+                    if (data.stream_url && typeof window.EventSource !== 'undefined') {
+                        try {
+                            const streamDeal = data.deal_type || 'rent';
+                            const esUrl = `${data.stream_url}?query=${encodeURIComponent(query)}&deal_type=${encodeURIComponent(streamDeal)}`;
+                            const es = new EventSource(esUrl);
+
+                            es.onmessage = function(ev) {
+                                try {
+                                    const msg = JSON.parse(ev.data);
+                                    const bannerMsg = document.getElementById('saghfLiveCrawlMsg');
+                                    const bannerDot = document.getElementById('saghfLiveCrawlDot');
+
+                                    if (msg.phase === 'live_heartbeat') {
+                                        if (bannerMsg) {
+                                            bannerMsg.innerHTML = `<span class="saghf-live-spinner">⚡</span> در حال اسکن زنده دیوار... (${toPersianDigits(msg.elapsed_seconds || 0)}s)`;
+                                        }
+                                    } else if (msg.phase === 'live_results') {
+                                        const newItems = msg.new_items || [];
+                                        if (newItems.length > 0) {
+                                            newItems.forEach(newItem => {
+                                                const liveCard = document.createElement('div');
+                                                liveCard.className = 'saghf-mini-property-card saghf-card-live-glow';
+                                                const newPhone = newItem.owner_phone && newItem.owner_phone !== 'موجود در لینک آگهی'
+                                                    ? `<span style="font-size: 0.68rem; color: #34d399; font-weight: 600;">📞 مالک: ${toPersianDigits(newItem.owner_phone)}</span>`
+                                                    : '';
+                                                liveCard.innerHTML = `
+                                                    <div class="saghf-mini-card-head">
+                                                        <img src="${newItem.image_url}" class="saghf-mini-thumb" onerror="this.src='/static/images/placeholder.png'" alt="ملک" />
+                                                        <div class="saghf-mini-info">
+                                                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; margin-bottom: 0.25rem;">
+                                                                <span class="saghf-mini-match-badge" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #f87171; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 9999px;">🔴 استخراج زنده</span>
+                                                                <span style="font-size: 0.68rem; color: #fbbf24;">لحظاتی پیش</span>
+                                                            </div>
+                                                            <div class="saghf-mini-title" title="${newItem.title}">${newItem.title}</div>
+                                                            <div class="saghf-mini-meta">📍 ${newItem.district || 'تهران'} | 📐 ${toPersianDigits(newItem.area || 0)} متر (${toPersianDigits(newItem.rooms || 1)} خواب)</div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem;">
+                                                        <div class="saghf-mini-price-box">${newItem.price_str}</div>
+                                                        ${newPhone}
+                                                    </div>
+                                                    <div class="saghf-mini-card-actions">
+                                                        <a href="${newItem.detail_url}" class="saghf-card-btn-view">🏛️ پرونده ملک ↵</a>
+                                                        <a href="${newItem.source_url || newItem.detail_url}" target="_blank" rel="noopener noreferrer" class="saghf-card-source-link">لینک آگهی ↗</a>
+                                                    </div>
+                                                `;
+                                                if (liveBanner && liveBanner.nextSibling) {
+                                                    matchContainer.insertBefore(liveCard, liveBanner.nextSibling);
+                                                } else {
+                                                    matchContainer.appendChild(liveCard);
+                                                }
+                                            });
+                                            currentTotalCount += newItems.length;
+                                            if (countBadge) countBadge.textContent = `${toPersianDigits(currentTotalCount)} فایل`;
+                                            playAudioChime('success');
+                                        }
+                                        if (bannerMsg) {
+                                            bannerMsg.innerHTML = `🔥 ${toPersianDigits(newItems.length)} فایل جدید لحظه‌ای از دیوار به ابتدای لیست اضافه شد!`;
+                                        }
+                                        if (bannerDot) {
+                                            bannerDot.style.background = '#34d399';
+                                            bannerDot.style.boxShadow = '0 0 10px #34d399';
+                                        }
+                                    } else if (msg.phase === 'done' || msg.phase === 'live_timeout') {
+                                        if (bannerMsg) {
+                                            bannerMsg.innerHTML = '✅ استخراج کامل شد — کلیه فایل‌های مالکین شخصی ۷ روزه و لحظه‌ای آماده هستند.';
+                                        }
+                                        if (bannerDot) {
+                                            bannerDot.style.background = '#34d399';
+                                            bannerDot.style.boxShadow = 'none';
+                                        }
+                                        es.close();
+                                    }
+                                } catch(e) {}
+                            };
+                            es.onerror = function() {
+                                if (liveBanner) {
+                                    const bannerMsg = document.getElementById('saghfLiveCrawlMsg');
+                                    if (bannerMsg) bannerMsg.textContent = '✅ فایل‌های آرشیو ۷ روزه مالک شخصی آماده و پایدار هستند.';
+                                }
+                                es.close();
+                            };
+                        } catch(err) {
+                            console.warn('[AI Orb Stream]', err);
+                        }
+                    }
+
                 } else if (matchContainer && data.items && data.items.length === 0) {
                     if (countBadge) countBadge.textContent = '۰ فایل';
                 }

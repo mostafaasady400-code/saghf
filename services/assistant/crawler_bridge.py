@@ -23,9 +23,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import and_, or_, func
 
 from database.db import db
-from database.models import AccessibleListing
+from database.models import AccessibleListing, Property, Owner
 from crawler.publisher_classifier import EXPLICIT_AGENCY, LIKELY_INTERMEDIARY, LIKELY_OWNER, UNKNOWN
-from crawler.owner_filter import extract_phone_number
+from crawler.owner_filter import extract_phone_number, OwnerFilter
 from services.nlp_extractor import PropertyLeadNLPExtractor, normalize_persian_text
 
 logger = logging.getLogger(__name__)
@@ -94,19 +94,6 @@ class CrawlerBridge:
         """
         clean_deal = 'rent' if deal_type in ('rent', 'رهن', 'اجاره') else 'sale'
 
-        # ۱. اجرای فوری و در لحظه استخراج زنده از دیوار (On-Demand / Real-time Scraping)
-        # Only the authenticated crawler can perform a live refresh.
-        live_refresh = cls._refresh_from_authenticated_crawler(
-            deal_type=clean_deal,
-            districts=districts,
-            min_area=min_area,
-            max_area=max_area,
-            rooms=rooms,
-            max_price=max_price,
-            max_deposit=max_deposit,
-            max_rent=max_rent,
-        ) if refresh_live else {"status": "skipped", "reason": "explicitly_disabled"}
-
         now = datetime.utcnow()
         cutoff = now - timedelta(hours=window_hours)
         fresh_cutoff = now - timedelta(minutes=30)
@@ -119,7 +106,7 @@ class CrawlerBridge:
         suggest_items: List[Dict[str, Any]] = []
         seen_source_keys = set()
 
-        # ۲.۱ واکشی از جدول AccessibleListing
+        # ۲.۱ واکشی آنی از جدول AccessibleListing (آرشیو آگهی‌های ۷ روز اخیر)
         base_acc_q = cls._base_owner_query(clean_deal, cutoff)
         base_acc_q = cls._apply_financial_filters(base_acc_q, clean_deal, max_price, max_deposit, max_rent)
         base_acc_q = cls._apply_district_filter(base_acc_q, districts)
@@ -156,15 +143,85 @@ class CrawlerBridge:
                     if len(suggest_items) >= 10:
                         break
 
-        # AccessibleListing is the authoritative source for publication time.
-        # CRM created_at is not evidence of recent publication.
+        # ۲.۲ واکشی مکمل از جدول Property (فایل‌های تاییدشده مالکین مستقیم در سامانه سقف)
+        if len(exact_items) < 20 or len(suggest_items) < 10:
+            prop_q = Property.query.filter(
+                Property.is_personal_owner == True,
+                Property.created_at >= cutoff,
+                Property.status.notin_(['archived', 'sold', 'needs_followup']),
+                Property.deal_type == clean_deal
+            )
+            if districts:
+                dist_or = []
+                for d in districts:
+                    clean = d.replace('منطقه', '').strip()
+                    dist_or.extend([
+                        Property.district.ilike(f'%{d}%'),
+                        Property.district.ilike(f'%{clean}%'),
+                        Property.title.ilike(f'%{d}%'),
+                    ])
+                prop_q = prop_q.filter(or_(*dist_or))
 
-        # مرتب‌سازی زمانی دقیق: اولویت ۱ (لحظاتی پیش تا ۳۰ دقیقه)، سپس اولویت ۲ (ساعات اخیر تا ۷ روز گذشته)
+            if clean_deal == 'sale' and max_price > 0:
+                prop_q = prop_q.filter(Property.total_price <= int(max_price * 1.15))
+            elif clean_deal == 'rent':
+                if max_deposit > 0:
+                    prop_q = prop_q.filter(Property.deposit <= int(max_deposit * 1.2))
+                if max_rent > 0:
+                    prop_q = prop_q.filter(Property.monthly_rent <= int(max_rent * 1.2))
+
+            if len(exact_items) < 20:
+                p_exact_q = prop_q
+                if tight_lo > 0:
+                    p_exact_q = p_exact_q.filter(Property.area >= tight_lo, Property.area <= tight_hi)
+                if rooms and rooms > 0:
+                    p_exact_q = p_exact_q.filter(Property.rooms == rooms)
+
+                for p in p_exact_q.order_by(Property.created_at.desc()).limit(20).all():
+                    eval_res = OwnerFilter.evaluate(platform="divar", title=p.title or "", description=p.description or "")
+                    if eval_res.is_personal:
+                        s_key = p.source_id or p.source_url or f"prop_{p.id}"
+                        if s_key not in seen_source_keys:
+                            seen_source_keys.add(s_key)
+                            exact_items.append(cls._format_property(p, now, fresh_cutoff, is_suggestion=False, target_area=target_area))
+                            if len(exact_items) >= 20:
+                                break
+
+            if len(suggest_items) < 10:
+                p_sug_q = prop_q
+                if wide_lo > 0:
+                    p_sug_q = p_sug_q.filter(Property.area >= wide_lo, Property.area <= wide_hi)
+                if rooms and rooms > 0:
+                    p_sug_q = p_sug_q.filter(Property.rooms == rooms)
+
+                for p in p_sug_q.order_by(Property.created_at.desc()).limit(15).all():
+                    eval_res = OwnerFilter.evaluate(platform="divar", title=p.title or "", description=p.description or "")
+                    if eval_res.is_personal:
+                        s_key = p.source_id or p.source_url or f"prop_{p.id}"
+                        if s_key not in seen_source_keys:
+                            seen_source_keys.add(s_key)
+                            suggest_items.append(cls._format_property(p, now, fresh_cutoff, is_suggestion=True, target_area=target_area))
+                            if len(suggest_items) >= 10:
+                                break
+
+        # ۳. مرتب‌سازی زمانی دقیق: اولویت ۱ (لحظاتی پیش تا ۳۰ دقیقه)، سپس اولویت ۲ (ساعات اخیر)، سپس اولویت ۳ (تا ۷ روز گذشته)
         exact_items.sort(key=lambda x: (x.get('priority', 2), -(x.get('_pub_timestamp') or 0)))
         suggest_items.sort(key=lambda x: (x.get('priority', 2), -(x.get('_pub_timestamp') or 0)))
 
         final_exact = exact_items[:20]
         final_suggest = suggest_items[:10]
+
+        # ۴. آغاز استخراج زنده در پس‌زمینه (Async Targeted Crawler) بدون مسدود کردن پاسخ کاربر
+        live_refresh = cls._refresh_from_authenticated_crawler(
+            deal_type=clean_deal,
+            districts=districts,
+            min_area=min_area,
+            max_area=max_area,
+            rooms=rooms,
+            max_price=max_price,
+            max_deposit=max_deposit,
+            max_rent=max_rent,
+        ) if refresh_live else {"status": "skipped", "reason": "explicitly_disabled"}
 
         return {
             'exact': final_exact,
@@ -182,14 +239,16 @@ class CrawlerBridge:
                 'tight_range': [tight_lo, tight_hi] if tight_lo > 0 else None,
                 'wide_range': [wide_lo, wide_hi] if wide_lo > 0 else None,
                 'live_refresh': live_refresh,
-                'is_live': False,  # Archive results are never collectively labelled live.
+                'live_run_id': live_refresh.get('run_id'),
+                'is_live': False,  # دیتای آرشیو ۷ روزه پایدار
+                'is_live_active': live_refresh.get('status') == 'running',
                 'data_source': 'persisted_archive',
             }
         }
 
     @classmethod
     def _refresh_from_authenticated_crawler(cls, **criteria: Any) -> Dict[str, Any]:
-        """Run the real crawler before querying results; never include secrets in errors."""
+        """Run the real crawler asynchronously in the background; never block user and never leak secrets."""
         try:
             from flask import current_app, has_app_context
             if has_app_context() and current_app.config.get("TESTING"):
@@ -207,25 +266,27 @@ class CrawlerBridge:
                 "max_price": criteria.get("max_price") or None,
                 "max_deposit": criteria.get("max_deposit") or None,
                 "max_rent": criteria.get("max_rent") or None,
-                "window_hours": 24,
+                "window_hours": 168,
             }
-            run = SearchRunService.create_run(normalized, query_text="جست‌وجوی زنده دستیار")
-            budget = max(10.0, min(120.0, float(os.getenv("DIVAR_LIVE_SEARCH_TIMEOUT", "45"))))
-            run = SearchRunService.execute(run.run_id, max_runtime_seconds=budget)
-            report = dict(run.report or {})
-            source_status = run.source_status or "unknown"
-            if source_status == "authenticated_session_unavailable":
-                return {"status": "failed", "reason": source_status, "run_id": run.run_id}
-            pages = int(report.get("pages_traversed") or 0)
-            if pages <= 0 and source_status not in {"completed", "time_budget_reached"}:
-                return {"status": "failed", "reason": source_status, "run_id": run.run_id}
-            status = "completed" if source_status == "completed" else "partial"
+            run = SearchRunService.create_run(normalized, query_text="استخراج زنده و هدفمند دیوار")
+            budget = max(15.0, min(180.0, float(os.getenv("DIVAR_LIVE_SEARCH_TIMEOUT", "60"))))
+
+            app = current_app._get_current_object() if has_app_context() else None
+            if app:
+                SearchRunService.execute_async(app, run.run_id, max_runtime_seconds=budget)
+            else:
+                threading.Thread(
+                    target=SearchRunService.execute,
+                    args=(run.run_id,),
+                    kwargs={"max_runtime_seconds": budget},
+                    daemon=True
+                ).start()
+
             return {
-                "status": status,
-                "reason": source_status,
+                "status": "running",
+                "reason": "background_live_scraping_initiated",
                 "run_id": run.run_id,
-                "pages_traversed": pages,
-                "coverage_status": run.coverage_status,
+                "coverage_status": "streaming",
             }
         except Exception as exc:
             logger.warning("[CrawlerBridge] live refresh failed: %s", type(exc).__name__)
@@ -575,13 +636,15 @@ class CrawlerBridge:
 
         # ساخت متن چت مارک‌داون ساختاریافته با تگ لینک آگهی و مشخصات مالک
         refresh_status = (meta.get('live_refresh') or {}).get('status')
-        refresh_note = "نتایج از آرشیو ذخیره‌شده هستند."
-        if refresh_status == 'failed':
+        refresh_note = "نتایج از آرشیو ۷ روز اخیر آماده است."
+        if refresh_status == 'running':
+            refresh_note = "نتایج از دیتابیس ۱ هفته اخیر آماده شد؛ پایش لحظه‌ای دیوار برای آگهی‌های جدیدتر در پس‌زمینه فعال است. ⚡"
+        elif refresh_status == 'failed':
             refresh_note += " تازه‌سازی زنده ناموفق بود؛ نبود نتیجه به معنی نبود آگهی نیست."
         elif refresh_status == 'partial':
             refresh_note += " تازه‌سازی زنده محدود انجام شد؛ پوشش هنوز کامل نیست."
         voice_reply += " " + refresh_note
-        chat_lines = [f"### آگهی‌های آرشیو با شواهد مالک شخصی ({dist_label})", refresh_note]
+        chat_lines = [f"### آگهی‌های آماده با شواهد مالک شخصی ({dist_label})", refresh_note]
         chat_lines.append(f"*{deal_fa} | بازه {meta.get('window_hours', 168)} ساعت | مجموع: {total} آگهی*\n")
 
         if exact:

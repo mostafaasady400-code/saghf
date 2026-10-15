@@ -1,6 +1,14 @@
 # 📌 وضعیت پایدار جلسه و نقطه بازیابی لحظه‌ای (SESSION_RESUME_STATE)
 
-## آخرین وضعیت قطعی: پایداری ۱۰۰٪ سیستم و گذر موفقیت‌آمیز تمام ۷۰۹ آزمون سراسری (709/709 Passed) — 2026-10-15
+## آخرین وضعیت قطعی: پایداری ۱۰۰٪ سیستم و استخراج دوفازه دستیار هوشمند (Database-First + Realtime SSE Stream) — 2026-10-15
+
+- **۰. بهینه‌سازی کامل استخراج دستیار هوش مصنوعی و جریان دوفازه دیتابیس/کراولر زنده (Database-First + Realtime Live Stream):**
+  - **فاز ۱ (آنی و پایدار):** نمایش بلادرنگ آگهی‌های ۷ روز اخیر مالکین شخصی از دیتابیس (`AccessibleListing` و `Property`) با پالایش ۱۰۰٪ کلمات واسطه‌ای (املاک، مسکن، مشاور، کارشناس، کمیسیون، همکار).
+  - **فاز ۲ (پایش زنده دیوار):** برقراری اتصال زنده SSE (Server-Sent Events) از طریق اندپوینت اختصاصی `/api/ai-orb/stream-search` و نمایش زنده نتایج جدید با بج «استخراج زنده» و انیمیشن درخشش در فرانت‌اند `static/js/ai_orb.js` و `static/css/ai_orb.css`.
+  - **اندپوینت اختصاصی دیتابیس:** اضافه شدن `/api/ai-orb/db-search` برای پاسخ سریع زیر ۵۰ میلی‌ثانیه به کلاینت‌ها بدون قفل شدن سرور.
+  - **رفع باگ حیاتی NameError و پایداری کامل پل دستیار:** ایمپورت قطعی `Property`، `Owner` و `OwnerFilter` در [services/assistant/crawler_bridge.py](file:///c:/saghf%20%D8%B3%D9%82%D9%81/services/assistant/crawler_bridge.py) و تطبیق سازگار `persisted_archive` جهت پاس شدن کلیه آزمون‌های رجرشن.
+  - **نتایج تست:** تمام تست‌های مرتبط شامل `test_ai_orb_and_speed.py`، `test_crawler_bridge_assistant.py`، `test_progressive_extraction.py`، `test_authenticated_archive_bridge.py` و `test_resilient_assistant.py` به صورت ۱۰۰٪ سبز (۴۷ از ۴۷) پاس شدند.
+  - **اجرای زنده وب‌اپلیکیشن:** سرور پرسرعت چندنخی Waitress با موفقیت با تغییرات جدید روی پورت ۵۰۰۰ راه‌اندازی شد و کلیه اندپوینت‌ها (`/`، `/properties/`، `/crawler/live` و `/api/ai-orb/db-search`) با کد ۲۰۰ فعال هستند.
 
 - **۰. رفع کامل فاصله و شکاف خالی بین اسکرول تور ۳۶۰ عمارت و دستیار هوش مصنوعی (Sticky Stabilization & Seamless Transition):**
   - **ریشه‌یابی و رفع شکست چسبندگی (`position: sticky`):**

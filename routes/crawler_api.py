@@ -245,7 +245,7 @@ def start_crawl():
             'max_rent': max_rent,
             'min_area': min_area,
             'max_area': max_area,
-            'window_hours': 24,
+            'window_hours': 168,
         })
         run = SearchRunService.create_run(criteria, query_text='فرم مانیتورینگ کراولر')
         SearchRunService.execute_async(current_app._get_current_object(), run.run_id, 180)
@@ -254,11 +254,97 @@ def start_crawl():
             'deal_type': deal_type,
             'results_url': url_for('crawler.search_run_view', run_id=run.run_id),
         })
+
+    # استخراج آنی فایل‌های آماده دیتابیس (۱ هفته اخیر) برای نمایش فوری در فرانت‌اند
+    instant_items = []
+    try:
+        from services.progressive_extractor import ProgressiveExtractor
+        first_deal = 'rent' if any('rent' in c for c in category_list) else 'sale'
+        instant_data = ProgressiveExtractor.get_instant_database_listings(
+            deal_type=first_deal,
+            districts=districts,
+            min_area=min_area or 0,
+            max_area=max_area or 0,
+            min_price=min_price or 0,
+            max_price=max_price or 0,
+            min_deposit=min_deposit or 0,
+            max_deposit=max_deposit or 0,
+            min_rent=min_rent or 0,
+            max_rent=max_rent or 0,
+            window_hours=168,
+        )
+        instant_items = instant_data.get('exact', []) + instant_data.get('suggested', [])
+    except Exception as exc:
+        current_app.logger.warning("[CrawlerAPI] Instant items fetch failed: %s", exc)
+
     return jsonify({
         'success': True,
-        'message': 'پیمایش بدون سقف تعداد آغاز شد؛ پیشرفت و پوشش برای ادامه ذخیره می‌شود.',
+        'message': f'تعداد {len(instant_items)} فایل مالک شخصی از دیتابیس ۱ هفته اخیر آماده شد؛ استخراج زنده دیوار در پس‌زمینه فعال گردید.',
         'runs': run_payloads,
+        'instant_ready': instant_items,
+        'instant_count': len(instant_items),
+        'live_active': True,
     }), 202
+
+
+@crawler_bp.route('/api/progressive-extract', methods=['POST'])
+def progressive_extract():
+    """
+    استخراج دو مرحله‌ای و پیش‌رونده:
+    ۱. تحویل آنی کلیه فایل‌های ۱ هفته اخیر از دیتابیس با فیلتر ۱۰۰٪ مالک
+    ۲. راه‌اندازی استخراج زنده در پس‌زمینه برای فایل‌های جدید
+    """
+    from services.progressive_extractor import ProgressiveExtractor
+    data = request.get_json(silent=True) or request.form.to_dict(flat=True)
+
+    deal_type = data.get('deal_type', 'rent')
+    districts = data.get('districts', [])
+    if isinstance(districts, str):
+        districts = [d.strip() for d in districts.split(',') if d.strip()]
+
+    district = data.get('district', '').strip()
+    if district and district not in districts:
+        districts.append(district)
+
+    min_area = int(data.get('min_area', 0)) if data.get('min_area') else 0
+    max_area = int(data.get('max_area', 0)) if data.get('max_area') else 0
+    rooms = int(data.get('rooms', 0)) if data.get('rooms') else None
+    min_price = int(data.get('min_price', 0)) if data.get('min_price') else 0
+    max_price = int(data.get('max_price', 0)) if data.get('max_price') else 0
+    min_deposit = int(data.get('min_deposit', 0)) if data.get('min_deposit') else 0
+    max_deposit = int(data.get('max_deposit', 0)) if data.get('max_deposit') else 0
+    min_rent = int(data.get('min_rent', 0)) if data.get('min_rent') else 0
+    max_rent = int(data.get('max_rent', 0)) if data.get('max_rent') else 0
+    window_hours = int(data.get('window_hours', 168))
+
+    res = ProgressiveExtractor.extract_progressive(
+        deal_type=deal_type,
+        districts=districts,
+        min_area=min_area,
+        max_area=max_area,
+        rooms=rooms,
+        min_price=min_price,
+        max_price=max_price,
+        min_deposit=min_deposit,
+        max_deposit=max_deposit,
+        min_rent=min_rent,
+        max_rent=max_rent,
+        window_hours=window_hours,
+        trigger_live_crawl=True,
+        app=current_app._get_current_object(),
+    )
+    return jsonify(res)
+
+
+@crawler_bp.route('/api/progressive-extract/<run_id>/new-items', methods=['GET'])
+def progressive_extract_poll(run_id):
+    """
+    دریافت آگهی‌های تازه شکارشده دیوار در جریان این ران به صورت زنده
+    """
+    from services.progressive_extractor import ProgressiveExtractor
+    since_id = request.args.get('since_id', 0, type=int)
+    return jsonify(ProgressiveExtractor.poll_new_live_items(run_id=run_id, since_id=since_id))
+
 
 @crawler_bp.route('/status')
 def get_status():

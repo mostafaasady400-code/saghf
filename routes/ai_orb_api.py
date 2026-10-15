@@ -1,27 +1,136 @@
 """
 سرویس API دستیار هوشمند و گوی شناور سقف (AI Floating Orb Engine)
-پوشش‌دهنده ۳ کارکرد اصلی:
+پوشش‌دهنده ۴ کارکرد اصلی:
 ۱. کنترل صوتی اپلیکیشن و فیلترهای استخراج (Voice Controller)
 ۲. شنود و تحلیل زنده مذاکره با مشتری حضوری (Real-time Lead Assistant)
 ۳. دستیار هوشمند عملیاتی کارشناس (Telegram, Contacts, Crawl)
+۴. جریان زنده دوفازی: دیتابیس ۷ روزه → استخراج لحظه‌ای (SSE Stream)
 """
 
 import re
 import json
 import logging
+import queue
+import threading
 from datetime import datetime, timedelta
-from flask import Blueprint, request, jsonify, url_for
-from sqlalchemy import or_
+from flask import Blueprint, request, jsonify, url_for, Response, stream_with_context
+from sqlalchemy import or_, and_, func
 from database.db import db
-from database.models import Property, Owner, Client
+from database.models import Property, Owner, Client, AccessibleListing
 from services.nlp_extractor import PropertyLeadNLPExtractor, normalize_persian_text
 from services.scoring_service import PropertyScorer
 from crawler.crawler_manager import crawler_manager
 from services.voice_agent_service import VoiceAgentService
+from crawler.publisher_classifier import LIKELY_OWNER
+from crawler.owner_filter import OwnerFilter, extract_phone_number
 
 logger = logging.getLogger(__name__)
 
 ai_orb_bp = Blueprint('ai_orb', __name__, url_prefix='/api/ai-orb')
+
+
+# ============================================================================
+# بلوک کمکی: واکشی آگهی‌های مالکین شخصی از دیتابیس (یک هفته اخیر)
+# ============================================================================
+
+def _get_db_owner_listings(deal_type: str, districts=None, min_area=0, max_area=0,
+                            rooms=None, max_price=0, max_deposit=0, max_rent=0,
+                            window_hours: int = 168, limit: int = 30):
+    """
+    واکشی فوری آگهی‌های مالکین شخصی از جدول AccessibleListing (آرشیو ۷ روزه)
+    + جدول Property (فایل‌های تاییدشده سقف).
+    خروجی: (exact_items, suggest_items)
+    """
+    from services.assistant.crawler_bridge import CrawlerBridge, _compute_area_ranges
+
+    clean_deal = 'rent' if deal_type in ('rent', 'رهن', 'اجاره') else 'sale'
+    now = datetime.utcnow()
+    cutoff = now - timedelta(hours=window_hours)
+    fresh_cutoff = now - timedelta(minutes=30)
+    target_area = min_area or max_area or 0
+    tight_lo, tight_hi, wide_lo, wide_hi = _compute_area_ranges(min_area=min_area, max_area=max_area)
+
+    exact_items = []
+    suggest_items = []
+    seen_keys = set()
+
+    # ── AccessibleListing ────────────────────────────────────────────────────
+    base_q = CrawlerBridge._base_owner_query(clean_deal, cutoff)
+    base_q = CrawlerBridge._apply_financial_filters(base_q, clean_deal, max_price, max_deposit, max_rent)
+    base_q = CrawlerBridge._apply_district_filter(base_q, districts)
+
+    # دقیق
+    exact_q = base_q
+    if tight_lo > 0:
+        exact_q = exact_q.filter(AccessibleListing.area >= tight_lo, AccessibleListing.area <= tight_hi)
+    if rooms:
+        exact_q = exact_q.filter(AccessibleListing.rooms == rooms)
+    for l in exact_q.order_by(AccessibleListing.published_at.desc().nullslast(),
+                               AccessibleListing.first_seen_at.desc()).limit(limit).all():
+        if CrawlerBridge._is_clean_personal_listing(l):
+            sk = (l.source_id or l.source_url or str(l.id))
+            if sk not in seen_keys:
+                seen_keys.add(sk)
+                exact_items.append(CrawlerBridge._format_listing(l, now, fresh_cutoff, False, target_area))
+                if len(exact_items) >= 20:
+                    break
+
+    # پیشنهادی
+    sug_q = base_q
+    if wide_lo > 0:
+        sug_q = sug_q.filter(AccessibleListing.area >= wide_lo, AccessibleListing.area <= wide_hi)
+    if rooms:
+        sug_q = sug_q.filter(AccessibleListing.rooms == rooms)
+    for l in sug_q.order_by(AccessibleListing.published_at.desc().nullslast(),
+                              AccessibleListing.first_seen_at.desc()).limit(20).all():
+        if CrawlerBridge._is_clean_personal_listing(l):
+            sk = (l.source_id or l.source_url or str(l.id))
+            if sk not in seen_keys:
+                seen_keys.add(sk)
+                suggest_items.append(CrawlerBridge._format_listing(l, now, fresh_cutoff, True, target_area))
+                if len(suggest_items) >= 10:
+                    break
+
+    # ── Property (مکمل از سامانه سقف) ───────────────────────────────────────
+    if len(exact_items) < 20 or len(suggest_items) < 10:
+        prop_q = Property.query.filter(
+            Property.is_personal_owner == True,
+            Property.created_at >= cutoff,
+            Property.status.notin_(['archived', 'sold', 'needs_followup']),
+            Property.deal_type == clean_deal
+        )
+        if districts:
+            dist_or = []
+            for d in districts:
+                clean = d.replace('منطقه', '').strip()
+                dist_or.extend([
+                    Property.district.ilike(f'%{d}%'),
+                    Property.district.ilike(f'%{clean}%'),
+                ])
+            prop_q = prop_q.filter(or_(*dist_or))
+        if clean_deal == 'sale' and max_price > 0:
+            prop_q = prop_q.filter(Property.total_price <= int(max_price * 1.15))
+        elif clean_deal == 'rent':
+            if max_deposit > 0:
+                prop_q = prop_q.filter(Property.deposit <= int(max_deposit * 1.2))
+            if max_rent > 0:
+                prop_q = prop_q.filter(Property.monthly_rent <= int(max_rent * 1.2))
+
+        for p in prop_q.order_by(Property.created_at.desc()).limit(20).all():
+            eval_res = OwnerFilter.evaluate(platform='divar', title=p.title or '', description=p.description or '')
+            if eval_res.is_personal:
+                sk = p.source_id or p.source_url or f'prop_{p.id}'
+                if sk not in seen_keys:
+                    seen_keys.add(sk)
+                    item = CrawlerBridge._format_property(p, now, fresh_cutoff, len(exact_items) >= 20, target_area)
+                    if len(exact_items) < 20:
+                        exact_items.append(item)
+                    elif len(suggest_items) < 10:
+                        suggest_items.append(item)
+
+    exact_items.sort(key=lambda x: (x.get('priority', 2), -(x.get('_pub_timestamp') or 0)))
+    suggest_items.sort(key=lambda x: (x.get('priority', 2), -(x.get('_pub_timestamp') or 0)))
+    return exact_items[:20], suggest_items[:10]
 
 @ai_orb_bp.route('/initial-greeting', methods=['GET', 'POST'])
 def initial_greeting():
@@ -563,6 +672,7 @@ def parse_voice_command():
         'voice_reply': voice_reply,
         'speech_text': speech_text,
         'items': items,
+        'stream_url': '/api/ai-orb/stream-search',
         'command': raw_command
     })
 
@@ -710,3 +820,335 @@ def analyze_in_person_lead():
         'matches': matches_data,
         'voice_reply': voice_summary
     })
+
+
+# ============================================================================
+# ۴. جستجوی دوفازی دیتابیس‌اول — DB-First Streaming (SSE)
+# فاز ۱: نمایش فوری کل آرشیو ۷ روزه مالکین شخصی از دیتابیس
+# فاز ۲: استخراج لحظه‌ای کراولر دیوار برای آگهی‌های جدیدتر
+# ============================================================================
+
+@ai_orb_bp.route('/stream-search', methods=['GET', 'POST'])
+def stream_search():
+    """
+    جریان زنده دوفازی استخراج دستیار:
+    • فاز ۱ (فوری): همه آگهی‌های مالکین شخصی ۷ روز اخیر از دیتابیس
+    • فاز ۲ (زنده): کراولر دیوار در پس‌زمینه و push نتایج جدید
+    استفاده: EventSource('/api/ai-orb/stream-search?deal_type=rent&districts=پونک')
+    """
+    data = request.get_json(silent=True) or {}
+    if request.method == 'GET':
+        # پارامترها از query string
+        deal_type = request.args.get('deal_type', data.get('deal_type', 'rent'))
+        raw_districts = request.args.get('districts', '')
+        districts = [d.strip() for d in raw_districts.split(',') if d.strip()] or data.get('districts') or None
+        min_area = int(request.args.get('min_area', data.get('min_area', 0) or 0))
+        max_area = int(request.args.get('max_area', data.get('max_area', 0) or 0))
+        rooms = request.args.get('rooms', data.get('rooms'))
+        rooms = int(rooms) if rooms else None
+        max_price = int(request.args.get('max_price', data.get('max_price', 0) or 0))
+        max_deposit = int(request.args.get('max_deposit', data.get('max_deposit', 0) or 0))
+        max_rent = int(request.args.get('max_rent', data.get('max_rent', 0) or 0))
+        query_text = request.args.get('query', data.get('query', ''))
+    else:
+        deal_type = data.get('deal_type', 'rent')
+        query_text = data.get('query', data.get('command', ''))
+        # اگر متن آزاد آمده، NLP اجرا کن
+        if query_text:
+            criteria = PropertyLeadNLPExtractor.extract_criteria(query_text)
+            deal_type = criteria.get('deal_type', deal_type)
+            districts = criteria.get('districts') or data.get('districts') or None
+            min_area = criteria.get('min_area', 0)
+            max_area = criteria.get('max_area', 0)
+            rooms = criteria.get('rooms')
+            max_price = criteria.get('max_budget', 0)
+            max_deposit = criteria.get('max_deposit', 0)
+            max_rent = criteria.get('max_rent', 0)
+        else:
+            districts = data.get('districts') or None
+            min_area = data.get('min_area', 0) or 0
+            max_area = data.get('max_area', 0) or 0
+            rooms = data.get('rooms')
+            max_price = data.get('max_price', 0) or 0
+            max_deposit = data.get('max_deposit', 0) or 0
+            max_rent = data.get('max_rent', 0) or 0
+
+    from flask import current_app
+
+    def generate():
+        # ------------------------------------------------------------------ #
+        # فاز ۱: دیتابیس آنی — ارسال فوری قبل از هر چیز                    #
+        # ------------------------------------------------------------------ #
+        try:
+            yield "data: " + json.dumps({
+                'phase': 'db_start',
+                'message': '🔍 در حال بارگذاری آگهی‌های مالکین شخصی از آرشیو ۷ روزه...',
+                'status': 'loading'
+            }, ensure_ascii=False) + "\n\n"
+
+            with current_app.app_context():
+                exact_items, suggest_items = _get_db_owner_listings(
+                    deal_type=deal_type,
+                    districts=districts,
+                    min_area=min_area,
+                    max_area=max_area,
+                    rooms=rooms,
+                    max_price=max_price,
+                    max_deposit=max_deposit,
+                    max_rent=max_rent,
+                    window_hours=168,
+                    limit=30,
+                )
+
+            total_db = len(exact_items) + len(suggest_items)
+            fresh_count = sum(1 for i in exact_items if i.get('priority') == 1)
+
+            yield "data: " + json.dumps({
+                'phase': 'db_results',
+                'message': (
+                    f'✅ {total_db} آگهی مالک شخصی از دیتابیس بارگذاری شد'
+                    + (f' ({fresh_count} مورد تازه 🔥)' if fresh_count else '')
+                ),
+                'status': 'db_ready',
+                'exact': exact_items,
+                'suggested': suggest_items,
+                'total': total_db,
+                'fresh_count': fresh_count,
+                'source': 'database_archive_7days',
+                'meta': {
+                    'deal_type': deal_type,
+                    'districts': districts or [],
+                    'window_hours': 168,
+                }
+            }, ensure_ascii=False) + "\n\n"
+
+        except Exception as e:
+            logger.error(f"[stream_search] فاز ۱ خطا: {e}")
+            yield "data: " + json.dumps({
+                'phase': 'db_error',
+                'message': f'⚠️ خطا در بارگذاری دیتابیس: {str(e)[:80]}',
+                'status': 'error',
+                'exact': [],
+                'suggested': []
+            }, ensure_ascii=False) + "\n\n"
+
+        # ------------------------------------------------------------------ #
+        # فاز ۲: استخراج زنده — کراولر دیوار در پس‌زمینه                    #
+        # ------------------------------------------------------------------ #
+        yield "data: " + json.dumps({
+            'phase': 'live_start',
+            'message': '⚡ در حال استخراج آگهی‌های جدید از دیوار به‌صورت لحظه‌ای...',
+            'status': 'crawling'
+        }, ensure_ascii=False) + "\n\n"
+
+        try:
+            live_results_q = queue.Queue()
+
+            def run_live_crawl(app_obj):
+                try:
+                    from services.search_run_service import SearchRunService
+                    import os as _os
+                    normalized = {
+                        'city': 'tehran',
+                        'deal_type': 'rent' if deal_type in ('rent', 'رهن', 'اجاره') else 'sale',
+                        'property_type': 'apartment',
+                        'districts': districts or [],
+                        'min_area': min_area or None,
+                        'max_area': max_area or None,
+                        'rooms': rooms or None,
+                        'max_price': max_price or None,
+                        'max_deposit': max_deposit or None,
+                        'max_rent': max_rent or None,
+                        'window_hours': 24,
+                    }
+                    with app_obj.app_context():
+                        run = SearchRunService.create_run(normalized, query_text=query_text or 'استخراج زنده دستیار')
+                        budget = float(_os.getenv('DIVAR_LIVE_SEARCH_TIMEOUT', '45'))
+                        SearchRunService.execute(run.run_id, max_runtime_seconds=budget)
+
+                        # بارگذاری نتایج جدید از دیتابیس بعد از اجرای کراولر
+                        from datetime import datetime as _dt, timedelta as _td
+                        cutoff_fresh = _dt.utcnow() - _td(minutes=10)
+                        from database.models import AccessibleListing as _AL
+                        fresh_listings = _AL.query.filter(
+                            _AL.first_seen_at >= cutoff_fresh,
+                        ).order_by(_AL.first_seen_at.desc()).limit(30).all()
+
+                        new_items = []
+                        for l in fresh_listings:
+                            from crawler.owner_filter import OwnerFilter as _OF
+                            ev = _OF.evaluate(platform='divar', title=l.title or '', description=l.description or '')
+                            if ev.is_personal:
+                                from services.assistant.crawler_bridge import CrawlerBridge as _CB
+                                now_ = _dt.utcnow()
+                                item = _CB._format_listing(l, now_, now_ - _td(minutes=30), False, min_area or max_area or 0)
+                                new_items.append(item)
+
+                        live_results_q.put({'status': 'done', 'items': new_items, 'run_id': run.run_id})
+                except Exception as ex:
+                    live_results_q.put({'status': 'error', 'error': str(ex)[:120]})
+
+            app = current_app._get_current_object()
+            t = threading.Thread(target=run_live_crawl, args=(app,), daemon=True)
+            t.start()
+
+            # ارسال heartbeat هر ۳ ثانیه تا کراولر تمام شود
+            import time
+            max_wait = 50  # ثانیه
+            start_ts = time.time()
+            live_data = None
+            while time.time() - start_ts < max_wait:
+                try:
+                    live_data = live_results_q.get(timeout=3)
+                    break
+                except queue.Empty:
+                    elapsed = int(time.time() - start_ts)
+                    yield "data: " + json.dumps({
+                        'phase': 'live_heartbeat',
+                        'message': f'⏳ کراولر در حال استخراج... ({elapsed}s)',
+                        'status': 'crawling',
+                        'elapsed_seconds': elapsed
+                    }, ensure_ascii=False) + "\n\n"
+
+            if live_data and live_data.get('status') == 'done':
+                new_items = live_data.get('items', [])
+                yield "data: " + json.dumps({
+                    'phase': 'live_results',
+                    'message': f'🆕 {len(new_items)} آگهی جدید لحظه‌ای از دیوار استخراج شد!',
+                    'status': 'live_ready',
+                    'new_items': new_items,
+                    'total_new': len(new_items),
+                    'run_id': live_data.get('run_id'),
+                    'source': 'live_crawl_divar'
+                }, ensure_ascii=False) + "\n\n"
+            elif live_data and live_data.get('status') == 'error':
+                yield "data: " + json.dumps({
+                    'phase': 'live_error',
+                    'message': f'⚠️ استخراج زنده ناموفق بود: {live_data.get("error", "")}',
+                    'status': 'live_error',
+                    'new_items': []
+                }, ensure_ascii=False) + "\n\n"
+            else:
+                yield "data: " + json.dumps({
+                    'phase': 'live_timeout',
+                    'message': '⏱️ زمان استخراج زنده به پایان رسید. نتایج دیتابیس کامل است.',
+                    'status': 'timeout',
+                    'new_items': []
+                }, ensure_ascii=False) + "\n\n"
+
+        except Exception as e:
+            logger.error(f"[stream_search] فاز ۲ خطا: {e}")
+            yield "data: " + json.dumps({
+                'phase': 'live_error',
+                'message': '⚠️ خطا در استخراج زنده.',
+                'status': 'error',
+                'new_items': []
+            }, ensure_ascii=False) + "\n\n"
+
+        # ------------------------------------------------------------------ #
+        # پایان جریان                                                         #
+        # ------------------------------------------------------------------ #
+        yield "data: " + json.dumps({
+            'phase': 'done',
+            'message': '✅ عملیات استخراج دوفازی کامل شد.',
+            'status': 'complete'
+        }, ensure_ascii=False) + "\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+            'Connection': 'keep-alive',
+        }
+    )
+
+
+@ai_orb_bp.route('/db-search', methods=['POST', 'GET'])
+def db_search_only():
+    """
+    جستجوی سریع فقط از دیتابیس (بدون کراولر زنده) — برای نمایش فوری اولیه.
+    خروجی: آگهی‌های مالکین شخصی ۷ روز اخیر فیلترشده.
+    """
+    data = request.get_json(silent=True) or {}
+
+    # استخراج NLP اگر query متنی آمده
+    query_text = (data.get('query') or data.get('command') or '').strip()
+    if query_text:
+        criteria = PropertyLeadNLPExtractor.extract_criteria(query_text)
+        deal_type = criteria.get('deal_type', 'rent')
+        districts = criteria.get('districts') or None
+        min_area = criteria.get('min_area', 0)
+        max_area = criteria.get('max_area', 0)
+        rooms = criteria.get('rooms')
+        max_price = criteria.get('max_budget', 0)
+        max_deposit = criteria.get('max_deposit', 0)
+        max_rent = criteria.get('max_rent', 0)
+    else:
+        deal_type = data.get('deal_type', 'rent')
+        districts = data.get('districts') or None
+        min_area = data.get('min_area', 0) or 0
+        max_area = data.get('max_area', 0) or 0
+        rooms = data.get('rooms')
+        max_price = data.get('max_price', 0) or 0
+        max_deposit = data.get('max_deposit', 0) or 0
+        max_rent = data.get('max_rent', 0) or 0
+
+    try:
+        exact_items, suggest_items = _get_db_owner_listings(
+            deal_type=deal_type,
+            districts=districts,
+            min_area=min_area,
+            max_area=max_area,
+            rooms=rooms,
+            max_price=max_price,
+            max_deposit=max_deposit,
+            max_rent=max_rent,
+            window_hours=168,
+        )
+
+        total = len(exact_items) + len(suggest_items)
+        fresh_count = sum(1 for i in exact_items if i.get('priority') == 1)
+
+        if total > 0:
+            voice_reply = (
+                f'✅ {total} آگهی مالک شخصی از آرشیو ۷ روزه بارگذاری شد.'
+                + (f' {fresh_count} مورد در ۳۰ دقیقه اخیر ثبت شده. 🔥' if fresh_count else '')
+                + ' استخراج زنده دیوار در پس‌زمینه آغاز می‌شود...'
+            )
+        else:
+            voice_reply = 'آگهی مالک شخصی با این مشخصات در ۷ روز اخیر یافت نشد. کراولر زنده استعلام می‌شود.'
+
+        return jsonify({
+            'success': True,
+            'phase': 'db_results',
+            'action': 'agent_results',
+            'exact': exact_items,
+            'suggested': suggest_items,
+            'items': exact_items + suggest_items,
+            'total': total,
+            'fresh_count': fresh_count,
+            'voice_reply': voice_reply,
+            'speech_text': voice_reply,
+            'source': 'database_archive_7days',
+            'stream_url': '/api/ai-orb/stream-search',
+            'meta': {
+                'deal_type': deal_type,
+                'districts': districts or [],
+                'window_hours': 168,
+                'exact_count': len(exact_items),
+                'suggested_count': len(suggest_items),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"[db_search_only] خطا: {e}")
+        return jsonify({
+            'success': False,
+            'phase': 'db_error',
+            'message': f'خطا در جستجوی دیتابیس: {str(e)[:120]}',
+            'exact': [],
+            'suggested': [],
+            'items': []
+        }), 500

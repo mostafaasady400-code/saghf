@@ -111,6 +111,11 @@ function initCrawler() {
                 const data = await res.json();
                 if (data.success) {
                     showToast(data.message, 'success');
+                    if (data.instant_ready && data.instant_ready.length > 0) {
+                        data.instant_ready.forEach(item => {
+                            appendLivePropertyCard(item);
+                        });
+                    }
                     wasRunning = true;
                     startPolling();
                 } else {
