@@ -1,0 +1,2 @@
+# Calendar dependency validated in the regional extraction environment.
+jdatetime==6.1.0

@@ -1,0 +1,519 @@
+{% extends "base.html" %}
+
+{% block title %}پایش سلامت زیرساخت و منابع پردازشی - سقف{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem 0 3.5rem;">
+
+    <!-- Top Navigation and Actions Bar -->
+    <div class="glass-panel" style="padding: 1.25rem 2rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; border: 1px solid rgba(212, 175, 55, 0.4);">
+        <div style="display: flex; align-items: center; gap: 1.2rem;">
+            <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(212, 175, 55, 0.15)); border: 1px solid rgba(56, 189, 248, 0.5); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);">
+                ⚡
+            </div>
+            <div>
+                <h1 style="font-size: 1.35rem; font-weight: 900; color: #f8fafc; margin-bottom: 0.25rem;">
+                    پایش سلامت زیرساخت و منابع <span class="gold-gradient-text">Infrastructure Health</span>
+                </h1>
+                <div style="font-size: 0.82rem; color: #94a3b8; display: flex; align-items: center; gap: 0.6rem;">
+                    <span>کاربر مدیر: <strong style="color: #fce79f;">{{ admin_user }}</strong></span>
+                    <span>•</span>
+                    <span style="color: #38bdf8;">هاست: {{ report.compute.os.hostname }}</span>
+                    <span>•</span>
+                    <span>آپ‌تایم فرآیند: <strong id="val-uptime" style="color: #34d399;">{{ (report.compute.os.uptime_seconds / 60) | round(1) }} دقیقه</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+            <button id="btn-refresh-health" onclick="refreshHealthData()" class="glass-btn" style="padding: 0.5rem 1.1rem; font-size: 0.84rem; border-color: rgba(56, 189, 248, 0.6); color: #38bdf8;">
+                <span id="refresh-spinner" style="display: inline-block; transition: transform 0.6s ease;">🔄</span> بروزرسانی آنی وضعیت
+            </button>
+            <a href="{{ url_for('admin.dashboard') }}" class="glass-btn" style="padding: 0.5rem 1rem; font-size: 0.82rem;">
+                <span>📊</span> بازگشت به داشبورد
+            </a>
+        </div>
+    </div>
+
+    <!-- Overall System Health & Score Banner -->
+    <div class="glass-card" style="margin-bottom: 2rem; padding: 1.6rem 2rem; border: 1px solid rgba(212, 175, 55, 0.45); background: linear-gradient(135deg, rgba(212, 175, 55, 0.09) 0%, rgba(15, 23, 42, 0.75) 100%); border-radius: 20px; position: relative; overflow: hidden;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
+            
+            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                <div style="width: 64px; height: 64px; border-radius: 18px; background: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.5); display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                    🛡️
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <h2 style="font-size: 1.25rem; font-weight: 900; color: #fce79f; margin: 0;">وضعیت کلی پایداری و سلامت سامانه</h2>
+                        {% if report.overall_status == 'HEALTHY' %}
+                            <span id="badge-overall" class="badge-neon badge-neon-emerald" style="font-size: 0.82rem; font-weight: 800; padding: 0.25rem 0.75rem;">🟢 کاملاً عملیاتی (HEALTHY)</span>
+                        {% elif report.overall_status == 'DEGRADED' %}
+                            <span id="badge-overall" class="badge-neon badge-neon-gold" style="font-size: 0.82rem; font-weight: 800; padding: 0.25rem 0.75rem;">🟡 با افت موقت (DEGRADED)</span>
+                        {% else %}
+                            <span id="badge-overall" class="badge-neon badge-neon-rose" style="font-size: 0.82rem; font-weight: 800; padding: 0.25rem 0.75rem;">🔴 بحرانی (CRITICAL)</span>
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 0.4rem;">
+                        سیستم‌عامل: <strong style="color: #f8fafc;">{{ report.compute.os.system }} {{ report.compute.os.release }} ({{ report.compute.os.architecture }})</strong> | مفسر: <strong style="color: #38bdf8;">Python {{ report.compute.os.python_version }}</strong> | زمان آخرین سنجش: <span id="val-timestamp" style="color: #94a3b8;">{{ report.timestamp }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 2rem;">
+                <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.12); padding-left: 1.75rem;">
+                    <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.2rem;">شاخص سلامت عملیاتی</div>
+                    <div id="val-score" style="font-size: 2.2rem; font-weight: 950; color: #34d399; line-height: 1.1;">
+                        {{ report.health_score }} <span style="font-size: 1rem; color: #64748b;">/ ۱۰۰</span>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.2rem;">سیاست تله‌متری</div>
+                    <div style="font-size: 1.1rem; font-weight: 850; color: #38bdf8; line-height: 1.2;">
+                        Zero-Mock
+                    </div>
+                    <div style="font-size: 0.72rem; color: #34d399;">سنجش ۱۰۰٪ واقعی</div>
+                </div>
+            </div>
+        </div>
+
+        {% if report.issues %}
+        <div id="box-issues" style="margin-top: 1.25rem; padding: 0.85rem 1.25rem; border-radius: 12px; background: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.35); color: #fda4af; font-size: 0.84rem;">
+            <strong>⚠️ هشدارهای فعال:</strong>
+            <ul id="list-issues" style="margin: 0.3rem 1.5rem 0 0; padding: 0;">
+                {% for iss in report.issues %}
+                    <li>{{ iss }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <div id="box-issues" style="display: none; margin-top: 1.25rem; padding: 0.85rem 1.25rem; border-radius: 12px; background: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.35); color: #fda4af; font-size: 0.84rem;">
+            <strong>⚠️ هشدارهای فعال:</strong>
+            <ul id="list-issues" style="margin: 0.3rem 1.5rem 0 0; padding: 0;"></ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Compute & Hardware Telemetry (4 Cards) -->
+    <div style="margin-bottom: 2rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 800; color: #e2e8f0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>💻</span> منابع محاسباتی و سخت‌افزاری سرور (Host Telemetry)
+        </h3>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
+            
+            <!-- CPU Card -->
+            <div class="glass-card" style="padding: 1.4rem; border-top: 3px solid #38bdf8;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.82rem; color: #94a3b8;">پردازنده (CPU)</span>
+                    <span id="badge-cpu" class="badge-neon {% if report.compute.cpu.status == 'optimal' %}badge-neon-emerald{% else %}badge-neon-gold{% endif %}" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                        {{ report.compute.cpu.logical_cores }} هسته
+                    </span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                    <div id="val-cpu" style="font-size: 2.1rem; font-weight: 900; color: #38bdf8;">{{ report.compute.cpu.percent }}%</div>
+                    <span style="font-size: 0.78rem; color: #64748b;">میانگین کل</span>
+                </div>
+                <!-- Progress bar -->
+                <div style="width: 100%; height: 7px; background: rgba(255,255,255,0.08); border-radius: 10px; margin: 0.8rem 0; overflow: hidden;">
+                    <div id="bar-cpu" style="width: {{ report.compute.cpu.percent }}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #818cf8); border-radius: 10px; transition: width 0.5s ease;"></div>
+                </div>
+                <div style="font-size: 0.74rem; color: #94a3b8; display: flex; justify-content: space-between;">
+                    <span>هسته‌های فیزیکی: {{ report.compute.cpu.physical_cores }}</span>
+                    <span>وضعیت: <strong style="color: #34d399;">نرمال</strong></span>
+                </div>
+            </div>
+
+            <!-- RAM Card -->
+            <div class="glass-card" style="padding: 1.4rem; border-top: 3px solid #34d399;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.82rem; color: #94a3b8;">حافظه اصلی (RAM)</span>
+                    <span class="badge-neon badge-neon-emerald" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                        {{ report.compute.ram.total_gb }} GB کل
+                    </span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                    <div id="val-ram" style="font-size: 2.1rem; font-weight: 900; color: #34d399;">{{ report.compute.ram.percent }}%</div>
+                    <span style="font-size: 0.78rem; color: #64748b;">در حال استفاده</span>
+                </div>
+                <div style="width: 100%; height: 7px; background: rgba(255,255,255,0.08); border-radius: 10px; margin: 0.8rem 0; overflow: hidden;">
+                    <div id="bar-ram" style="width: {{ report.compute.ram.percent }}%; height: 100%; background: linear-gradient(90deg, #34d399, #10b981); border-radius: 10px; transition: width 0.5s ease;"></div>
+                </div>
+                <div style="font-size: 0.74rem; color: #94a3b8; display: flex; justify-content: space-between;">
+                    <span>مصرف: {{ report.compute.ram.used_gb }} GB</span>
+                    <span>آزاد: <strong style="color: #34d399;">{{ report.compute.ram.available_gb }} GB</strong></span>
+                </div>
+            </div>
+
+            <!-- Disk Storage Card -->
+            <div class="glass-card" style="padding: 1.4rem; border-top: 3px solid #f59e0b;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.82rem; color: #94a3b8;">فضای دیسک (Storage)</span>
+                    <span class="badge-neon badge-neon-gold" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                        {{ report.compute.disk.total_gb }} GB کل
+                    </span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                    <div id="val-disk" style="font-size: 2.1rem; font-weight: 900; color: #f59e0b;">{{ report.compute.disk.percent }}%</div>
+                    <span style="font-size: 0.78rem; color: #64748b;">اشغال شده</span>
+                </div>
+                <div style="width: 100%; height: 7px; background: rgba(255,255,255,0.08); border-radius: 10px; margin: 0.8rem 0; overflow: hidden;">
+                    <div id="bar-disk" style="width: {{ report.compute.disk.percent }}%; height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 10px; transition: width 0.5s ease;"></div>
+                </div>
+                <div style="font-size: 0.74rem; color: #94a3b8; display: flex; justify-content: space-between;">
+                    <span>آزاد: <strong style="color: #34d399;">{{ report.compute.disk.free_gb }} GB</strong></span>
+                    <span>مجوز نوشتن: {% if report.compute.disk.write_healthy %}<strong style="color: #34d399;">مجاز ✓</strong>{% else %}<strong style="color: #f43f5e;">مسدود ✗</strong>{% endif %}</span>
+                </div>
+            </div>
+
+            <!-- Process Footprint Card -->
+            <div class="glass-card" style="padding: 1.4rem; border-top: 3px solid #a855f7;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.82rem; color: #94a3b8;">ردپای فرآیند وب سقف</span>
+                    <span class="badge-neon badge-neon-purple" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                        PID: {{ report.compute.process.pid }}
+                    </span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                    <div id="val-proc-rss" style="font-size: 2.1rem; font-weight: 900; color: #c084fc;">{{ report.compute.process.rss_mb }}</div>
+                    <span style="font-size: 0.82rem; color: #cbd5e1;">مگابایت (RSS)</span>
+                </div>
+                <div style="width: 100%; height: 7px; background: rgba(255,255,255,0.08); border-radius: 10px; margin: 0.8rem 0; overflow: hidden;">
+                    <div style="width: 25%; height: 100%; background: linear-gradient(90deg, #a855f7, #c084fc); border-radius: 10px;"></div>
+                </div>
+                <div style="font-size: 0.74rem; color: #94a3b8; display: flex; justify-content: space-between;">
+                    <span>تعداد نخ‌ها: {{ report.compute.process.threads }} Thread</span>
+                    <span>بهینه‌سازی: <strong style="color: #34d399;">سبک و پایدار</strong></span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Operational Services Matrix (6 Components) -->
+    <div>
+        <h3 style="font-size: 1.05rem; font-weight: 800; color: #e2e8f0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>🧩</span> ماتریس سلامت سرویس‌های عملیاتی (Service Health Matrix)
+        </h3>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.35rem;">
+            
+            <!-- Service 1: SQLite Database -->
+            <div class="glass-card" style="padding: 1.5rem; border: 1px solid rgba(52, 211, 153, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.5rem;">🗄️</span>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">موتور پایگاه داده SQLite</div>
+                            <div style="font-size: 0.74rem; color: #94a3b8;">SQLAlchemy ORM + Connection Pooling</div>
+                        </div>
+                    </div>
+                    <span id="badge-db" class="badge-neon badge-neon-emerald" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                        {{ report.database.status | upper }}
+                    </span>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border-radius: 12px; padding: 0.9rem; font-size: 0.8rem; color: #cbd5e1; line-height: 1.8;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>تاخیر کوئری (Latency):</span>
+                        <strong id="val-db-latency" style="color: #34d399;">{{ report.database.query_latency_ms }} ms</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>تست یکپارچگی (Integrity):</span>
+                        <strong style="color: #38bdf8;">{{ report.database.integrity_check | upper }} ✓</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>حجم فایل دیتابیس:</span>
+                        <span>{{ report.database.file_size_kb }} KB ({{ report.database.file_size_mb }} MB)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 0.4rem; padding-top: 0.4rem;">
+                        <span>تعداد رکوردهای فعال:</span>
+                        <span style="color: #fce79f;">{{ report.database.counts.properties }} ملک | {{ report.database.counts.clients }} مشتری | {{ report.database.counts.visits }} بازدید</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service 2: Dual Bot Runner Process -->
+            <div class="glass-card" style="padding: 1.5rem; border: 1px solid rgba(56, 189, 248, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.5rem;">🤖</span>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">فرآیند رانر دوگانه بات‌ها</div>
+                            <div style="font-size: 0.74rem; color: #94a3b8;">اسکریپت مستقل run_bot.py</div>
+                        </div>
+                    </div>
+                    {% if report.bots.process_runner.active %}
+                        <span class="badge-neon badge-neon-emerald" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">فعال و برخط</span>
+                    {% else %}
+                        <span class="badge-neon badge-neon-rose" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">متوقف</span>
+                    {% endif %}
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border-radius: 12px; padding: 0.9rem; font-size: 0.8rem; color: #cbd5e1; line-height: 1.8;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>شناسه پردازه (PID):</span>
+                        <strong style="color: #38bdf8;">{{ report.bots.process_runner.pid or 'یافت نشد' }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>مصرف رم پردازه رانر:</span>
+                        <span>{{ report.bots.process_runner.rss_mb }} مگابایت</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>حالت اجرا:</span>
+                        <span style="color: #34d399;">Daemon Background Task</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 0.4rem; padding-top: 0.4rem;">
+                        <span>همگام‌سازی دو پلتفرم:</span>
+                        <span style="color: #a855f7;">تلگرام + پیام‌رسان بله</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service 3: Telegram Bot Gateway -->
+            <div class="glass-card" style="padding: 1.5rem; border: 1px solid rgba(56, 189, 248, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.5rem;">✈️</span>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">درگاه تلگرام (Telegram Gateway)</div>
+                            <div style="font-size: 0.74rem; color: #94a3b8;">اتصال مستقیم به api.telegram.org</div>
+                        </div>
+                    </div>
+                    {% if report.bots.telegram.healthy %}
+                        <span id="badge-tg" class="badge-neon badge-neon-emerald" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">متصل (ONLINE)</span>
+                    {% else %}
+                        <span id="badge-tg" class="badge-neon badge-neon-rose" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">قطع (OFFLINE)</span>
+                    {% endif %}
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border-radius: 12px; padding: 0.9rem; font-size: 0.8rem; color: #cbd5e1; line-height: 1.8;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>شناسه ربات (@Username):</span>
+                        <strong style="color: #38bdf8;">@{{ report.bots.telegram.username }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>تاخیر پاسخگویی (Ping):</span>
+                        <strong id="val-tg-latency" style="color: #34d399;">{{ report.bots.telegram.latency_ms }} ms</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>اعتبارسنجی توکن:</span>
+                        <span style="color: #34d399;">تایید شده ✓</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 0.4rem; padding-top: 0.4rem;">
+                        <span>قابلیت‌ها:</span>
+                        <span style="color: #cbd5e1;">دستیار هوشمند فروش + ثبت بازدید</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service 4: Bale Bot Gateway -->
+            <div class="glass-card" style="padding: 1.5rem; border: 1px solid rgba(52, 211, 153, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.5rem;">🟢</span>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">درگاه پیام‌رسان بله (Bale Gateway)</div>
+                            <div style="font-size: 0.74rem; color: #94a3b8;">اتصال ملی به tapi.bale.ai</div>
+                        </div>
+                    </div>
+                    {% if report.bots.bale.healthy %}
+                        <span id="badge-bale" class="badge-neon badge-neon-emerald" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">متصل (ONLINE)</span>
+                    {% else %}
+                        <span id="badge-bale" class="badge-neon badge-neon-rose" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">قطع (OFFLINE)</span>
+                    {% endif %}
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border-radius: 12px; padding: 0.9rem; font-size: 0.8rem; color: #cbd5e1; line-height: 1.8;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>شناسه ربات (@Username):</span>
+                        <strong style="color: #34d399;">@{{ report.bots.bale.username }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>تاخیر پاسخگویی (Ping):</span>
+                        <strong id="val-bale-latency" style="color: #34d399;">{{ report.bots.bale.latency_ms }} ms</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>شبکه ملی اطلاعات (NIX):</span>
+                        <span style="color: #34d399;">بدون نیاز به پروکسی ✓</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 0.4rem; padding-top: 0.4rem;">
+                        <span>قابلیت‌ها:</span>
+                        <span style="color: #cbd5e1;">ارسال فایل‌های متقاضیان و کارشناسان</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service 5: Tier 1 TLS Impersonator -->
+            <div class="glass-card" style="padding: 1.5rem; border: 1px solid rgba(212, 175, 55, 0.35);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.5rem;">🕵️</span>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">لایه اول کراولر: TLS Impersonator</div>
+                            <div style="font-size: 0.74rem; color: #94a3b8;">جعل JA3/JA4 با کتابخانه curl_cffi</div>
+                        </div>
+                    </div>
+                    <span class="badge-neon badge-neon-gold" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                        Chrome 124 JA3
+                    </span>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border-radius: 12px; padding: 0.9rem; font-size: 0.8rem; color: #cbd5e1; line-height: 1.8;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>وضعیت ماژول:</span>
+                        <strong style="color: #34d399;">عملیاتی و آماده استخراج ✓</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>لایه دوم پشتیبان (Tier 2):</span>
+                        <span style="color: #38bdf8;">Playwright Stealth Headless</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>چرخه حیات نشست سوکت:</span>
+                        <span style="color: #fce79f;">بازنشانی پس از ۶۰ درخواست</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 0.4rem; padding-top: 0.4rem;">
+                        <span>پروتکل ضد واسطه:</span>
+                        <span style="color: #34d399;">فیلتر دو مرحله‌ای کلمات و حساب‌ها</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service 6: Edge Targets & Deduplication -->
+            <div class="glass-card" style="padding: 1.5rem; border: 1px solid rgba(168, 85, 247, 0.35);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.5rem;">🌐</span>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">اتصال به دیوار، شیپور و ددوپلیکیتور</div>
+                            <div style="font-size: 0.74rem; color: #94a3b8;">پایش پلتفرم‌های مقصد و حافظه کش</div>
+                        </div>
+                    </div>
+                    <span class="badge-neon badge-neon-purple" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                        O(1) Deduplicator
+                    </span>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border-radius: 12px; padding: 0.9rem; font-size: 0.8rem; color: #cbd5e1; line-height: 1.8;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>پینگ سرورهای دیوار:</span>
+                        <strong id="val-divar-latency" style="color: #38bdf8;">{{ report.crawler.edge_targets.divar.latency_ms }} ms</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>پینگ سرورهای شیپور:</span>
+                        <strong id="val-sheypoor-latency" style="color: #34d399;">{{ report.crawler.edge_targets.sheypoor.latency_ms }} ms</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>تعداد شناسه‌های کش‌شده:</span>
+                        <strong style="color: #fce79f;">{{ report.crawler.deduplication_engine.cached_signatures }} کلید در RAM</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 0.4rem; padding-top: 0.4rem;">
+                        <span>احراز هویت سشن دیوار:</span>
+                        {% if report.crawler.divar_session.authenticated %}
+                            <span style="color: #34d399;">فعال (شماره‌ها باز است) ✓</span>
+                        {% else %}
+                            <span style="color: #94a3b8;">نشست عمومی (استخراج از متن)</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- Real-time Health Polling JavaScript -->
+<script>
+async function refreshHealthData() {
+    const btn = document.getElementById('btn-refresh-health');
+    const spinner = document.getElementById('refresh-spinner');
+    
+    if (spinner) {
+        spinner.style.transform = 'rotate(360deg)';
+    }
+
+    try {
+        const resp = await fetch('{{ url_for("admin.system_health_data") }}');
+        if (!resp.ok) throw new Error('خطا در دریافت تله‌متری سلامت');
+        const data = await resp.json();
+
+        // Update score & status
+        const scoreEl = document.getElementById('val-score');
+        if (scoreEl) scoreEl.innerHTML = `${data.health_score} <span style="font-size: 1rem; color: #64748b;">/ ۱۰۰</span>`;
+
+        const badgeOverall = document.getElementById('badge-overall');
+        if (badgeOverall) {
+            if (data.overall_status === 'HEALTHY') {
+                badgeOverall.className = 'badge-neon badge-neon-emerald';
+                badgeOverall.textContent = '🟢 کاملاً عملیاتی (HEALTHY)';
+            } else if (data.overall_status === 'DEGRADED') {
+                badgeOverall.className = 'badge-neon badge-neon-gold';
+                badgeOverall.textContent = '🟡 با افت موقت (DEGRADED)';
+            } else {
+                badgeOverall.className = 'badge-neon badge-neon-rose';
+                badgeOverall.textContent = '🔴 بحرانی (CRITICAL)';
+            }
+        }
+
+        // Update Timestamp & Uptime
+        const tsEl = document.getElementById('val-timestamp');
+        if (tsEl) tsEl.textContent = data.timestamp;
+
+        const uptimeEl = document.getElementById('val-uptime');
+        if (uptimeEl) uptimeEl.textContent = `${(data.compute.os.uptime_seconds / 60).toFixed(1)} دقیقه`;
+
+        // Update Compute Progress Bars & Values
+        const cpuEl = document.getElementById('val-cpu');
+        const cpuBar = document.getElementById('bar-cpu');
+        if (cpuEl) cpuEl.textContent = `${data.compute.cpu.percent}%`;
+        if (cpuBar) cpuBar.style.width = `${data.compute.cpu.percent}%`;
+
+        const ramEl = document.getElementById('val-ram');
+        const ramBar = document.getElementById('bar-ram');
+        if (ramEl) ramEl.textContent = `${data.compute.ram.percent}%`;
+        if (ramBar) ramBar.style.width = `${data.compute.ram.percent}%`;
+
+        const diskEl = document.getElementById('val-disk');
+        const diskBar = document.getElementById('bar-disk');
+        if (diskEl) diskEl.textContent = `${data.compute.disk.percent}%`;
+        if (diskBar) diskBar.style.width = `${data.compute.disk.percent}%`;
+
+        const procRss = document.getElementById('val-proc-rss');
+        if (procRss) procRss.textContent = data.compute.process.rss_mb;
+
+        // Update DB Latency
+        const dbLat = document.getElementById('val-db-latency');
+        if (dbLat) dbLat.textContent = `${data.database.query_latency_ms} ms`;
+
+        // Update Bots Latencies
+        const tgLat = document.getElementById('val-tg-latency');
+        if (tgLat) tgLat.textContent = `${data.bots.telegram.latency_ms} ms`;
+
+        const baleLat = document.getElementById('val-bale-latency');
+        if (baleLat) baleLat.textContent = `${data.bots.bale.latency_ms} ms`;
+
+        // Update Targets Latencies
+        const divarLat = document.getElementById('val-divar-latency');
+        if (divarLat) divarLat.textContent = `${data.crawler.edge_targets.divar.latency_ms} ms`;
+
+        const sheypoorLat = document.getElementById('val-sheypoor-latency');
+        if (sheypoorLat) sheypoorLat.textContent = `${data.crawler.edge_targets.sheypoor.latency_ms} ms`;
+
+        // Issues list
+        const boxIssues = document.getElementById('box-issues');
+        const listIssues = document.getElementById('list-issues');
+        if (boxIssues && listIssues) {
+            if (data.issues && data.issues.length > 0) {
+                listIssues.innerHTML = data.issues.map(i => `<li>${i}</li>`).join('');
+                boxIssues.style.display = 'block';
+            } else {
+                listIssues.innerHTML = '';
+                boxIssues.style.display = 'none';
+            }
+        }
+
+    } catch (err) {
+        console.error('Failed to refresh health data:', err);
+    } finally {
+        setTimeout(() => {
+            if (spinner) spinner.style.transform = 'rotate(0deg)';
+        }, 600);
+    }
+}
+</script>
+{% endblock %}

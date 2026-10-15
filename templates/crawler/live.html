@@ -1,0 +1,1541 @@
+{% extends "base.html" %}
+
+{% block title %}اتاق مانیتورینگ کراولر دیوار و شیپور | سقف{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            اتاق مانیتورینگ و استخراج زنده املاک <span class="text-neon-cyan">(دیوار و شیپور)</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            پایش هوشمند فایل‌های شخصی تا ۵ روز گذشته، فیلتر حذف قطعی مشاوران و تفکیک دپارتمان‌های فروش و اجاره
+        </p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <button type="button" onclick="openDivarSessionModal()" id="divar-session-btn" class="glass-btn" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease;">
+            <span id="divar-session-icon">🔑</span>
+            <span id="divar-session-status-text">اتصال دیوار و کنار (شماره واقعی)</span>
+        </button>
+        <div id="crawler-status-pill" class="badge-neon badge-neon-cyan" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+            <span class="neon-pulse-dot cyan"></span> موتور آماده به کار
+        </div>
+    </div>
+</div>
+
+<!-- Crawler Control & Real-Time Stats (Grid Layout) -->
+<div class="grid-2" style="margin-bottom: 2rem;">
+    <!-- Column 1: Background Crawl Status & Real-time Metrics (Replacing legacy terminal box) -->
+    <div class="glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(0, 242, 254, 0.2); position: relative; overflow: hidden;">
+        <!-- Background Ambient Glow -->
+        <div style="position: absolute; top: -20px; right: -20px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(0,242,254,0.12) 0%, transparent 70%); pointer-events: none;"></div>
+
+        <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; margin: 0; color: #f8fafc;">
+                    <span>⚡</span> مانیتورینگ خودکار پس‌زمینه
+                </h3>
+                <span class="badge-neon badge-neon-emerald" style="font-size: 0.74rem;">
+                    بدون توقف در بک‌گراند
+                </span>
+            </div>
+
+            <!-- Sleek Status Card -->
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.1)); border: 1px solid rgba(0,242,254,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                        📡
+                    </div>
+                    <div>
+                        <div style="font-size: 0.88rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.2rem;">
+                            استخراج غیرهمزمان و بلادرنگ
+                        </div>
+                        <div style="font-size: 0.76rem; color: #94a3b8; line-height: 1.5;">
+                            فرآیند واکشی آگهی‌های شخصی و ارزیابی شروط، پشت صحنه اجرا شده و نتایج بدون معطلی به دپارتمان‌های زیر افزوده می‌شوند.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Highlights -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.76rem; color: #cbd5e1;">
+                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.4rem;">
+                    <span style="color: #10b981;">✓</span> فیلتر حذف قطعی املاک
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.4rem;">
+                    <span style="color: #10b981;">✓</span> تفکیک هوشمند سن بنا و بودجه
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.4rem;">
+                    <span style="color: #00f2fe;">✓</span> رتبه‌بندی کیفی فایل‌ها
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.4rem;">
+                    <span style="color: #00f2fe;">✓</span> استریم ۵ تا ۱۰ ثانیه‌ای
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats Counters -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.75rem;">
+            <div class="glass-card" style="padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8;">کل پویش‌شده</div>
+                <div id="stat-total-crawled" style="font-size: 1.1rem; font-weight: 800; color: #00f2fe;">0</div>
+            </div>
+            <div class="glass-card" style="padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8;">فایل‌های جدید</div>
+                <div id="stat-new-saved" style="font-size: 1.1rem; font-weight: 800; color: #10b981;">0</div>
+            </div>
+            <div class="glass-card" style="padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8;">تکراری (Skip)</div>
+                <div id="stat-skipped" style="font-size: 1.1rem; font-weight: 800; color: #f59e0b;">0</div>
+            </div>
+            <div class="glass-card" style="padding: 0.5rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8;">کل دیتابیس</div>
+                <div id="stat-total-db" style="font-size: 1.1rem; font-weight: 800; color: #8b5cf6;">{{ (sale_properties | length) + (rent_properties | length) }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Column 2: Control Form Panel (Enhanced with City, District and Depth) -->
+    <div class="glass-panel" style="padding: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem; margin-top: 0;">
+            <span>⚙️</span> تنظیمات استخراج هوشمند و فیلترها
+        </h3>
+
+        <form id="crawler-start-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <!-- City & District Live Filters -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.75rem;">
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.25rem;">
+                        📍 شهر مبدا
+                    </label>
+                    <select id="crawler-city" name="city" class="glass-select" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                        <option value="tehran" selected>تهران (پیش‌فرض)</option>
+                        <option value="pardis">پردیس</option>
+                        <option value="parand">پرند</option>
+                        <option value="karaj">کرج</option>
+                        <option value="shiraz">شیراز</option>
+                        <option value="isfahan">اصفهان</option>
+                        <option value="mashhad">مشهد</option>
+                        <option value="tabriz">تبریز</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.25rem;">
+                        🔍 محله / کلمه کلیدی
+                    </label>
+                    <input type="text" id="crawler-district" name="district" placeholder="مثلاً: سعادت آباد، پونک..." class="glass-input" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                </div>
+            </div>
+
+            <!-- Platforms -->
+            <div style="margin-bottom: 0.75rem;">
+                <label style="display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.35rem;">
+                    پلتفرم‌های مبدا (با فیلتر حذف قطعی املاک و واسطه)
+                </label>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; font-weight: 700; background: linear-gradient(135deg, rgba(0, 242, 254, 0.14), rgba(245, 158, 11, 0.08)); padding: 0.45rem 0.85rem; border-radius: 10px; border: 1.5px solid rgba(0, 242, 254, 0.45); box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);">
+                        <input type="checkbox" name="sources" value="divar" checked style="accent-color: #00f2fe; width: 16px; height: 16px;">
+                        <span>⭐ دیوار (مرجع اصلی و طلایی)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.82rem; background: rgba(16, 185, 129, 0.06); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.25);">
+                        <input type="checkbox" name="sources" value="sheypoor" checked style="accent-color: #10b981;">
+                        <span>شیپور (مکمل)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div style="margin-bottom: 0.75rem;">
+                <label style="display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.35rem;">
+                    دسته‌بندی‌های هدف
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.82rem;">
+                    <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; padding: 0.25rem 0.4rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <input type="checkbox" name="categories" value="buy-apartment" checked style="accent-color: #00f2fe;">
+                        <span>🏢 فروش آپارتمان</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; padding: 0.25rem 0.4rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <input type="checkbox" name="categories" value="rent-apartment" checked style="accent-color: #f59e0b;">
+                        <span>🔑 رهن و اجاره آپارتمان</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; padding: 0.25rem 0.4rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <input type="checkbox" name="categories" value="buy-residential" style="accent-color: #00f2fe;">
+                        <span>🏡 فروش ویلایی / خانه</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; padding: 0.25rem 0.4rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <input type="checkbox" name="categories" value="commercial-rent" style="accent-color: #f59e0b;">
+                        <span>🏬 اجاره اداری و تجاری</span>
+                    </label>
+            <!-- Advanced Targeted Filters (Accordion) -->
+            <details class="glass-panel" style="margin-bottom: 0.85rem; padding: 0.75rem; border-radius: 10px; border: 1px solid rgba(255, 215, 0, 0.25); background: rgba(0, 0, 0, 0.25);">
+                <summary style="cursor: pointer; font-size: 0.85rem; font-weight: 700; color: #fbbf24; display: flex; align-items: center; justify-content: space-between;">
+                    <span>🎯 فیلترهای پیشرفته و چندانتخابی محله‌ها (منطقه ۵)</span>
+                    <span style="font-size: 0.75rem; color: #94a3b8;">▼ تنظیمات عمیق</span>
+                </summary>
+
+                <!-- Multi-select Districts Pills -->
+                <div style="margin-top: 0.75rem;">
+                    <label style="display: block; font-size: 0.75rem; color: #fbbf24; margin-bottom: 0.35rem;">
+                        انتخاب چندگانه محله‌ها (منطقه ۵):
+                    </label>
+                    <div id="district-pills-container" style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+                        {% for d in ['پونک', 'جنت‌آباد', 'جنت‌آباد مرکزی', 'جنت‌آباد جنوبی', 'جنت‌آباد شمالی', 'صادقیه', 'شهران', 'باغ‌فیض', 'بلوار فردوس', 'اباذر', 'اکباتان', 'شاهین', 'سازمان برنامه', 'شهرزیبا'] %}
+                        <label class="district-pill" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="districts" value="{{ d }}" style="accent-color: #fbbf24;">
+                            <span>{{ d }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Financial Filters -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداقل ودیعه (م.ت):</label>
+                        <input type="number" id="crawler-min-deposit" name="min_deposit" placeholder="مثلاً ۲۰۰" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداکثر ودیعه (م.ت):</label>
+                        <input type="number" id="crawler-max-deposit" name="max_deposit" placeholder="مثلاً ۸۰۰" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداقل اجاره (م.ت):</label>
+                        <input type="number" id="crawler-min-rent" name="min_rent" placeholder="مثلاً ۱۰" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداکثر اجاره (م.ت):</label>
+                        <input type="number" id="crawler-max-rent" name="max_rent" placeholder="مثلاً ۳۵" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                </div>
+
+                <!-- Specs: Area & Year -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداقل متراژ (متر):</label>
+                        <input type="number" id="crawler-min-area" name="min_area" placeholder="مثلاً ۷۵" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.2rem;">حداقل سال ساخت:</label>
+                        <input type="number" id="crawler-min-year" name="min_year" placeholder="مثلاً ۱۳۹۸" class="glass-input" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                    </div>
+                </div>
+
+                <!-- Profile Save / Load Bar -->
+                <div style="margin-top: 0.75rem; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                    <select id="saved-profiles-select" class="glass-select" style="flex: 2; padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+                        <option value="">-- بارگذاری پروفایل فیلتر ذخیره‌شده --</option>
+                    </select>
+                    <button type="button" id="btn-save-profile" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" title="ذخیره شروط فعلی در پروفایل">
+                        💾 ذخیره پروفایل
+                    </button>
+                    <button type="button" id="btn-run-profile" class="glass-btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #10b981; border-color: rgba(16, 185, 129, 0.4);" title="اجرای سریع فیلتر این پروفایل">
+                        ▶️ اجرای پروفایل
+                    </button>
+                </div>
+            </details>
+
+            <!-- Limit, Submit and Reset Buttons -->
+            <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 0.6rem; align-items: flex-end; margin-top: 0.85rem;">
+                <div>
+                    <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem;">
+                        حجم استخراج در هر دسته
+                    </label>
+                    <select id="crawler-limit" class="glass-select" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                        <option value="15">۱۵ فایل (سریع)</option>
+                        <option value="30" selected>۳۰ فایل (استاندارد)</option>
+                        <option value="60">۶۰ فایل (عمیق)</option>
+                        <option value="100">۱۰۰ فایل (حداکثر)</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 0.4rem;">
+                    <button type="submit" id="start-crawl-btn" class="btn-neon-cyan" style="flex: 2; justify-content: center; padding: 0.55rem 0.6rem; font-size: 0.85rem;">
+                        <span>⚡</span> شروع کراولینگ
+                    </button>
+                    <button type="button" id="reset-data-btn" class="glass-btn" style="flex: 1; justify-content: center; padding: 0.55rem 0.5rem; font-size: 0.78rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" title="پاک‌سازی کامل کلیه فایل‌های کراول‌شده قبلی">
+                        <span>🧹</span> ریست
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- DEPARTMENTS: INDEPENDENT SALES & RENTAL PANELS -->
+<!-- ======================================================== -->
+
+<!-- Master Department Switcher Tabs -->
+<div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; background: rgba(15, 23, 42, 0.6); padding: 0.5rem; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.06);">
+    <button type="button" id="tab-btn-sale" onclick="switchDepartment('sale')" class="glass-btn" style="flex: 1; padding: 0.65rem 1.25rem; font-size: 0.95rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #0b0f19; border: none; box-shadow: 0 0 15px rgba(0,242,254,0.3);">
+        🏢 آگهی‌های فروش مالکین (<span id="tab-sale-count">{{ sale_properties | length | pnum }}</span>)
+    </button>
+    <button type="button" id="tab-btn-rent" onclick="switchDepartment('rent')" class="glass-btn" style="flex: 1; padding: 0.65rem 1.25rem; font-size: 0.95rem; font-weight: 700; border-radius: 10px; background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1);">
+        🔑 آگهی‌های رهن و اجاره مالکین (<span id="tab-rent-count">{{ rent_properties | length | pnum }}</span>)
+    </button>
+    <button type="button" id="tab-btn-all" onclick="switchDepartment('all')" class="glass-btn" style="padding: 0.65rem 1.25rem; font-size: 0.95rem; font-weight: 700; border-radius: 10px; background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1);">
+        🌐 مشاهده همزمان هر دو دپارتمان
+    </button>
+</div>
+
+<!-- PANEL 1: DEDICATED SALES DEPARTMENT -->
+<div id="panel-sale" class="department-panel" style="margin-bottom: 2.5rem;">
+    <div class="glass-panel" style="padding: 1.25rem; border-right: 4px solid #00f2fe;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.5rem;">🏢</span>
+                <div>
+                    <h3 style="font-size: 1.2rem; font-weight: 800; margin: 0; color: #00f2fe;">
+                        آگهی‌های فروش مستقیم مالکین
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin: 0.2rem 0 0 0;">
+                        صرفاً آگهی‌های شخصی بدون واسطه — فیلتر قطعی تمام مشاوران، آژانس‌ها و دپارتمان‌ها
+                    </p>
+                </div>
+            </div>
+            <span id="panel-sale-count" class="badge-neon badge-neon-cyan">
+                {{ sale_properties | length | pnum }} آگهی ثبت‌شده
+            </span>
+        </div>
+
+        <div id="sale-cards-container" class="grid-2" style="gap: 1rem;">
+            {% if sale_properties and sale_properties | length > 0 %}
+                {% for p in sale_properties %}
+                    {% set is_owner_declared = 'مالک هستم' in (p.description or '') or 'مالکم' in (p.description or '') or 'من مالک' in (p.description or '') or 'مالک هستم' in (p.title or '') %}
+                    <div id="prop-card-{{ p.id }}" class="glass-card" style="padding: 1.15rem; border: 1px solid {% if is_owner_declared %}rgba(212, 175, 55, 0.45){% else %}rgba(0, 242, 254, 0.15){% endif %}; display: flex; flex-direction: column; justify-content: space-between; position: relative; {% if is_owner_declared %}box-shadow: 0 0 18px rgba(212,175,55,0.18);{% endif %}">
+                        {% if is_owner_declared %}
+                        <div style="position: absolute; top: -1px; right: -1px; background: linear-gradient(135deg, #d4af37, #ffd700); color: #0b0f19; font-size: 0.68rem; font-weight: 900; padding: 0.25rem 0.65rem; border-radius: 0 10px 0 10px; letter-spacing: 0.5px; z-index: 2;">👑 مالک هستم</div>
+                        {% endif %}
+                        <div>
+                            <!-- Header: Source & Links -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; {% if is_owner_declared %}margin-top: 0.5rem;{% endif %}">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                    {% if p.source == 'divar' %}
+                                        <span class="badge-neon badge-neon-cyan" style="font-size: 0.72rem;">دیوار</span>
+                                    {% else %}
+                                        <span class="badge-neon badge-neon-emerald" style="font-size: 0.72rem;">شیپور</span>
+                                    {% endif %}
+                                    <span style="font-size: 0.75rem; color: #94a3b8;">📍 {{ p.district }}</span>
+                                    <span class="badge-neon badge-neon-purple" style="font-size: 0.7rem;">امتیاز: {{ p.score | pnum }}</span>
+                                </div>
+                                <div>
+                                    {% if p.source_url %}
+                                        <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none; font-size: 0.75rem; font-weight: 700;">
+                                            🔗 لینک آگهی
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Title -->
+                            <h4 style="font-size: 1rem; font-weight: 700; margin: 0 0 0.6rem 0; line-height: 1.4;">
+                                <a href="{{ url_for('properties.detail', id=p.id) }}" style="color: #f8fafc; text-decoration: none;">
+                                    {{ p.title }}
+                                </a>
+                            </h4>
+
+                            <!-- Key Specs -->
+                            <div style="display: flex; gap: 0.65rem; flex-wrap: wrap; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.6rem; background: rgba(0,0,0,0.25); padding: 0.4rem 0.65rem; border-radius: 8px;">
+                                <span>📐 {{ p.area | pnum }} متر</span>
+                                <span>🛏️ {{ p.rooms | pnum }} خواب</span>
+                                <span>🏢 طبقه {{ p.floor | pnum }}{% if p.total_floors %} از {{ p.total_floors | pnum }}{% endif %}</span>
+                                <span>🏗️ ساخت {{ p.build_year | pnum }}</span>
+                            </div>
+
+                            <!-- Core Amenities -->
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.65rem; font-size: 0.72rem;">
+                                <span class="badge-neon {% if p.has_elevator %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">آسانسور {% if p.has_elevator %}✓{% else %}✕{% endif %}</span>
+                                <span class="badge-neon {% if p.has_parking %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">پارکینگ {% if p.has_parking %}✓{% else %}✕{% endif %}</span>
+                                <span class="badge-neon {% if p.has_warehouse %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">انباری {% if p.has_warehouse %}✓{% else %}✕{% endif %}</span>
+                                {% if p.has_balcony %}<span class="badge-neon badge-neon-cyan">بالکن ✓</span>{% endif %}
+                            </div>
+
+                            <!-- Owner Phone Number Card -->
+                            <div id="phone-container-{{ p.id }}" style="display: flex; align-items: center; justify-content: space-between; background: {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.1){% else %}rgba(0, 242, 254, 0.08){% endif %}; border: 1px solid {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.3){% else %}rgba(0, 242, 254, 0.25){% endif %}; padding: 0.45rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem;">
+                                <div id="phone-display-{{ p.id }}" style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-size: 1rem;">📞</span>
+                                    <span style="font-size: 0.8rem; color: #94a3b8;">شماره مالک:</span>
+                                    {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                                        <a href="tel:{{ p.owner.phone_number }}" style="font-size: 0.95rem; font-weight: 800; color: #10b981; text-decoration: none; letter-spacing: 1px;">{{ p.owner.phone_number }}</a>
+                                        <span style="font-size: 0.65rem; color: #10b981; background: rgba(16,185,129,0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">مالک ۱۰۰٪ واقعی</span>
+                                    {% else %}
+                                        <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 600;">محفوظ در دیوار</span>
+                                    {% endif %}
+                                </div>
+                                <div id="phone-action-{{ p.id }}" style="display: flex; align-items: center; gap: 0.35rem;">
+                                    {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                                        <button type="button" onclick="copyToClipboard('{{ p.owner.phone_number }}', event)" class="glass-btn" style="padding: 0.2rem 0.45rem; font-size: 0.72rem; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">کپی</button>
+                                    {% else %}
+                                        <button type="button" onclick="extractOwnerPhoneJIT({{ p.id }}, this)" class="btn-extract-phone" id="btn-jit-{{ p.id }}" title="استخراج آنی برحسب تقاضا با مصرف ۱ سهمیه استخر" style="padding: 0.22rem 0.55rem; font-size: 0.72rem;">
+                                            ⚡ استخراج آنی (JIT)
+                                        </button>
+                                        {% if p.source_url %}
+                                            <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.22rem 0.45rem; font-size: 0.7rem; color: #00f2fe; border-color: rgba(0, 242, 254, 0.3); text-decoration: none; font-weight: 600;">دیوار 🔗</a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Price Display -->
+                            <div style="background: linear-gradient(135deg, rgba(0,242,254,0.06), rgba(79,172,254,0.04)); border: 1px solid rgba(0,242,254,0.18); border-radius: 10px; padding: 0.6rem 0.85rem; margin-bottom: 0.75rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                    <span style="font-size: 0.8rem; color: #94a3b8;">قیمت کل:</span>
+                                    <span style="font-size: 1.15rem; font-weight: 800; color: #00f2fe;">{{ p.total_price | toman }}</span>
+                                </div>
+                                {% if p.area and p.area > 0 and p.total_price and p.total_price > 0 %}
+                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 0.3rem; padding-top: 0.3rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                                    <span style="font-size: 0.75rem; color: #64748b;">هر متر مربع:</span>
+                                    <span style="font-size: 0.9rem; font-weight: 700; color: #4facfe;">{{ (p.total_price // p.area) | toman }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Real Photos Gallery Thumbnails -->
+                            {% if p.images and p.images | length > 0 %}
+                                <div style="margin-bottom: 0.75rem;">
+                                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.35rem;"><span>📷 تصاویر واقعی ({{ p.images | length | pnum }} عکس):</span></div>
+                                    <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.25rem;">
+                                        {% for img in p.images[:5] %}
+                                            <div onclick="openPhotoGallery({{ p.id }}, {{ p.images | tojson | forceescape }}, '{{ p.title | forceescape }}', '{{ p.file_code }}')" style="cursor: pointer; flex-shrink: 0;" title="مشاهده در گالری">
+                                                <img src="{{ img }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/static/placeholder.png';" alt="ملک" style="width: 64px; height: 52px; object-fit: cover; border-radius: 7px; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Expandable Full Description -->
+                            <details style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; font-size: 0.8rem; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.05);">
+                                <summary style="cursor: pointer; font-weight: 700; color: #94a3b8; outline: none;">📄 مشاهده متن کامل آگهی</summary>
+                                <div style="margin-top: 0.5rem; line-height: 1.6; white-space: pre-line; color: #e2e8f0; font-size: 0.82rem; max-height: 160px; overflow-y: auto; padding-right: 0.25rem;">
+                                    {{ p.description or "توضیحات تکمیلی در صفحه اصلی آگهی درج شده است." }}
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- Card Action Footer -->
+                        <div style="display: flex; gap: 0.5rem; border-top: 1px solid rgba(212,175,55,0.18); padding-top: 0.75rem; margin-top: 0.5rem;">
+                            <button type="button" onclick="openInAppAdModal({{ p.id }}, event)" class="btn-luxury-gold" style="flex: 1; justify-content: center; padding: 0.45rem 0.6rem; font-size: 0.82rem;">🏛️ نمایش آگهی</button>
+                            <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.45rem 0.6rem; font-size: 0.82rem; color: #f5d77f; text-decoration: none;" title="مشاهده پرونده کامل">⚡ پرونده</a>
+                            {% if p.source_url %}<a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.45rem 0.6rem; font-size: 0.82rem; color: #8896ab; text-decoration: none;">لینک آگهی</a>{% endif %}
+                            {% if p.status != 'verified' %}
+                                <form action="{{ url_for('properties.verify', id=p.id) }}" method="POST" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-neon-emerald" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;" title="تأیید فایل">✓</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-placeholder" style="grid-column: 1 / -1; text-align: center; color: #64748b; padding: 3rem; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏢</div>
+                    <div>هنوز آگهی فروشی از مالکین استخراج نشده است. با شروع کراولینگ، آگهی‌های جدید به‌صورت زنده اضافه می‌شوند.</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- PANEL 2: DEDICATED RENT & MORTGAGE DEPARTMENT -->
+<div id="panel-rent" class="department-panel" style="margin-bottom: 2.5rem; display: none;">
+    <div class="glass-panel" style="padding: 1.25rem; border-right: 4px solid #f59e0b;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.5rem;">🔑</span>
+                <div>
+                    <h3 style="font-size: 1.2rem; font-weight: 800; margin: 0; color: #f59e0b;">
+                        آگهی‌های رهن و اجاره مستقیم مالکین
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin: 0.2rem 0 0 0;">
+                        صرفاً آگهی‌های شخصی — فیلتر قطعی تمام مشاوران، آژانس‌ها و دپارتمان‌ها — با محاسبه تبدیل رهن به اجاره
+                    </p>
+                </div>
+            </div>
+            <span id="panel-rent-count" class="badge-neon badge-neon-amber">
+                {{ rent_properties | length | pnum }} آگهی ثبت‌شده
+            </span>
+        </div>
+
+        <div id="rent-cards-container" class="grid-2" style="gap: 1rem;">
+            {% if rent_properties and rent_properties | length > 0 %}
+                {% for p in rent_properties %}
+                    {% set is_owner_declared = 'مالک هستم' in (p.description or '') or 'مالکم' in (p.description or '') or 'من مالک' in (p.description or '') or 'مالک هستم' in (p.title or '') %}
+                    {% set deposit_val = p.deposit or 0 %}
+                    {% set rent_val = p.monthly_rent or 0 %}
+                    {# تبدیل رهن به اجاره: هر ۳۰ میلیون رهن = ۱ میلیون اجاره (نرخ تبدیل ۳۰:۱) #}
+                    {% set CONVERT_RATE = 30 %}
+                    {% set full_rent_equiv = (deposit_val // 1000000 // CONVERT_RATE + rent_val // 1000000) if deposit_val > 0 else (rent_val // 1000000) %}
+                    {% set full_deposit_equiv = (deposit_val // 1000000 + rent_val // 1000000 * CONVERT_RATE) if rent_val > 0 else (deposit_val // 1000000) %}
+                    <div id="prop-card-{{ p.id }}" class="glass-card" style="padding: 1.15rem; border: 1px solid {% if is_owner_declared %}rgba(212, 175, 55, 0.45){% else %}rgba(245, 158, 11, 0.18){% endif %}; display: flex; flex-direction: column; justify-content: space-between; position: relative; {% if is_owner_declared %}box-shadow: 0 0 18px rgba(212,175,55,0.18);{% endif %}">
+                        {% if is_owner_declared %}
+                        <div style="position: absolute; top: -1px; right: -1px; background: linear-gradient(135deg, #d4af37, #ffd700); color: #0b0f19; font-size: 0.68rem; font-weight: 900; padding: 0.25rem 0.65rem; border-radius: 0 10px 0 10px; letter-spacing: 0.5px; z-index: 2;">👑 مالک هستم</div>
+                        {% endif %}
+                        <div>
+                            <!-- Header: Source & Links -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; {% if is_owner_declared %}margin-top: 0.5rem;{% endif %}">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                    {% if p.source == 'divar' %}
+                                        <span class="badge-neon badge-neon-cyan" style="font-size: 0.72rem;">دیوار</span>
+                                    {% else %}
+                                        <span class="badge-neon badge-neon-emerald" style="font-size: 0.72rem;">شیپور</span>
+                                    {% endif %}
+                                    <span style="font-size: 0.75rem; color: #94a3b8;">📍 {{ p.district }}</span>
+                                    <span class="badge-neon badge-neon-amber" style="font-size: 0.7rem;">امتیاز: {{ p.score | pnum }}</span>
+                                </div>
+                                <div>
+                                    {% if p.source_url %}
+                                        <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-amber" style="text-decoration: none; font-size: 0.75rem; font-weight: 700;">🔗 لینک آگهی</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Title -->
+                            <h4 style="font-size: 1rem; font-weight: 700; margin: 0 0 0.6rem 0; line-height: 1.4;">
+                                <a href="{{ url_for('properties.detail', id=p.id) }}" style="color: #f8fafc; text-decoration: none;">{{ p.title }}</a>
+                            </h4>
+
+                            <!-- Key Specs -->
+                            <div style="display: flex; gap: 0.65rem; flex-wrap: wrap; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.6rem; background: rgba(0,0,0,0.25); padding: 0.4rem 0.65rem; border-radius: 8px;">
+                                <span>📐 {{ p.area | pnum }} متر</span>
+                                <span>🛏️ {{ p.rooms | pnum }} خواب</span>
+                                <span>🏢 طبقه {{ p.floor | pnum }}{% if p.total_floors %} از {{ p.total_floors | pnum }}{% endif %}</span>
+                                <span>🏗️ ساخت {{ p.build_year | pnum }}</span>
+                            </div>
+
+                            <!-- Core Amenities -->
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.65rem; font-size: 0.72rem;">
+                                <span class="badge-neon {% if p.has_elevator %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">آسانسور {% if p.has_elevator %}✓{% else %}✕{% endif %}</span>
+                                <span class="badge-neon {% if p.has_parking %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">پارکینگ {% if p.has_parking %}✓{% else %}✕{% endif %}</span>
+                                <span class="badge-neon {% if p.has_warehouse %}badge-neon-emerald{% else %}badge-neon-gray{% endif %}">انباری {% if p.has_warehouse %}✓{% else %}✕{% endif %}</span>
+                                {% if p.has_balcony %}<span class="badge-neon badge-neon-cyan">بالکن ✓</span>{% endif %}
+                            </div>
+
+                            <!-- Owner Phone Number Card -->
+                            <div id="phone-container-{{ p.id }}" style="display: flex; align-items: center; justify-content: space-between; background: {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.1){% else %}rgba(245, 158, 11, 0.08){% endif %}; border: 1px solid {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.3){% else %}rgba(245, 158, 11, 0.25){% endif %}; padding: 0.45rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem;">
+                                <div id="phone-display-{{ p.id }}" style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-size: 1rem;">📞</span>
+                                    <span style="font-size: 0.8rem; color: #94a3b8;">شماره مالک:</span>
+                                    {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                                        <a href="tel:{{ p.owner.phone_number }}" style="font-size: 0.95rem; font-weight: 800; color: #10b981; text-decoration: none; letter-spacing: 1px;">{{ p.owner.phone_number }}</a>
+                                        <span style="font-size: 0.65rem; color: #10b981; background: rgba(16,185,129,0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">مالک ۱۰۰٪ واقعی</span>
+                                    {% else %}
+                                        <span style="font-size: 0.78rem; color: #fbbf24; font-weight: 600;">محفوظ در دیوار</span>
+                                    {% endif %}
+                                </div>
+                                <div id="phone-action-{{ p.id }}" style="display: flex; align-items: center; gap: 0.35rem;">
+                                    {% if p.owner and p.owner.phone_number and p.owner.phone_number.startswith('09') %}
+                                        <button type="button" onclick="copyToClipboard('{{ p.owner.phone_number }}', event)" class="glass-btn" style="padding: 0.2rem 0.45rem; font-size: 0.72rem; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">کپی</button>
+                                    {% else %}
+                                        <button type="button" onclick="extractOwnerPhoneJIT({{ p.id }}, this)" class="btn-extract-phone" id="btn-jit-{{ p.id }}" title="استخراج آنی برحسب تقاضا با مصرف ۱ سهمیه استخر" style="padding: 0.22rem 0.55rem; font-size: 0.72rem;">
+                                            ⚡ استخراج آنی (JIT)
+                                        </button>
+                                        {% if p.source_url %}
+                                            <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.22rem 0.45rem; font-size: 0.7rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); text-decoration: none; font-weight: 600;">دیوار 🔗</a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Deposit and Rent Display with Conversion Calculator -->
+                            <div style="background: linear-gradient(135deg, rgba(245,158,11,0.07), rgba(251,191,36,0.04)); border: 1px solid rgba(245,158,11,0.22); border-radius: 10px; padding: 0.65rem 0.85rem; margin-bottom: 0.75rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;">
+                                    <div>
+                                        <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.15rem;">ودیعه (رهن):</div>
+                                        <div style="font-size: 1.1rem; font-weight: 800; color: #f59e0b;">{{ p.deposit | toman }}</div>
+                                    </div>
+                                    {% if rent_val > 0 %}
+                                    <div style="text-align: left;">
+                                        <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.15rem;">اجاره ماهانه:</div>
+                                        <div style="font-size: 1rem; font-weight: 800; color: #10b981;">{{ p.monthly_rent | toman }}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if deposit_val > 0 or rent_val > 0 %}
+                                <div style="border-top: 1px solid rgba(245,158,11,0.15); padding-top: 0.4rem; margin-top: 0.3rem;">
+                                    <div style="font-size: 0.7rem; color: #78716c; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.3rem;">
+                                        <span>⇄</span> <span>تبدیل رهن و اجاره (نرخ: هر ۳۰م = ۱م/ماه)</span>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                        <div style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 0.3rem 0.5rem; border: 1px solid rgba(245,158,11,0.15);">
+                                            <div style="font-size: 0.65rem; color: #94a3b8;">رهن کامل معادل:</div>
+                                            <div style="font-size: 0.85rem; font-weight: 700; color: #fbbf24;">{{ full_deposit_equiv | pnum }} م.ت</div>
+                                        </div>
+                                        <div style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 0.3rem 0.5rem; border: 1px solid rgba(16,185,129,0.15);">
+                                            <div style="font-size: 0.65rem; color: #94a3b8;">اجاره کامل معادل:</div>
+                                            <div style="font-size: 0.85rem; font-weight: 700; color: #10b981;">{{ full_rent_equiv | pnum }} م.ت/ماه</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Real Photos Gallery Thumbnails -->
+                            {% if p.images and p.images | length > 0 %}
+                                <div style="margin-bottom: 0.75rem;">
+                                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.35rem;"><span>📷 تصاویر واقعی ({{ p.images | length | pnum }} عکس):</span></div>
+                                    <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.25rem;">
+                                        {% for img in p.images[:5] %}
+                                            <div onclick="openPhotoGallery({{ p.id }}, {{ p.images | tojson | forceescape }}, '{{ p.title | forceescape }}', '{{ p.file_code }}')" style="cursor: pointer; flex-shrink: 0;" title="مشاهده در گالری">
+                                                <img src="{{ img }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/static/placeholder.png';" alt="ملک" style="width: 64px; height: 52px; object-fit: cover; border-radius: 7px; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Expandable Full Description -->
+                            <details style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; font-size: 0.8rem; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.05);">
+                                <summary style="cursor: pointer; font-weight: 700; color: #94a3b8; outline: none;">📄 مشاهده متن کامل آگهی</summary>
+                                <div style="margin-top: 0.5rem; line-height: 1.6; white-space: pre-line; color: #e2e8f0; font-size: 0.82rem; max-height: 160px; overflow-y: auto; padding-right: 0.25rem;">
+                                    {{ p.description or "توضیحات تکمیلی در صفحه اصلی آگهی درج شده است." }}
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- Card Action Footer -->
+                        <div style="display: flex; gap: 0.5rem; border-top: 1px solid rgba(212,175,55,0.18); padding-top: 0.75rem; margin-top: 0.5rem;">
+                            <button type="button" onclick="openInAppAdModal({{ p.id }}, event)" class="btn-luxury-gold" style="flex: 1; justify-content: center; padding: 0.45rem 0.6rem; font-size: 0.82rem;">🏛️ نمایش آگهی</button>
+                            <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.45rem 0.6rem; font-size: 0.82rem; color: #f5d77f; text-decoration: none;" title="مشاهده پرونده کامل">⚡ پرونده</a>
+                            {% if p.source_url %}<a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.45rem 0.6rem; font-size: 0.82rem; color: #8896ab; text-decoration: none;">لینک آگهی</a>{% endif %}
+                            {% if p.status != 'verified' %}
+                                <form action="{{ url_for('properties.verify', id=p.id) }}" method="POST" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-neon-emerald" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;" title="تأیید فایل">✓</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-placeholder" style="grid-column: 1 / -1; text-align: center; color: #64748b; padding: 3rem; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔑</div>
+                    <div>هنوز آگهی رهن و اجاره‌ای از مالکین استخراج نشده است. با شروع کراولینگ، آگهی‌های جدید به‌صورت زنده اضافه می‌شوند.</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+@keyframes liveCardPulse {
+    0% { transform: translateY(-10px) scale(0.98); box-shadow: 0 0 25px rgba(0, 242, 254, 0.6); }
+    50% { transform: translateY(0) scale(1.01); box-shadow: 0 0 35px rgba(0, 242, 254, 0.4); }
+    100% { transform: translateY(0) scale(1); box-shadow: none; }
+}
+.live-card-pulse {
+    animation: liveCardPulse 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+</style>
+<script>
+window.highestPropertyId = {{ (sale_properties + rent_properties) | map(attribute='id') | max if (sale_properties or rent_properties) else 0 }};
+</script>
+<script src="{{ url_for('static', filename='js/crawler.js') }}"></script>
+<script>
+function switchDepartment(type) {
+    const salePanel = document.getElementById('panel-sale');
+    const rentPanel = document.getElementById('panel-rent');
+    const tabSale = document.getElementById('tab-btn-sale');
+    const tabRent = document.getElementById('tab-btn-rent');
+    const tabAll = document.getElementById('tab-btn-all');
+
+    // Reset tabs
+    [tabSale, tabRent, tabAll].forEach(t => {
+        if (!t) return;
+        t.style.background = 'transparent';
+        t.style.color = '#94a3b8';
+        t.style.border = '1px solid rgba(255,255,255,0.1)';
+        t.style.boxShadow = 'none';
+    });
+
+    if (type === 'sale') {
+        salePanel.style.display = 'block';
+        rentPanel.style.display = 'none';
+        tabSale.style.background = 'linear-gradient(135deg, #00f2fe, #4facfe)';
+        tabSale.style.color = '#0b0f19';
+        tabSale.style.border = 'none';
+        tabSale.style.boxShadow = '0 0 15px rgba(0,242,254,0.3)';
+    } else if (type === 'rent') {
+        salePanel.style.display = 'none';
+        rentPanel.style.display = 'block';
+        tabRent.style.background = 'linear-gradient(135deg, #f59e0b, #fbbf24)';
+        tabRent.style.color = '#0b0f19';
+        tabRent.style.border = 'none';
+        tabRent.style.boxShadow = '0 0 15px rgba(245,158,11,0.3)';
+    } else {
+        salePanel.style.display = 'block';
+        rentPanel.style.display = 'block';
+        tabAll.style.background = 'linear-gradient(135deg, #8b5cf6, #c084fc)';
+        tabAll.style.color = '#0b0f19';
+        tabAll.style.border = 'none';
+        tabAll.style.boxShadow = '0 0 15px rgba(139,92,246,0.3)';
+    }
+}
+
+// =====================================================================
+// Divar Session & Kenar OpenAPI Modal Logic
+// =====================================================================
+
+function openDivarSessionModal() {
+    const modal = document.getElementById('divarSessionModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        refreshDivarSessionStatus();
+    }
+}
+
+function closeDivarSessionModal() {
+    const modal = document.getElementById('divarSessionModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function switchSessionTab(tab) {
+    const tabOtp = document.getElementById('tab-btn-otp');
+    const tabApi = document.getElementById('tab-btn-api');
+    const tabChrome = document.getElementById('tab-btn-chrome');
+    const tabMatrix = document.getElementById('tab-btn-matrix');
+    const secOtp = document.getElementById('section-tab-otp');
+    const secApi = document.getElementById('section-tab-api');
+    const secChrome = document.getElementById('section-tab-chrome');
+    const secMatrix = document.getElementById('section-tab-matrix');
+
+    // Reset all tabs
+    [secOtp, secApi, secChrome, secMatrix].forEach(s => { if(s) s.style.display = 'none'; });
+    [tabOtp, tabApi, tabChrome, tabMatrix].forEach(b => {
+        if (b) {
+            b.style.background = 'transparent';
+            b.style.color = '#94a3b8';
+            b.style.border = '1px solid rgba(255,255,255,0.1)';
+        }
+    });
+
+    if (tab === 'matrix') {
+        if (secMatrix) secMatrix.style.display = 'block';
+        if (tabMatrix) { tabMatrix.style.background = 'rgba(0,242,254,0.2)'; tabMatrix.style.color = '#38bdf8'; tabMatrix.style.border = '1px solid rgba(0,242,254,0.4)'; }
+        renderMatrixAccounts();
+    } else if (tab === 'chrome') {
+        if (secChrome) secChrome.style.display = 'block';
+        if (tabChrome) { tabChrome.style.background = 'rgba(34,197,94,0.2)'; tabChrome.style.color = '#4ade80'; tabChrome.style.border = '1px solid rgba(34,197,94,0.4)'; }
+    } else if (tab === 'otp') {
+        if (secOtp) secOtp.style.display = 'block';
+        if (tabOtp) { tabOtp.style.background = 'rgba(245,158,11,0.2)'; tabOtp.style.color = '#fbbf24'; tabOtp.style.border = 'none'; }
+    } else {
+        if (secApi) secApi.style.display = 'block';
+        if (tabApi) { tabApi.style.background = 'rgba(245,158,11,0.2)'; tabApi.style.color = '#fbbf24'; tabApi.style.border = 'none'; }
+    }
+}
+
+
+async function refreshDivarSessionStatus() {
+    const dot = document.getElementById('divar-status-dot');
+    const msg = document.getElementById('divar-status-msg');
+    const btnText = document.getElementById('divar-session-status-text');
+    const btn = document.getElementById('divar-session-btn');
+    const quotaBadge = document.getElementById('divar-quota-badge');
+
+    try {
+        const res = await fetch('/crawler/divar-session/status');
+        const data = await res.json();
+
+        // استعلام سهمیه استخر حساب‌ها
+        try {
+            const accRes = await fetch('/crawler/divar-session/accounts');
+            const accData = await accRes.json();
+            if (quotaBadge && accData.total_accounts > 0) {
+                const rem = accData.total_remaining;
+                const maxCap = accData.max_daily_capacity;
+                quotaBadge.innerHTML = `🛡️ استخر چنداکانتی: <strong style="color:${rem > 5 ? '#38bdf8' : '#f87171'}">${rem}</strong> از ${maxCap} سهمیه آزاد (${accData.total_accounts} سیم‌کارت)`;
+            } else {
+                const qRes = await fetch('/crawler/divar-session/quota');
+                const qData = await qRes.json();
+                if (quotaBadge && qData.local) {
+                    const rem = qData.local.remaining ?? 25;
+                    const used = qData.local.used_count ?? 0;
+                    const lim = qData.local.limit ?? 25;
+                    quotaBadge.innerHTML = `🛡️ سهمیه امن امروز: <strong style="color:${rem > 5 ? '#38bdf8' : '#f87171'}">${rem}</strong> از ${lim} (مصرف‌شده: ${used})`;
+                }
+            }
+        } catch(qe) {}
+
+        if (data.authenticated) {
+            if (dot) {
+                dot.style.background = '#10b981';
+                dot.style.boxShadow = '0 0 10px #10b981';
+            }
+            if (msg) msg.innerHTML = '<span style="color: #10b981; font-weight: 700;">🟢 اتصال استخر برقرار است</span> — نشست احراز هویت دیوار فعال است و استخراج شماره‌ها با تمدید خودکار انجام می‌شود.';
+            if (btnText) btnText.textContent = '🟢 استخر دیوار فعال است';
+            if (btn) {
+                btn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                btn.style.color = '#10b981';
+            }
+        } else {
+            if (dot) {
+                dot.style.background = '#f59e0b';
+                dot.style.boxShadow = '0 0 10px #f59e0b';
+            }
+            if (msg) msg.innerHTML = '<span style="color: #f59e0b; font-weight: 700;">🟡 در انتظار اتصال</span> — برای استخراج ۱۰۰٪ شماره‌های واقعی، سیم‌کارت یا توکن را در استخر فعال کنید.';
+            if (btnText) btnText.textContent = '🔑 اتصال استخر دیوار (شماره واقعی)';
+            if (btn) {
+                btn.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                btn.style.color = '#fbbf24';
+            }
+        }
+    } catch (e) {
+        console.error('Error fetching session status:', e);
+    }
+}
+
+function showDivarAlert(text, isError = false) {
+    const alertBox = document.getElementById('divar-session-alert');
+    if (!alertBox) return;
+    alertBox.style.display = 'block';
+    alertBox.style.background = isError ? 'rgba(244, 63, 94, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+    alertBox.style.border = isError ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)';
+    alertBox.style.color = isError ? '#f43f5e' : '#10b981';
+    alertBox.textContent = text;
+}
+
+async function handleRequestDivarSms() {
+    const phoneInput = document.getElementById('divar-phone-input');
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const btn = document.getElementById('btn-request-sms');
+    const codeContainer = document.getElementById('divar-code-container');
+
+    if (!phone || !phone.startsWith('09') || phone.length !== 11) {
+        showDivarAlert('لطفاً شماره موبایل معتبر ۱۱ رقمی (شروع با ۰۹) وارد کنید.', true);
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'در حال ارسال پیامک...';
+    }
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-session/request-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf
+            },
+            body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showDivarAlert(data.message, false);
+            if (codeContainer) codeContainer.style.display = 'block';
+            const codeInput = document.getElementById('divar-code-input');
+            if (codeInput) codeInput.focus();
+        } else {
+            showDivarAlert(data.message || 'خطا در ارسال پیامک کد.', true);
+        }
+    } catch (e) {
+        showDivarAlert('خطای ارتباط با سرور: ' + e.message, true);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '📩 ارسال مجدد کد';
+        }
+    }
+}
+
+async function handleConfirmDivarSms() {
+    const phone = document.getElementById('divar-phone-input')?.value.trim();
+    const code = document.getElementById('divar-code-input')?.value.trim();
+    const btn = document.getElementById('btn-confirm-sms');
+
+    if (!code) {
+        showDivarAlert('لطفاً کد تأیید پیامک‌شده را وارد نمایید.', true);
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'در حال اعتبارسنجی...';
+    }
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-session/confirm', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf
+            },
+            body: JSON.stringify({ phone, code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showDivarAlert(data.message, false);
+            refreshDivarSessionStatus();
+            setTimeout(() => {
+                closeDivarSessionModal();
+            }, 2000);
+        } else {
+            showDivarAlert(data.message || 'کد وارد شده نامعتبر است.', true);
+        }
+    } catch (e) {
+        showDivarAlert('خطا در اعتبارسنجی کد: ' + e.message, true);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '✅ تأیید و اتصال نهایی';
+        }
+    }
+}
+
+async function handleSaveDivarApiKey() {
+    const key = document.getElementById('divar-apikey-input')?.value.trim();
+    if (!key) {
+        showDivarAlert('لطفاً کلید کنار دیوار را وارد کنید.', true);
+        return;
+    }
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-openapi/set-key', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf
+            },
+            body: JSON.stringify({ api_key: key })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showDivarAlert(data.message, false);
+            refreshDivarSessionStatus();
+            setTimeout(() => {
+                closeDivarSessionModal();
+            }, 1500);
+        } else {
+            showDivarAlert(data.message || 'خطا در ذخیره کلید.', true);
+        }
+    } catch (e) {
+        showDivarAlert('خطا در ذخیره کلید: ' + e.message, true);
+    }
+}
+
+async function handleSaveDivarManualToken() {
+    const token = document.getElementById('divar-apikey-input')?.value.trim();
+    if (!token) {
+        showDivarAlert('لطفاً توکن سشن را وارد کنید.', true);
+        return;
+    }
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-session/manual-token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf
+            },
+            body: JSON.stringify({ token })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showDivarAlert(data.message, false);
+            refreshDivarSessionStatus();
+            setTimeout(() => {
+                closeDivarSessionModal();
+            }, 1500);
+        } else {
+            showDivarAlert(data.message || 'خطا در ذخیره توکن.', true);
+        }
+    } catch (e) {
+        showDivarAlert('خطا در ذخیره توکن: ' + e.message, true);
+    }
+}
+
+// === Launch Chrome Debug ===
+async function handleLaunchChrome() {
+    const btn = document.getElementById('btn-launch-chrome');
+    const statusEl = document.getElementById('cdp-sync-status');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ در حال باز کردن مرورگر...'; }
+    if (statusEl) statusEl.style.display = 'none';
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-session/launch-chrome', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf }
+        });
+        const data = await res.json();
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = data.success ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+            statusEl.style.border = data.success ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(239,68,68,0.4)';
+            statusEl.style.color = data.success ? '#34d399' : '#f87171';
+            statusEl.innerHTML = (data.success ? '🟢 ' : '❌ ') + data.message;
+        }
+    } catch (e) {
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = 'rgba(239,68,68,0.15)';
+            statusEl.style.border = '1px solid rgba(239,68,68,0.4)';
+            statusEl.style.color = '#f87171';
+            statusEl.textContent = '❌ خطا: ' + e.message;
+        }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🚀 ۱. راه‌اندازی خودکار Chrome'; }
+    }
+}
+
+// === Chrome CDP Sync ===
+async function handleSyncFromChrome() {
+    const btn = document.getElementById('btn-sync-chrome');
+    const statusEl = document.getElementById('cdp-sync-status');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ در حال اتصال به Chrome...'; }
+    if (statusEl) statusEl.style.display = 'none';
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-session/sync-from-cdp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ port: 9222 })
+        });
+        const data = await res.json();
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = data.success ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+            statusEl.style.border = data.success ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(239,68,68,0.4)';
+            statusEl.style.color = data.success ? '#34d399' : '#f87171';
+            statusEl.innerHTML = data.success
+                ? `✅ ${data.message}<br><small style="color:#94a3b8">کوکی‌ها: ${(data.cookie_names||[]).join(', ')}</small>`
+                : `❌ ${data.message}${data.instruction ? '<br><small style="color:#fbbf24">'+data.instruction+'</small>' : ''}`;
+        }
+        if (data.success) {
+            refreshDivarSessionStatus();
+            setTimeout(() => {
+                if (data.has_access_token) {
+                    showDivarAlert('سشن دیوار با موفقیت از Chrome بروزرسانی شد! اکنون می‌توانید شماره‌ها را استخراج کنید.', false);
+                }
+            }, 500);
+        }
+    } catch (e) {
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = 'rgba(239,68,68,0.15)';
+            statusEl.style.border = '1px solid rgba(239,68,68,0.4)';
+            statusEl.style.color = '#f87171';
+            statusEl.textContent = '❌ خطا در اتصال: ' + e.message;
+        }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🔗 همگام‌سازی با Chrome'; }
+    }
+}
+
+// === Batch Phone Extraction ===
+async function handleBatchExtract() {
+    const btn = document.getElementById('btn-batch-extract');
+    const statusEl = document.getElementById('batch-extract-status');
+    const limit = parseInt(document.getElementById('batch-limit')?.value || '20');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ در حال استخراج شماره‌ها...'; }
+    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'در حال پردازش...'; }
+
+    try {
+        const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+        const res = await fetch('/crawler/divar-session/batch-extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ limit })
+        });
+        const data = await res.json();
+
+        let html = `<div style="font-weight:700; margin-bottom:0.5rem; color:#34d399">📊 نتیجه استخراج: ${data.success_count} شماره جدید از ${data.total_processed} آگهی</div>`;
+        if (data.results && data.results.length) {
+            html += '<div style="max-height:200px; overflow-y:auto; font-size:0.78rem;">';
+            data.results.forEach(r => {
+                const icon = r.status === 'extracted' ? '✅' : r.status === 'already_exists' ? '📋' : r.status === 'not_found' ? '🔒' : '⚠️';
+                const color = r.status === 'extracted' ? '#34d399' : r.status === 'already_exists' ? '#60a5fa' : '#f59e0b';
+                html += `<div style="color:${color}; padding:0.2rem 0;">${icon} ${r.title} ${r.phone ? '→ '+r.phone : '('+r.status+')'}</div>`;
+            });
+            html += '</div>';
+        }
+
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = data.success_count > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)';
+            statusEl.style.border = data.success_count > 0 ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(245,158,11,0.3)';
+            statusEl.innerHTML = html;
+        }
+    } catch (e) {
+        if (statusEl) { statusEl.textContent = '❌ خطا: ' + e.message; }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '⚡ استخراج Batch شماره‌های واقعی'; }
+    }
+}
+
+// =====================================================================
+// JIT On-Demand Phone Extraction & Multi-Account Pool Logic
+// =====================================================================
+
+async function extractOwnerPhoneJIT(propId, btn) {
+    if (!btn) return;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ دریافت...';
+    btn.style.opacity = '0.7';
+
+    try {
+        const res = await fetch('/crawler/divar-session/extract-phone-jit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ property_id: propId })
+        });
+        const data = await res.json();
+
+        const phoneDisplay = document.getElementById(`phone-display-${propId}`);
+        const phoneAction = document.getElementById(`phone-action-${propId}`);
+        const container = document.getElementById(`phone-container-${propId}`);
+
+        if (data.success && data.phone) {
+            if (phoneDisplay) {
+                phoneDisplay.innerHTML = `
+                    <span style="font-size: 1rem;">📞</span>
+                    <span style="font-size: 0.8rem; color: #94a3b8;">شماره مالک:</span>
+                    <a href="tel:${data.phone}" style="font-size: 0.95rem; font-weight: 800; color: #10b981; text-decoration: none; letter-spacing: 1px;">${data.phone}</a>
+                    <span style="font-size: 0.65rem; color: #10b981; background: rgba(16,185,129,0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">مالک ۱۰۰٪ واقعی</span>
+                `;
+            }
+            if (phoneAction) {
+                phoneAction.innerHTML = `
+                    <button type="button" onclick="copyToClipboard('${data.phone}', event)" class="glass-btn" style="padding: 0.2rem 0.45rem; font-size: 0.72rem; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">کپی</button>
+                `;
+            }
+            if (container) {
+                container.style.background = 'rgba(16, 185, 129, 0.12)';
+                container.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            }
+            refreshDivarSessionStatus();
+        } else if (data.is_chat_only) {
+            if (phoneDisplay) {
+                phoneDisplay.innerHTML = `
+                    <span style="font-size: 1rem;">💬</span>
+                    <span style="font-size: 0.78rem; color: #f59e0b; font-weight: 600;">فقط چت دیوار (بدون شماره)</span>
+                `;
+            }
+            btn.style.display = 'none';
+        } else if (data.quota_exceeded) {
+            alert('⚠️ ' + data.message);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            btn.style.opacity = '1';
+        } else {
+            alert('پیام: ' + (data.message || 'استخراج شماره انجام نشد.'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            btn.style.opacity = '1';
+        }
+    } catch (e) {
+        alert('خطای ارتباط با سرور: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        btn.style.opacity = '1';
+    }
+}
+
+async function renderMatrixAccounts() {
+    const listEl = document.getElementById('matrix-accounts-list');
+    const summaryEl = document.getElementById('matrix-summary-badge');
+    if (!listEl) return;
+
+    listEl.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 1rem; font-size: 0.8rem;">در حال بارگذاری استخر سیم‌کارت‌ها...</div>';
+
+    try {
+        const res = await fetch('/crawler/divar-session/accounts');
+        const data = await res.json();
+
+        if (summaryEl) {
+            summaryEl.innerHTML = `👥 <strong>${data.total_accounts}</strong> سیم‌کارت متصل | سهمیه امروز: <strong style="color: #38bdf8;">${data.total_remaining}</strong> از ${data.max_daily_capacity} شماره`;
+        }
+
+        if (!data.accounts || data.accounts.length === 0) {
+            listEl.innerHTML = `
+                <div style="text-align: center; color: #94a3b8; padding: 1.25rem; background: rgba(0,0,0,0.2); border-radius: 10px; font-size: 0.82rem;">
+                    هنوز سیم‌کارتی در استخر ثبت نشده است. از فرم زیر جهت افزودن اولین سیم‌کارت استفاده نمایید.
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        data.accounts.forEach(acc => {
+            const isFull = acc.remaining_quota <= 0;
+            const barPct = Math.round((acc.remaining_quota / 25) * 100);
+            html += `
+                <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.75rem 0.85rem; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="font-size: 1.2rem;">📱</span>
+                        <div>
+                            <div style="font-size: 0.88rem; font-weight: 800; color: #f8fafc; direction: ltr; text-align: right;">${acc.phone}</div>
+                            <div style="font-size: 0.72rem; color: #94a3b8;">${acc.label || 'سیم‌کارت فعال'} | ${acc.has_refresh_token ? '<span style="color:#10b981;">خودترمیمی دائم فعال ✓</span>' : 'توکن دستی'}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="text-align: left;">
+                            <div style="font-size: 0.76rem; font-weight: 700; color: ${isFull ? '#f87171' : '#38bdf8'};">
+                                ${acc.remaining_quota} از ۲۵ سهمیه
+                            </div>
+                            <div style="width: 75px; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 3px;">
+                                <div style="width: ${barPct}%; height: 100%; background: ${isFull ? '#ef4444' : '#00f2fe'};"></div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="handleRemoveMatrixAccount('${acc.phone}')" class="glass-btn" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; color: #f87171; border-color: rgba(239,68,68,0.3);" title="حذف از استخر">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        listEl.innerHTML = html;
+    } catch (e) {
+        listEl.innerHTML = `<div style="color: #f87171; font-size: 0.8rem;">خطا در دریافت لیست استخر: ${e.message}</div>`;
+    }
+}
+
+async function handleAddMatrixSms() {
+    const phoneInput = document.getElementById('matrix-phone-input');
+    const alertBox = document.getElementById('matrix-alert');
+    const codeContainer = document.getElementById('matrix-code-container');
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+
+    if (!phone || !phone.startsWith('09') || phone.length !== 11) {
+        if (alertBox) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = 'rgba(239,68,68,0.15)';
+            alertBox.style.color = '#f87171';
+            alertBox.textContent = 'شماره موبایل باید ۱۱ رقمی و با ۰۹ شروع شود.';
+        }
+        return;
+    }
+
+    try {
+        const res = await fetch('/crawler/divar-session/accounts/request-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (codeContainer) codeContainer.style.display = 'block';
+            if (alertBox) {
+                alertBox.style.display = 'block';
+                alertBox.style.background = 'rgba(16,185,129,0.15)';
+                alertBox.style.color = '#34d399';
+                alertBox.textContent = data.message;
+            }
+        } else {
+            if (alertBox) {
+                alertBox.style.display = 'block';
+                alertBox.style.background = 'rgba(239,68,68,0.15)';
+                alertBox.style.color = '#f87171';
+                alertBox.textContent = data.message;
+            }
+        }
+    } catch (e) {
+        if (alertBox) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = 'rgba(239,68,68,0.15)';
+            alertBox.style.color = '#f87171';
+            alertBox.textContent = 'خطا در ارسال درخواست: ' + e.message;
+        }
+    }
+}
+
+async function handleConfirmMatrixSms() {
+    const phoneInput = document.getElementById('matrix-phone-input');
+    const codeInput = document.getElementById('matrix-code-input');
+    const labelInput = document.getElementById('matrix-label-input');
+    const alertBox = document.getElementById('matrix-alert');
+    const codeContainer = document.getElementById('matrix-code-container');
+
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const code = codeInput ? codeInput.value.trim() : '';
+    const label = labelInput ? labelInput.value.trim() : `سیم‌کارت ${phone}`;
+
+    if (!code) {
+        if (alertBox) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = 'rgba(239,68,68,0.15)';
+            alertBox.style.color = '#f87171';
+            alertBox.textContent = 'لطفاً کد تایید پیامک‌شده را وارد کنید.';
+        }
+        return;
+    }
+
+    try {
+        const res = await fetch('/crawler/divar-session/accounts/confirm-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone, code: code, label: label })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (alertBox) {
+                alertBox.style.display = 'block';
+                alertBox.style.background = 'rgba(16,185,129,0.15)';
+                alertBox.style.color = '#34d399';
+                alertBox.textContent = data.message;
+            }
+            if (codeContainer) codeContainer.style.display = 'none';
+            if (phoneInput) phoneInput.value = '';
+            if (codeInput) codeInput.value = '';
+            renderMatrixAccounts();
+            refreshDivarSessionStatus();
+        } else {
+            if (alertBox) {
+                alertBox.style.display = 'block';
+                alertBox.style.background = 'rgba(239,68,68,0.15)';
+                alertBox.style.color = '#f87171';
+                alertBox.textContent = data.message;
+            }
+        }
+    } catch (e) {
+        if (alertBox) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = 'rgba(239,68,68,0.15)';
+            alertBox.style.color = '#f87171';
+            alertBox.textContent = 'خطا در ثبت سیم‌کارت: ' + e.message;
+        }
+    }
+}
+
+async function handleRemoveMatrixAccount(phone) {
+    if (!confirm(`آیا از حذف حساب ${phone} از استخر اطمینان دارید؟`)) return;
+    try {
+        const res = await fetch('/crawler/divar-session/accounts/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone })
+        });
+        const data = await res.json();
+        renderMatrixAccounts();
+        refreshDivarSessionStatus();
+    } catch (e) {
+        alert('خطا در حذف حساب: ' + e.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    refreshDivarSessionStatus();
+});
+</script>
+
+<!-- Divar Session & Kenar Connection Modal Component -->
+<div id="divarSessionModal" style="display: none; position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(12px); z-index: 10000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="glass-panel" style="max-width: 580px; width: 100%; border: 1px solid rgba(245, 158, 11, 0.35); box-shadow: 0 0 40px rgba(245, 158, 11, 0.15); border-radius: 18px; padding: 1.75rem; position: relative; max-height: 90vh; overflow-y: auto;">
+        
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.85rem;">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                    🔑
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #f8fafc;">
+                        اتصال به دیوار و استخراج شماره‌های واقعی
+                    </h3>
+                    <p style="margin: 0.15rem 0 0; font-size: 0.76rem; color: #94a3b8;">
+                        فعال‌سازی استخراج خودکار شماره همراه مالک جهت انتقال مستقیم به CRM بومی
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="closeDivarSessionModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#f8fafc'" onmouseout="this.style.color='#94a3b8'">
+                ✕
+            </button>
+        </div>
+
+        <!-- Live Connection Status Banner -->
+        <div id="divar-modal-status-banner" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 0.85rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span id="divar-status-dot" class="neon-pulse-dot" style="background: #f59e0b; box-shadow: 0 0 8px #f59e0b; width: 10px; height: 10px; border-radius: 50%; display: inline-block;"></span>
+                    <span id="divar-status-msg" style="font-size: 0.84rem; color: #e2e8f0; font-weight: 600;">در حال بررسی وضعیت اتصال...</span>
+                </div>
+                <button type="button" onclick="refreshDivarSessionStatus()" class="glass-btn" style="padding: 0.25rem 0.6rem; font-size: 0.74rem; color: #94a3b8;">
+                    🔄 بررسی مجدد
+                </button>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.5rem;">
+                <span id="divar-quota-badge" style="font-size:0.75rem; padding:0.2rem 0.5rem; background:rgba(0,242,254,0.1); border:1px solid rgba(0,242,254,0.25); border-radius:6px; color:#38bdf8;">
+                    🛡️ سهمیه امن امروز: در حال بارگذاری...
+                </span>
+                <span style="font-size:0.72rem; color:#94a3b8;">آگهی‌های بدون شماره/چت سهمیه مصرف نمی‌کنند</span>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div style="display: flex; gap: 0.4rem; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.5rem; flex-wrap: wrap;">
+            <button type="button" id="tab-btn-matrix" onclick="switchSessionTab('matrix')" style="flex: 1; min-width: 120px; padding: 0.5rem 0.6rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px; border: 1px solid rgba(0,242,254,0.4); background: rgba(0,242,254,0.18); color: #38bdf8; cursor: pointer; transition: all 0.2s;">
+                👥 استخر سیم‌کارت‌ها (Matrix)
+            </button>
+            <button type="button" id="tab-btn-chrome" onclick="switchSessionTab('chrome')" style="flex: 1; min-width: 120px; padding: 0.5rem 0.6rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px; border: 1px solid rgba(34,197,94,0.4); background: rgba(34,197,94,0.1); color: #4ade80; cursor: pointer; transition: all 0.2s;">
+                🔗 Chrome CDP
+            </button>
+            <button type="button" id="tab-btn-otp" onclick="switchSessionTab('otp')" style="flex: 1; min-width: 120px; padding: 0.5rem 0.6rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #94a3b8; cursor: pointer; transition: all 0.2s;">
+                📱 پیامک تکی
+            </button>
+            <button type="button" id="tab-btn-api" onclick="switchSessionTab('api')" style="flex: 1; min-width: 120px; padding: 0.5rem 0.6rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #94a3b8; cursor: pointer; transition: all 0.2s;">
+                ⚡ کلید Kenar
+            </button>
+        </div>
+
+        <!-- Tab Matrix: Multi-Account Session Matrix -->
+        <div id="section-tab-matrix" style="display: block;">
+            <div style="background: rgba(0,242,254,0.06); border: 1px solid rgba(0,242,254,0.22); border-radius: 10px; padding: 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                <div id="matrix-summary-badge" style="font-size: 0.82rem; color: #e2e8f0;">
+                    👥 در حال محاسبه ظرفیت تجمیعی استخر...
+                </div>
+                <button type="button" onclick="renderMatrixAccounts()" class="glass-btn" style="padding: 0.2rem 0.55rem; font-size: 0.74rem; color: #38bdf8;">
+                    🔄 بروزرسانی
+                </button>
+            </div>
+
+            <!-- Accounts List Container -->
+            <div id="matrix-accounts-list" style="margin-bottom: 1rem; max-height: 220px; overflow-y: auto;">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- Form: Add New Account to Pool -->
+            <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                <div style="font-size: 0.84rem; font-weight: 700; color: #38bdf8; margin-bottom: 0.6rem;">
+                    ➕ افزودن سیم‌کارت جدید به استخر (+۲۵ سهمیه روزانه)
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.6rem; flex-wrap: wrap;">
+                    <input type="tel" id="matrix-phone-input" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" class="glass-input" style="flex: 2; min-width: 140px; padding: 0.5rem 0.75rem; font-size: 0.9rem; text-align: center; font-weight: 700;">
+                    <input type="text" id="matrix-label-input" placeholder="برچسب (مثلاً: سیم‌کارت دفتر)" class="glass-input" style="flex: 2; min-width: 140px; padding: 0.5rem 0.75rem; font-size: 0.82rem;">
+                    <button type="button" onclick="handleAddMatrixSms()" class="btn-neon-cyan" style="flex: 1; min-width: 110px; justify-content: center; padding: 0.5rem 0.75rem; font-size: 0.8rem; font-weight: 700;">
+                        📩 ارسال کد
+                    </button>
+                </div>
+
+                <div id="matrix-code-container" style="display: none; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 0.85rem; margin-bottom: 0.6rem;">
+                    <label style="display: block; font-size: 0.78rem; color: #10b981; font-weight: 700; margin-bottom: 0.35rem;">
+                        کد تایید ارسال‌شده به شماره جدید را وارد کنید:
+                    </label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="matrix-code-input" placeholder="کد ۵ رقمی" dir="ltr" maxlength="6" class="glass-input" style="flex: 1; padding: 0.5rem 0.75rem; font-size: 1rem; font-weight: 800; text-align: center; letter-spacing: 3px;">
+                        <button type="button" onclick="handleConfirmMatrixSms()" class="btn-luxury-gold" style="padding: 0.5rem 1.1rem; font-size: 0.82rem; font-weight: 800;">
+                            ✅ ثبت دائم در استخر
+                        </button>
+                    </div>
+                </div>
+                <div id="matrix-alert" style="display: none; padding: 0.55rem 0.75rem; border-radius: 8px; font-size: 0.8rem; margin-top: 0.4rem;"></div>
+            </div>
+        </div>
+
+        <!-- Tab Chrome CDP: New recommended method -->
+        <div id="section-tab-chrome" style="display: none;">
+            <div style="background: rgba(34,197,94,0.07); border: 1px solid rgba(34,197,94,0.25); border-radius: 10px; padding: 0.9rem; margin-bottom: 1rem;">
+                <p style="font-size: 0.82rem; color: #86efac; line-height: 1.7; margin: 0;">
+                    🟢 <strong>بهترین روش:</strong> Chrome شما را با پورت debugging باز کنید، در divar.ir وارد شوید، سپس دکمه همگام‌سازی را بزنید تا سشن فعال خودکار منتقل شود.
+                </p>
+            </div>
+
+            <!-- Steps -->
+            <ol style="font-size: 0.8rem; color: #cbd5e1; line-height: 1.9; padding-right: 1.5rem; margin-bottom: 1rem;">
+                <li>روی دکمه <strong style="color:#38bdf8">راه‌اندازی خودکار Chrome</strong> کلیک کنید (یا فایل <code style="color:#fbbf24">run_chrome_debug.bat</code> را اجرا کنید)</li>
+                <li>در پنجره Chrome باز شده، وارد حساب دیوار خود شوید</li>
+                <li>سپس دکمه <strong style="color:#4ade80">همگام‌سازی با Chrome</strong> را بزنید</li>
+            </ol>
+
+            <div style="display: flex; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
+                <button type="button" id="btn-launch-chrome" onclick="handleLaunchChrome()" style="flex: 1; min-width: 180px; padding:0.7rem; font-size:0.85rem; font-weight:700; border-radius:10px; border:1px solid rgba(56,189,248,0.4); background:linear-gradient(135deg,rgba(56,189,248,0.2),rgba(14,165,233,0.15)); color:#38bdf8; cursor:pointer; transition:all 0.2s;">
+                    🚀 ۱. راه‌اندازی خودکار Chrome
+                </button>
+                <button type="button" id="btn-sync-chrome" onclick="handleSyncFromChrome()" style="flex: 1; min-width: 180px; padding:0.7rem; font-size:0.85rem; font-weight:700; border-radius:10px; border:1px solid rgba(34,197,94,0.4); background:linear-gradient(135deg,rgba(34,197,94,0.25),rgba(16,185,129,0.15)); color:#4ade80; cursor:pointer; transition:all 0.2s;">
+                    🔗 ۲. همگام‌سازی نشست
+                </button>
+            </div>
+
+            <div id="cdp-sync-status" style="display:none; padding:0.75rem; border-radius:8px; font-size:0.8rem; line-height:1.6; margin-bottom:0.75rem;"></div>
+
+            <!-- Batch Extract Section -->
+            <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.6rem;">
+                    <span style="font-size:0.82rem; font-weight:700; color:#e2e8f0;">⚡ استخراج batch شماره مالکان</span>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <label style="font-size:0.74rem; color:#94a3b8;">تعداد:</label>
+                        <select id="batch-limit" style="padding:0.2rem 0.4rem; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#e2e8f0; font-size:0.78rem;">
+                            <option value="10">۱۰ آگهی</option>
+                            <option value="20" selected>۲۰ آگهی</option>
+                            <option value="30">۳۰ آگهی</option>
+                            <option value="50">۵۰ آگهی</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" id="btn-batch-extract" onclick="handleBatchExtract()" style="width:100%; padding:0.65rem; font-size:0.85rem; font-weight:700; border-radius:10px; border:1px solid rgba(245,158,11,0.4); background:rgba(245,158,11,0.1); color:#fbbf24; cursor:pointer; transition:all 0.2s;">
+                    ⚡ استخراج Batch شماره‌های واقعی
+                </button>
+                <div id="batch-extract-status" style="display:none; padding:0.75rem; border-radius:8px; font-size:0.8rem; margin-top:0.6rem;"></div>
+            </div>
+        </div>
+
+        <!-- Tab 1: OTP SMS Section -->
+        <div id="section-tab-otp" style="display: block;">
+            <p style="font-size: 0.8rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 1rem; background: rgba(0,242,254,0.05); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid rgba(0,242,254,0.15);">
+                💡 شماره موبایل خود را وارد کنید تا دیوار یک کد پیامک برای شما ارسال کند. پس از ثبت کد، نشست شما فعال شده و کراولر تمامی شماره‌های آگهی‌ها را استخراج می‌کند.
+            </p>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.4rem;">
+                    شماره موبایل حساب دیوار:
+                </label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="tel" id="divar-phone-input" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" class="glass-input" style="flex: 1; padding: 0.55rem 0.75rem; font-size: 0.95rem; font-weight: 700; letter-spacing: 1px; text-align: center;">
+                    <button type="button" id="btn-request-sms" onclick="handleRequestDivarSms()" class="glass-btn" style="padding: 0.55rem 1rem; font-size: 0.82rem; font-weight: 700; border-color: rgba(0,242,254,0.4); color: #00f2fe; white-space: nowrap;">
+                        📩 ارسال پیامک کد
+                    </button>
+                </div>
+            </div>
+
+            <!-- Verification Code Input (Shown after SMS sent) -->
+            <div id="divar-code-container" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; color: #10b981; font-weight: 700; margin-bottom: 0.4rem;">
+                    کد تأیید پیامک‌شده از دیوار را وارد کنید:
+                </label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="divar-code-input" placeholder="کد ۵ رقمی" dir="ltr" maxlength="6" class="glass-input" style="flex: 1; padding: 0.55rem 0.75rem; font-size: 1.1rem; font-weight: 800; letter-spacing: 3px; text-align: center;">
+                    <button type="button" id="btn-confirm-sms" onclick="handleConfirmDivarSms()" class="btn-luxury-gold" style="padding: 0.55rem 1.25rem; font-size: 0.85rem; font-weight: 800; white-space: nowrap;">
+                        ✅ تأیید و اتصال نهایی
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: OpenAPI Key / Manual Token Section -->
+        <div id="section-tab-api" style="display: none;">
+            <p style="font-size: 0.8rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 1rem; background: rgba(245,158,11,0.06); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid rgba(245,158,11,0.18);">
+                🔐 اگر در پنل <b>کنار دیوار (kenar.divar.ir)</b> کلید API اختصاصی دارید یا می‌خواهید توکن سشن کوکی دیوار را مستقیماً وارد کنید، آن را در این فیلد قرار دهید:
+            </p>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.4rem;">
+                    کلید کنار دیوار (DIVAR_API_KEY) یا توکن سشن:
+                </label>
+                <textarea id="divar-apikey-input" rows="3" placeholder="کلید API پلتفرم باز یا توکن احراز هویت را اینجا جای‌گذاری نمایید..." dir="ltr" class="glass-input" style="width: 100%; padding: 0.6rem; font-size: 0.82rem; font-family: monospace; resize: vertical; margin-bottom: 0.6rem;"></textarea>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" id="btn-save-apikey" onclick="handleSaveDivarApiKey()" class="glass-btn" style="padding: 0.55rem 1.2rem; font-size: 0.82rem; font-weight: 700; border-color: rgba(245,158,11,0.4); color: #fbbf24;">
+                        💾 ذخیره کلید کنار دیوار
+                    </button>
+                    <button type="button" id="btn-save-token" onclick="handleSaveDivarManualToken()" class="glass-btn" style="padding: 0.55rem 1.2rem; font-size: 0.82rem; font-weight: 700; border-color: rgba(0,242,254,0.4); color: #00f2fe;">
+                        💾 ذخیره به عنوان توکن سشن
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="divar-session-alert" style="display: none; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.82rem; margin-top: 0.75rem;"></div>
+
+    </div>
+</div>
+{% endblock %}

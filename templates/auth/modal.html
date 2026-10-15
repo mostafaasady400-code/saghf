@@ -1,0 +1,355 @@
+<!-- ==========================================================================
+     Saghf Global Luxury Quick Auth Modal (Telegram & Bale Instant Login)
+     ========================================================================== -->
+<div id="saghfAuthModalBackdrop" class="saghf-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 99999; align-items: center; justify-content: center; padding: 1rem; opacity: 0; transition: opacity 0.3s ease;">
+    <div id="saghfAuthModalDialog" class="saghf-auth-modal-dialog" style="width: 100%; max-width: 440px; background: rgba(14, 16, 22, 0.95); border: 1px solid rgba(212, 175, 55, 0.35); box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 40px rgba(212, 175, 55, 0.15); border-radius: 24px; padding: 2rem; color: #ffffff; position: relative; transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden;">
+        <!-- Gold Glow Top Line -->
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, #D4AF37, #F59E0B, #D4AF37, transparent);"></div>
+
+        <!-- Close Button -->
+        <button type="button" onclick="closeSaghfAuthModal()" style="position: absolute; top: 1.25rem; left: 1.25rem; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #94a3b8; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#ffffff'; this.style.background='rgba(255, 255, 255, 0.15)';" onmouseout="this.style.color='#94a3b8'; this.style.background='rgba(255, 255, 255, 0.06)';">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+
+        <!-- Brand Header -->
+        <div style="text-align: center; margin-bottom: 1.25rem;">
+            <img src="{{ url_for('static', filename='images/saghf_logo_transparent.png') }}" alt="لوگوی سقف" style="height: 55px; width: auto; object-fit: contain; filter: drop-shadow(0 4px 14px rgba(212, 175, 55, 0.45)); margin-bottom: 0.6rem;">
+            <div>
+                <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.8rem; background: rgba(212, 175, 55, 0.12); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 9999px; font-size: 0.75rem; color: #fce79f; margin-bottom: 0.6rem;">
+                    <span>⚜️ سقف VIP</span>
+                    <span style="opacity: 0.4;">•</span>
+                    <span>ورود و ثبت‌نام آنی</span>
+                </div>
+            </div>
+            <h3 style="font-size: 1.35rem; font-weight: 800; color: #ffffff; margin-bottom: 0.3rem;">ورود هوشمند بدون گذرواژه</h3>
+            <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5;">شماره خود را وارد کنید و با پیام‌رسان دلخواه تایید نمایید.</p>
+        </div>
+
+        <!-- Platform Tabs -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: rgba(0, 0, 0, 0.4); padding: 0.3rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 1.4rem;" id="modalPlatformTabs">
+            <button type="button" id="modalTabTg" onclick="switchModalPlatform('telegram')" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.65rem; border-radius: 9px; border: 1px solid rgba(34, 158, 217, 0.5); background: rgba(34, 158, 217, 0.2); color: #38bdf8; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                <span>تلگرام</span>
+            </button>
+            <button type="button" id="modalTabBale" onclick="switchModalPlatform('bale')" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.65rem; border-radius: 9px; border: 1px solid transparent; background: transparent; color: #94a3b8; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                <span>پیام‌رسان بله</span>
+            </button>
+        </div>
+
+        <!-- Step 1: Input Mobile -->
+        <div id="modalStepInput">
+            <form onsubmit="handleModalRequestSession(event)">
+                <div style="margin-bottom: 1.25rem; text-align: right;">
+                    <label for="modalPhoneInput" style="display: block; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.4rem; font-weight: 600;">
+                        شماره تلفن همراه:
+                    </label>
+                    <input 
+                        type="tel" 
+                        id="modalPhoneInput" 
+                        placeholder="۰۹۱۲۳۴۵۶۷۸۹" 
+                        style="width: 100%; padding: 0.85rem 1rem; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 12px; color: #ffffff; font-size: 1rem; letter-spacing: 1px; text-align: left; direction: ltr; outline: none; transition: border-color 0.2s;"
+                        onfocus="this.style.borderColor='#D4AF37'" 
+                        onblur="this.style.borderColor='rgba(255, 255, 255, 0.14)'"
+                        required
+                    >
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.35rem;">
+                        ⚡ در صورت نداشتن حساب، ثبت‌نام شما خودکار انجام خواهد شد.
+                    </div>
+                </div>
+
+                <button type="submit" id="modalSubmitBtn" style="width: 100%; padding: 0.85rem 1.25rem; border-radius: 12px; border: none; background: linear-gradient(135deg, #D4AF37 0%, #F59E0B 100%); color: #0A0A0C; font-size: 0.92rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 8px 25px rgba(212, 175, 55, 0.35); transition: transform 0.2s;">
+                    <span id="modalBtnIcon">🚀</span>
+                    <span id="modalBtnText">دریافت پیام تایید در تلگرام</span>
+                </button>
+            </form>
+
+            <div style="margin-top: 1.25rem; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1rem;">
+                <a href="{{ url_for('admin.login') }}" style="color: #94a3b8; font-size: 0.78rem; text-decoration: none;" onmouseover="this.style.color='#fce79f'" onmouseout="this.style.color='#94a3b8'">
+                    ورود مدیران با رمز عبور &larr;
+                </a>
+            </div>
+        </div>
+
+        <!-- Step 2: Waiting Confirmation -->
+        <div id="modalStepWaiting" style="display: none; text-align: center; padding: 0.5rem 0;">
+            <div id="modalRadarRing" style="width: 70px; height: 70px; margin: 0 auto 1.2rem; border-radius: 50%; background: rgba(34, 158, 217, 0.15); border: 2px solid rgba(34, 158, 217, 0.5); display: flex; align-items: center; justify-content: center;">
+                <span id="modalRadarIcon" style="font-size: 1.7rem;">✈️</span>
+            </div>
+
+            <h4 id="modalWaitingTitle" style="font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.3rem;">
+                در انتظار تایید شما در تلگرام...
+            </h4>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1rem; line-height: 1.5;">
+                پیام تایید ورود صادر شد. دکمه زیر را لمس کرده و در چت دکمه <b>[تایید و ورود]</b> را بزنید.
+            </p>
+
+            <div style="display: inline-block; padding: 0.25rem 0.75rem; background: rgba(255, 255, 255, 0.06); border-radius: 9999px; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 1.2rem;">
+                اعتبار نشست: <span id="modalCountdown">05:00</span>
+            </div>
+
+            <a id="modalDirectBtn" href="#" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.85rem; border-radius: 12px; background: #229ED9; color: #ffffff; font-weight: 700; font-size: 0.9rem; text-decoration: none; margin-bottom: 0.6rem; box-shadow: 0 8px 25px rgba(34, 158, 217, 0.35);">
+                <span id="modalDirectBtnText">باز کردن تلگرام و تایید ورود</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+
+            <!-- Quick Simulated Confirm in Dev -->
+            <button type="button" onclick="handleModalSimulateConfirm()" style="background: rgba(212, 175, 55, 0.12); border: 1px dashed rgba(212, 175, 55, 0.4); color: #fce79f; padding: 0.45rem 0.8rem; border-radius: 8px; font-size: 0.74rem; width: 100%; cursor: pointer; margin-top: 0.4rem;">
+                ⚡ تایید فوری محلی (تست سریع ورود)
+            </button>
+
+            <div style="margin-top: 1rem;">
+                <button type="button" onclick="resetModalAuthFlow()" style="background: none; border: none; color: #64748b; font-size: 0.78rem; cursor: pointer; text-decoration: underline;">
+                    &rarr; ویرایش شماره همراه یا انتخاب پیام‌رسان دیگر
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Success -->
+        <div id="modalStepSuccess" style="display: none; text-align: center; padding: 1rem 0;">
+            <div style="width: 60px; height: 60px; background: rgba(34, 197, 94, 0.15); border: 2px solid #22c55e; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; color: #22c55e; font-size: 1.8rem;">
+                ✓
+            </div>
+            <h4 style="color: #4ade80; font-size: 1.2rem; font-weight: 800; margin-bottom: 0.3rem;">ورود با موفقیت انجام شد!</h4>
+            <p id="modalSuccessName" style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 1.2rem;">در حال همگام‌سازی و بارگذاری اطلاعات...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+let modalPlatform = 'telegram';
+let modalActiveToken = null;
+let modalPollInterval = null;
+let modalCountdownInterval = null;
+let modalSeconds = 300;
+
+function openSaghfAuthModal() {
+    const backdrop = document.getElementById('saghfAuthModalBackdrop');
+    const dialog = document.getElementById('saghfAuthModalDialog');
+    if (!backdrop || !dialog) return;
+
+    resetModalAuthFlow();
+    backdrop.style.display = 'flex';
+    setTimeout(() => {
+        backdrop.style.opacity = '1';
+        dialog.style.transform = 'scale(1)';
+    }, 10);
+    setTimeout(() => {
+        const input = document.getElementById('modalPhoneInput');
+        if (input) input.focus();
+    }, 150);
+}
+
+function closeSaghfAuthModal() {
+    const backdrop = document.getElementById('saghfAuthModalBackdrop');
+    const dialog = document.getElementById('saghfAuthModalDialog');
+    if (!backdrop || !dialog) return;
+
+    clearInterval(modalPollInterval);
+    clearInterval(modalCountdownInterval);
+    backdrop.style.opacity = '0';
+    dialog.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        backdrop.style.display = 'none';
+    }, 280);
+}
+
+function switchModalPlatform(platform) {
+    modalPlatform = platform;
+    const tabTg = document.getElementById('modalTabTg');
+    const tabBale = document.getElementById('modalTabBale');
+    const btnText = document.getElementById('modalBtnText');
+
+    if (platform === 'telegram') {
+        tabTg.style.borderColor = 'rgba(34, 158, 217, 0.5)';
+        tabTg.style.background = 'rgba(34, 158, 217, 0.2)';
+        tabTg.style.color = '#38bdf8';
+        tabBale.style.borderColor = 'transparent';
+        tabBale.style.background = 'transparent';
+        tabBale.style.color = '#94a3b8';
+        btnText.textContent = 'دریافت پیام تایید در تلگرام';
+    } else {
+        tabBale.style.borderColor = 'rgba(24, 179, 104, 0.5)';
+        tabBale.style.background = 'rgba(24, 179, 104, 0.2)';
+        tabBale.style.color = '#4ade80';
+        tabTg.style.borderColor = 'transparent';
+        tabTg.style.background = 'transparent';
+        tabTg.style.color = '#94a3b8';
+        btnText.textContent = 'دریافت پیام تایید در بله';
+    }
+}
+
+async function handleModalRequestSession(e) {
+    e.preventDefault();
+    const phoneInput = document.getElementById('modalPhoneInput');
+    const submitBtn = document.getElementById('modalSubmitBtn');
+    const btnText = document.getElementById('modalBtnText');
+    const phone = phoneInput.value.trim();
+
+    if (!phone) return;
+
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.7';
+    btnText.textContent = 'در حال ارتباط با سرور...';
+
+    try {
+        const res = await fetch('/auth/request-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone, platform: modalPlatform })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            modalActiveToken = data.session_token;
+            showModalWaitingStep(data);
+        } else {
+            alert(data.message || 'خطا در صدور نشست.');
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            switchModalPlatform(modalPlatform);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('خطای غیرمنتظره در ارسال درخواست.');
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        switchModalPlatform(modalPlatform);
+    }
+}
+
+function showModalWaitingStep(data) {
+    document.getElementById('modalStepInput').style.display = 'none';
+    document.getElementById('modalStepWaiting').style.display = 'block';
+
+    const isTg = data.platform === 'telegram';
+    const radar = document.getElementById('modalRadarRing');
+    const icon = document.getElementById('modalRadarIcon');
+    const title = document.getElementById('modalWaitingTitle');
+    const directBtn = document.getElementById('modalDirectBtn');
+    const directBtnText = document.getElementById('modalDirectBtnText');
+
+    if (isTg) {
+        radar.style.background = 'rgba(34, 158, 217, 0.15)';
+        radar.style.borderColor = 'rgba(34, 158, 217, 0.5)';
+        icon.textContent = '✈️';
+        title.textContent = 'در انتظار تایید شما در تلگرام...';
+        directBtn.style.background = '#229ED9';
+        directBtnText.textContent = 'باز کردن تلگرام و تایید ورود';
+    } else {
+        radar.style.background = 'rgba(24, 179, 104, 0.15)';
+        radar.style.borderColor = 'rgba(24, 179, 104, 0.5)';
+        icon.textContent = '🌿';
+        title.textContent = 'در انتظار تایید شما در پیام‌رسان بله...';
+        directBtn.style.background = '#18b368';
+        directBtnText.textContent = 'باز کردن بله و تایید ورود';
+    }
+
+    directBtn.href = data.deep_link;
+
+    modalSeconds = data.expires_in_seconds || 300;
+    startModalTimer();
+    startModalPolling(data.session_token);
+}
+
+function startModalTimer() {
+    clearInterval(modalCountdownInterval);
+    const badge = document.getElementById('modalCountdown');
+    modalCountdownInterval = setInterval(() => {
+        modalSeconds--;
+        if (modalSeconds <= 0) {
+            clearInterval(modalCountdownInterval);
+            clearInterval(modalPollInterval);
+            badge.textContent = 'منقضی شد';
+            alert('زمان نشست ورود به پایان رسید.');
+            resetModalAuthFlow();
+            return;
+        }
+        const m = Math.floor(modalSeconds / 60).toString().padStart(2, '0');
+        const s = (modalSeconds % 60).toString().padStart(2, '0');
+        badge.textContent = `${m}:${s}`;
+    }, 1000);
+}
+
+function startModalPolling(token) {
+    clearInterval(modalPollInterval);
+    modalPollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/auth/check-session/${token}`);
+            const data = await res.json();
+            if (data.success && data.status === 'confirmed') {
+                clearInterval(modalPollInterval);
+                clearInterval(modalCountdownInterval);
+                handleModalLoginSuccess(data);
+            } else if (data.status === 'rejected') {
+                clearInterval(modalPollInterval);
+                clearInterval(modalCountdownInterval);
+                alert('درخواست ورود در پیام‌رسان لغو شد.');
+                resetModalAuthFlow();
+            } else if (data.status === 'expired') {
+                clearInterval(modalPollInterval);
+                clearInterval(modalCountdownInterval);
+                alert('نشست منقضی شد.');
+                resetModalAuthFlow();
+            }
+        } catch (e) {
+            console.warn('Poll err:', e);
+        }
+    }, 1500);
+}
+
+async function handleModalSimulateConfirm() {
+    if (!modalActiveToken) return;
+    try {
+        await fetch('/auth/simulate-confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_token: modalActiveToken })
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function handleModalLoginSuccess(data) {
+    document.getElementById('modalStepWaiting').style.display = 'none';
+    document.getElementById('modalStepSuccess').style.display = 'block';
+
+    const user = data.user || {};
+    const nameP = document.getElementById('modalSuccessName');
+    if (nameP && user.full_name) {
+        nameP.textContent = `خوش آمدید ${user.full_name} عزیز، در حال بارگذاری...`;
+    }
+
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
+}
+
+function resetModalAuthFlow() {
+    clearInterval(modalPollInterval);
+    clearInterval(modalCountdownInterval);
+    modalActiveToken = null;
+    document.getElementById('modalStepWaiting').style.display = 'none';
+    document.getElementById('modalStepSuccess').style.display = 'none';
+    document.getElementById('modalStepInput').style.display = 'block';
+    const submitBtn = document.getElementById('modalSubmitBtn');
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '1';
+    switchModalPlatform(modalPlatform);
+}
+
+function toggleUserDropdown() {
+    const dropdown = document.getElementById('userAccountDropdown');
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('userAccountDropdown');
+    if (dropdown && !e.target.closest('.user-account-dropdown-wrapper')) {
+        dropdown.style.display = 'none';
+    }
+});
+</script>

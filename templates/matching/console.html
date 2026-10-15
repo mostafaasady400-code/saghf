@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}کنسول هوشمند تطبیق ملک و مشتری | سقف AI{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            کنسول تطبیق هوشمند دوطرفه <span class="text-neon-cyan">«سقف AI»</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            تفکیک تخصصی فرصت‌های خرید و فروش و رهن و اجاره بر پایه تطابق تقاضا با مالکین مستقیم
+        </p>
+    </div>
+    <form action="{{ url_for('matching.refresh_all') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn-neon-purple" style="box-shadow: 0 4px 15px rgba(168, 85, 247, 0.25);">
+            <span>⚡</span> محاسبه مجدد و پالایش تطابق‌های سراسری
+        </button>
+    </form>
+</div>
+
+<!-- Department Segmented Switcher & Quick Filters -->
+<div class="glass-panel" style="padding: 1.25rem 1.5rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: center; justify-content: space-between;">
+    <!-- Segmented Department Tabs -->
+    <div class="matching-dept-segmented-bar" style="display: inline-flex; background: rgba(15, 23, 42, 0.65); padding: 0.3rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); gap: 0.35rem; max-width: 100%; box-sizing: border-box;">
+        <a href="{{ url_for('matching.console', deal_type='all', min_score=min_score) }}" 
+           class="dept-tab-btn {% if deal_type == 'all' %}active-all{% endif %}"
+           style="padding: 0.55rem 1.15rem; border-radius: 9px; font-size: 0.88rem; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 0.45rem; transition: all 0.2s ease;">
+            <span>🌐 همه فرصت‌ها</span>
+            <span style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 20px; background: rgba(255, 255, 255, 0.1);">{{ total_count | pnum }}</span>
+        </a>
+        <a href="{{ url_for('matching.console', deal_type='sale', min_score=min_score) }}" 
+           class="dept-tab-btn {% if deal_type == 'sale' %}active-sale{% endif %}"
+           style="padding: 0.55rem 1.15rem; border-radius: 9px; font-size: 0.88rem; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 0.45rem; transition: all 0.2s ease;">
+            <span>🟢 دپارتمان فروش</span>
+            <span style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 20px; background: rgba(16, 185, 129, 0.2); color: #34d399;">{{ sale_count | pnum }}</span>
+        </a>
+        <a href="{{ url_for('matching.console', deal_type='rent', min_score=min_score) }}" 
+           class="dept-tab-btn {% if deal_type == 'rent' %}active-rent{% endif %}"
+           style="padding: 0.55rem 1.15rem; border-radius: 9px; font-size: 0.88rem; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 0.45rem; transition: all 0.2s ease;">
+            <span>🔵 دپارتمان رهن و اجاره</span>
+            <span style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 20px; background: rgba(0, 242, 254, 0.2); color: #38bdf8;">{{ rent_count | pnum }}</span>
+        </a>
+    </div>
+
+    <!-- Minimum Score Filter -->
+    <form method="GET" action="{{ url_for('matching.console') }}" style="display: flex; gap: 0.85rem; align-items: center; margin-right: auto; max-width: 100%;">
+        <input type="hidden" name="deal_type" value="{{ deal_type }}">
+        <label style="font-size: 0.85rem; color: #94a3b8; font-weight: 600;">حداقل درصد تطابق:</label>
+        <select name="min_score" class="glass-select" style="width: 140px; padding: 0.45rem 0.75rem; font-size: 0.85rem;" onchange="this.form.submit()">
+            <option value="45" {% if min_score == 45 %}selected{% endif %}>۴۵٪ و بالاتر</option>
+            <option value="55" {% if min_score == 55 %}selected{% endif %}>۵۵٪ و بالاتر</option>
+            <option value="70" {% if min_score == 70 %}selected{% endif %}>۷۰٪ و بالاتر (طلایی)</option>
+            <option value="85" {% if min_score == 85 %}selected{% endif %}>۸۵٪ و بالاتر (قطعی)</option>
+        </select>
+    </form>
+</div>
+
+<style>
+.dept-tab-btn { color: #94a3b8; }
+.dept-tab-btn:hover { color: #f8fafc; background: rgba(255, 255, 255, 0.05); }
+.active-all { background: rgba(255, 255, 255, 0.15) !important; color: #ffffff !important; }
+.active-sale { background: rgba(16, 185, 129, 0.2) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.4); }
+.active-rent { background: rgba(0, 242, 254, 0.18) !important; color: #38bdf8 !important; border: 1px solid rgba(0, 242, 254, 0.4); }
+
+.matching-card-grid {
+    display: grid;
+    grid-template-columns: 1.5fr auto 1.5fr 1.1fr;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+@media (max-width: 900px) {
+    .matching-card-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .matching-dept-segmented-bar {
+        display: flex !important;
+        width: 100% !important;
+        flex-direction: column !important;
+        gap: 0.4rem !important;
+    }
+    .dept-tab-btn {
+        width: 100% !important;
+        justify-content: space-between !important;
+        box-sizing: border-box !important;
+    }
+}
+</style>
+
+<!-- ========================================================================= -->
+<!-- SECTION 1: SALE OPPORTUNITIES (دپارتمان خرید و فروش) -->
+<!-- ========================================================================= -->
+{% if deal_type in ['all', 'sale'] %}
+<div id="saleMatchingSection" style="margin-bottom: 2.5rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding: 0.75rem 1.25rem; background: rgba(16, 185, 129, 0.08); border-radius: 12px; border-right: 4px solid #10b981;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.35rem;">🟢</span>
+            <div>
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #34d399; margin: 0;">
+                    فرصت‌های تطابق خرید و فروش (مالکین مستقیم)
+                </h3>
+                <span style="font-size: 0.8rem; color: #94a3b8;">
+                    تطبیق بودجه خریداران با فایل‌های فروش نقدی و تهاتر تاییدشده
+                </span>
+            </div>
+        </div>
+        <span class="badge-neon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700;">
+            {{ sale_records | length | pnum }} مورد منطبق
+        </span>
+    </div>
+
+    {% if sale_records %}
+        <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+            {% for rec in sale_records %}
+                {% include "matching/_card.html" %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="glass-panel" style="padding: 2.5rem; text-align: center; color: #64748b; font-size: 0.92rem;">
+            فرصت تطابق فروشی با این درصد پیدا نشد.
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ========================================================================= -->
+<!-- SECTION 2: RENT OPPORTUNITIES (دپارتمان رهن و اجاره) -->
+<!-- ========================================================================= -->
+{% if deal_type in ['all', 'rent'] %}
+<div id="rentMatchingSection" style="margin-bottom: 2.5rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding: 0.75rem 1.25rem; background: rgba(0, 242, 254, 0.08); border-radius: 12px; border-right: 4px solid #00f2fe;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.35rem;">🔵</span>
+            <div>
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #38bdf8; margin: 0;">
+                    فرصت‌های تطابق رهن و اجاره (مالکین مستقیم)
+                </h3>
+                <span style="font-size: 0.8rem; color: #94a3b8;">
+                    تطبیق توان ودیعه و اجاره مستأجرین با فایل‌های اجاره مسکونی بدون واسطه
+                </span>
+            </div>
+        </div>
+        <span class="badge-neon" style="background: rgba(0, 242, 254, 0.15); border-color: rgba(0, 242, 254, 0.4); color: #38bdf8; font-weight: 700;">
+            {{ rent_records | length | pnum }} مورد منطبق
+        </span>
+    </div>
+
+    {% if rent_records %}
+        <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+            {% for rec in rent_records %}
+                {% include "matching/_card.html" %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="glass-panel" style="padding: 2.5rem; text-align: center; color: #64748b; font-size: 0.92rem;">
+            فرصت تطابق رهن و اجاره‌ای با این درصد پیدا نشد.
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function markSuggested(recordId, btn) {
+        try {
+            const res = await fetch(`/matching/${recordId}/suggest`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                btn.textContent = '✓ معرفی‌شده به مشتری';
+                btn.style.borderColor = '#10b981';
+                btn.style.color = '#10b981';
+                if (typeof showToast === 'function') {
+                    showToast(data.message, 'success');
+                }
+            }
+        } catch (e) {
+            if (typeof showToast === 'function') {
+                showToast('خطا در ثبت وضعیت پیشنهاد', 'error');
+            }
+        }
+    }
+</script>
+{% endblock %}

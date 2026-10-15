@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}سامانه هوشمند فایلینگ و املاک سقف{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <!-- Persian Typography Font (Parallel Non-blocking Fetch) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+
+    <!-- Design System: Glassmorphism + Neon Dark + Luxury AI Assistant -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/glassmorphism.css') }}?v=saghf_lux_v3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/neon-dark.css') }}?v=saghf_lux_v3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=saghf_lux_v4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ai_orb.css') }}?v=saghf_lux_v4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/saghf_motion_fx.css') }}?v=saghf_lux_v4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ai_assistant.css') }}?v=saghf_lux_v4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/saghf_refinement.css') }}?v=saghf_lux_v4">
+    
+    <!-- Three.js 3D WebGL Engine & AI Orb (Non-blocking Deferred Loading) -->
+    <script src="{{ url_for('static', filename='js/three.min.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/saghf_ai_orb.js') }}" defer></script>
+
+    <!-- Local Chart.js Engine (Zero External Network Latency) -->
+    <script src="{{ url_for('static', filename='js/chart.min.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_drawer.css') }}?v=saghf_lux_v4">
+    {% block extra_head %}{% endblock %}
+</head>
+<body dir="rtl">
+    <!-- Luxury Architectural Mansion Scroll Background Engine (Optimized WebP - 86% Faster) -->
+    <div id="luxury-scroll-bg-container" aria-hidden="true">
+        <div class="luxury-bg-slide active" data-zone="living" style="background-image: url('{{ url_for('static', filename='images/luxury/living_room.webp') }}');"></div>
+        <div class="luxury-bg-slide" data-zone="terrace" style="background-image: url('{{ url_for('static', filename='images/luxury/terrace_pool.webp') }}');"></div>
+        <div class="luxury-bg-slide" data-zone="kitchen" style="background-image: url('{{ url_for('static', filename='images/luxury/kitchen_dining.webp') }}');"></div>
+        <div class="luxury-bg-slide" data-zone="bedroom" style="background-image: url('{{ url_for('static', filename='images/luxury/master_bedroom.webp') }}');"></div>
+        <div class="luxury-bg-overlay"></div>
+    </div>
+
+    <!-- Floating 3D Glass Navbar -->
+    <header class="floating-3d-navbar">
+        <!-- Official Brand Logo & Name (سامانه سقف) -->
+        <a href="{{ url_for('dashboard.index') }}" class="floating-nav-brand" title="سامانه هوشمند املاک سقف">
+            <picture>
+                <source srcset="{{ url_for('static', filename='images/saghf_logo_nav.webp') }}" type="image/webp">
+                <img src="{{ url_for('static', filename='images/saghf_logo_nav.png') }}" alt="لوگوی هوشمند سامانه سقف" class="brand-logo-img" width="52" height="52" style="height: 52px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 16px rgba(212, 175, 55, 0.65)) drop-shadow(0 0 24px rgba(0, 242, 254, 0.35)); transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            </picture>
+            <div class="brand-text-container" style="display: flex; flex-direction: column; justify-content: center; line-height: 1.15; margin-right: 0.35rem;">
+                <span class="brand-main-title" style="font-size: 1.22rem; font-weight: 900; background: linear-gradient(135deg, #ffffff 10%, #fef08a 50%, #d4af37 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 25px rgba(212, 175, 55, 0.45); letter-spacing: -0.3px; white-space: nowrap;">سامانه سقف</span>
+                <span class="brand-mini-badge" style="font-size: 0.62rem; font-weight: 700; color: #38bdf8; letter-spacing: 0.5px;">هوش مصنوعی و املاک</span>
+            </div>
+        </a>
+
+        <!-- Center Nav Links: ۴ دپارتمان اصلی و کلیدی طبق دستور صوتی کاربر -->
+        <nav class="floating-nav-links">
+            <!-- ۱. خرید و فروش -->
+            <a href="{{ url_for('properties.list_properties', deal_type='sale') }}#properties-catalog-section" class="floating-nav-link {% if 'properties' in request.endpoint and request.args.get('deal_type') == 'sale' %}active{% endif %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 2 10 10-9.5 9.5a2.12 2.12 0 0 1-3 0L2 14.5 12 2Z"/><circle cx="8" cy="8" r="1.5"/></svg>
+                <span>خرید و فروش</span>
+            </a>
+
+            <!-- ۲. رهن و اجاره -->
+            <a href="{{ url_for('properties.list_properties', deal_type='rent') }}#properties-catalog-section" class="floating-nav-link {% if 'properties' in request.endpoint and request.args.get('deal_type') == 'rent' %}active{% endif %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3M18.5 4.5l3 3"/></svg>
+                <span>رهن و اجاره</span>
+            </a>
+
+            <!-- ۳. تطبیق هوشمند -->
+            <a href="{{ url_for('matching.console') }}" class="floating-nav-link {% if 'matching' in request.endpoint %}active{% endif %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                <span>تطبیق هوشمند</span>
+            </a>
+
+            <!-- ۴. تخمین هوشمند قیمت -->
+            <a href="{{ url_for('properties.valuation_page') }}" class="floating-nav-link {% if request.endpoint == 'properties.valuation_page' %}active{% endif %}" title="سامانه تخمین هوشمند ارزش و قیمت ملک">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><circle cx="12" cy="14" r="3.5"/></svg>
+                <span>تخمین هوشمند</span>
+            </a>
+        </nav>
+
+        <!-- Left Actions: دکمه ۳ خطی همبرگری و منوی سامانه سقف -->
+        <div class="floating-nav-actions">
+            <button type="button" id="mobileMenuToggleBtn" aria-controls="mobileNavDrawer" aria-expanded="false" onclick="toggleMobileNavDrawer()" class="mobile-hamburger-btn universal-dashboard-btn" aria-label="منوی سامانه سقف" title="داشبورد و امکانات سامانه سقف">
+                <svg class="hamburger-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <line class="line-top" x1="4" y1="6" x2="20" y2="6"/>
+                    <line class="line-mid" x1="4" y1="12" x2="20" y2="12"/>
+                    <line class="line-bot" x1="4" y1="18" x2="20" y2="18"/>
+                </svg>
+                <span class="dashboard-btn-text">منوی سامانه</span>
+                {% if session.get('user_id') %}
+                    <span class="dashboard-user-dot" title="کاربر وارد شده"></span>
+                {% endif %}
+            </button>
+        </div>
+    </header>
+
+    <!-- پس‌زمینه محو و تاریک منوی کشویی -->
+    <button type="button" id="mobileDrawerBackdrop" class="mobile-drawer-backdrop universal-dashboard-backdrop" onclick="closeMobileNavDrawer()" aria-label="بستن منوی کشویی" tabindex="-1" aria-hidden="true"></button>
+
+    <!-- داشبورد و منوی عمودی کشویی سامانه سقف (Universal Luxury Off-Canvas Drawer) -->
+    <aside id="mobileNavDrawer" role="dialog" aria-modal="true" aria-hidden="true" inert class="mobile-nav-drawer universal-dashboard-drawer" dir="rtl" aria-label="منو و داشبورد سامانه سقف">
+        <!-- هدر بالای منوی کشویی -->
+        <div class="dashboard-drawer-header">
+            <div class="flex items-center gap-2.5">
+                <picture>
+                    <source srcset="{{ url_for('static', filename='images/saghf_logo_nav.webp') }}" type="image/webp">
+                    <img src="{{ url_for('static', filename='images/saghf_logo_nav.png') }}" alt="سقف" class="dashboard-drawer-logo" width="42" height="42">
+                </picture>
+                <div class="dashboard-drawer-brand">
+                    <span class="dashboard-drawer-title">سامانه سقف</span>
+                    <span class="dashboard-drawer-subtitle">داشبورد هوشمند و خدمات</span>
+                </div>
+            </div>
+            <button type="button" onclick="closeMobileNavDrawer()" class="mobile-drawer-close-btn dashboard-drawer-close-btn" aria-label="بستن منو" title="بستن">✕</button>
+        </div>
+
+        <!-- بدنه اسکرول‌پذیر منو با کارت‌های گروه‌بندی‌شده -->
+        <div class="mobile-drawer-body dashboard-drawer-body">
+            <!-- ۱. نشانگر زنده وضعیت اتصال (چشمک‌زن سبز) -->
+            <div class="dashboard-status-card">
+                <div class="status-indicator-wrap">
+                    <span class="neon-pulse-dot emerald" style="position: relative; display: inline-block; pointer-events: none;"></span>
+                </div>
+                <div class="status-info">
+                    <div class="status-title">موتور هوشمند سقف آنلاین است</div>
+                    <div class="status-desc">استخراج لحظه‌ای فایل‌های مالک و تطبیق هوش مصنوعی</div>
+                </div>
+            </div>
+
+            <!-- ۲. بخش ورود و ثبت‌نام / وضعیت حساب کاربری -->
+            <div class="dashboard-auth-card">
+                {% if session.get('is_admin') %}
+                    <div class="auth-user-row">
+                        <div class="auth-avatar admin">👑</div>
+                        <div class="auth-details">
+                            <div class="auth-name">مدیریت عالی سقف</div>
+                            <div class="auth-role">دسترسی کامل پنل ادمین</div>
+                        </div>
+                    </div>
+                    <div class="auth-actions">
+                        <a href="{{ url_for('admin.dashboard') }}" class="dashboard-auth-btn admin-btn" onclick="closeUniversalDashboard()">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
+                            <span>ورود به پنل مدیریت</span>
+                        </a>
+                        <a href="{{ url_for('auth.logout') }}" class="dashboard-logout-link" onclick="closeUniversalDashboard()">خروج از حساب</a>
+                    </div>
+                {% elif session.get('user_id') %}
+                    <div class="auth-user-row">
+                        <div class="auth-avatar">
+                            {{ (session.get('user_full_name') or 'ک')[0] }}
+                        </div>
+                        <div class="auth-details">
+                            <div class="auth-name">{{ session.get('user_full_name') or 'کاربر سقف' }}</div>
+                            <div class="auth-phone">{{ session.get('user_phone') or '' }}</div>
+                        </div>
+                    </div>
+                    <div class="auth-actions">
+                        <span class="auth-verified-badge">✓ کاربر تاییدشده</span>
+                        <a href="{{ url_for('auth.logout') }}" class="dashboard-logout-link" onclick="closeUniversalDashboard()">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <span>خروج</span>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="auth-guest-box">
+                        <div class="auth-guest-header">
+                            <div class="auth-avatar guest">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                            <div class="auth-details">
+                                <div class="auth-name">ورود به حساب کاربری</div>
+                                <div class="auth-phone">مشاهده شماره تماس مستقیم مالکین</div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="closeUniversalDashboard(); openSaghfAuthModal();" class="dashboard-auth-btn">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+                            <span>ورود / ثبت‌نام سریع</span>
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- ۳. بخش دپارتمان‌های اصلی معاملاتی -->
+            <div class="dashboard-group-label">دپارتمان‌های اصلی سقف</div>
+            <div class="dashboard-links-group mobile-drawer-card">
+                <a href="{{ url_for('properties.list_properties', deal_type='sale') }}#properties-catalog-section" class="dashboard-nav-item mobile-drawer-item {% if 'properties' in request.endpoint and request.args.get('deal_type') == 'sale' %}active{% endif %}" onclick="closeUniversalDashboard()">
+                    <div class="nav-icon gold">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 2 10 10-9.5 9.5a2.12 2.12 0 0 1-3 0L2 14.5 12 2Z"/><circle cx="8" cy="8" r="1.5"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title">خرید و فروش آپارتمان</div>
+                        <div class="nav-sub">فایل‌های مستقیم مالک با قیمت منصفانه</div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('properties.list_properties', deal_type='rent') }}#properties-catalog-section" class="dashboard-nav-item mobile-drawer-item {% if 'properties' in request.endpoint and request.args.get('deal_type') == 'rent' %}active{% endif %}" onclick="closeUniversalDashboard()">
+                    <div class="nav-icon cyan">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3M18.5 4.5l3 3"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title">رهن و اجاره</div>
+                        <div class="nav-sub">فایل‌های رهن کامل و اجاره بدون واسطه</div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('matching.console') }}" class="dashboard-nav-item mobile-drawer-item {% if 'matching' in request.endpoint %}active{% endif %}" onclick="closeUniversalDashboard()">
+                    <div class="nav-icon emerald">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title">تطبیق هوشمند متقاضیان</div>
+                        <div class="nav-sub">اتصال خودکار نیاز خریدار و مستأجر به فایل‌ها</div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('properties.valuation_page') }}" class="dashboard-nav-item mobile-drawer-item {% if request.endpoint == 'properties.valuation_page' %}active{% endif %}" onclick="closeUniversalDashboard()">
+                    <div class="nav-icon purple">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><circle cx="12" cy="14" r="3.5"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title">تخمین هوشمند قیمت ملک</div>
+                        <div class="nav-sub">ارزیابی ارزش کارشناسی و قیمت‌گذاری محله‌ای</div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- ۴. بخش فایل‌ها و آرشیوها (منتقل‌شده از هدر طبق دستور صوتی کاربر) -->
+            <div class="dashboard-group-label">بانک فایل‌ها و آرشیو بازار</div>
+            <div class="dashboard-links-group mobile-drawer-card">
+                <a href="{{ url_for('properties.list_properties') }}#properties-catalog-section" class="dashboard-nav-item mobile-drawer-item {% if 'properties' in request.endpoint and not request.args.get('deal_type') and not request.args.get('property_type') and not request.args.get('lifecycle') %}active{% endif %}" onclick="closeUniversalDashboard()">
+                    <div class="nav-icon gray">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Z"/><path d="M18 14h-8M15 18h-5M10 6h8"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title">کل فایل‌ها</div>
+                        <div class="nav-sub">بانک جامع تمام آگهی‌های ثبت‌شده در سامانه</div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('properties.list_properties', property_type='villa') }}#properties-catalog-section" class="dashboard-nav-item mobile-drawer-item {% if 'properties' in request.endpoint and request.args.get('property_type') == 'villa' %}active{% endif %}" onclick="closeUniversalDashboard()">
+                    <div class="nav-icon amber">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/><line x1="9" y1="18" x2="15" y2="18"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title">کلنگی و مستغلات</div>
+                        <div class="nav-sub">املاک با موقعیت ساخت، تجاری و ویلایی</div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('clients.list_clients') }}" class="dashboard-nav-item mobile-drawer-item {% if 'clients' in request.endpoint %}active{% endif %}" onclick="closeUniversalDashboard()">
+                    <div class="nav-icon sky">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title">مشتریان و متقاضیان</div>
+                        <div class="nav-sub">مدیریت CRM و ثبت درخواست‌های خریداران</div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('properties.list_properties', lifecycle='deleted_divar') }}#properties-catalog-section" class="dashboard-nav-item mobile-drawer-item deleted-alert {% if request.args.get('lifecycle') == 'deleted_divar' %}active{% endif %}" onclick="closeUniversalDashboard()">
+                    <div class="nav-icon rose">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title flex items-center gap-1.5">
+                            <span>حذف‌شده‌های دیوار</span>
+                            <span class="deleted-tag">فرصت اختصاصی</span>
+                        </div>
+                        <div class="nav-sub">فایل‌های پاک‌شده از دیوار با شماره تماس فعال مالک</div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- ۵. بخش ابزارهای مانیتورینگ و هوش مصنوعی -->
+            <div class="dashboard-group-label">ابزارهای مانیتورینگ و هوش مصنوعی</div>
+            <div class="dashboard-links-group mobile-drawer-card">
+                <a href="{{ url_for('crawler.live_monitor') }}" class="dashboard-nav-item mobile-drawer-item {% if 'crawler' in request.endpoint %}active{% endif %}" onclick="closeUniversalDashboard()">
+                    <div class="nav-icon emerald">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M11 8a3 3 0 0 0-3 3"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title">جستجو و مانیتورینگ زنده کراولر</div>
+                        <div class="nav-sub">مشاهده جریان لحظه‌ای استخراج آگهی‌های نو</div>
+                    </div>
+                </a>
+
+                <button type="button" class="dashboard-nav-item mobile-drawer-item w-full text-right" onclick="closeUniversalDashboard(); if(window.openSaghfAiAssistant){window.openSaghfAiAssistant();}else{scrollToAssistant();}" style="background: none; border: none; cursor: pointer; width: 100%; text-align: right;">
+                    <div class="nav-icon purple">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    </div>
+                    <div class="nav-text">
+                        <div class="nav-title">دستیار صوتی و چت هوش مصنوعی</div>
+                        <div class="nav-sub">مشاور ملکی سقف با درک پارامترها و پیشنهاد فایل</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Immediate Zero-Dependency Drawer Controller -->
+    <script>
+    (function() {
+        function getDrawerElements() {
+            var drawer = document.getElementById('mobileNavDrawer') || document.getElementById('universalDashboardDrawer') || document.querySelector('.mobile-nav-drawer');
+            var backdrop = document.getElementById('mobileDrawerBackdrop') || document.getElementById('universalDashboardBackdrop') || document.querySelector('.mobile-drawer-backdrop');
+            var btns = document.querySelectorAll('#mobileMenuToggleBtn, .mobile-hamburger-btn, .universal-dashboard-btn');
+            return { drawer: drawer, backdrop: backdrop, btns: btns };
+        }
+        window.toggleMobileNavDrawer = function() {
+            var el = getDrawerElements();
+            if (!el.drawer) return;
+            var isOpen = el.drawer.classList.contains('active');
+            if (isOpen) {
+                window.closeMobileNavDrawer();
+            } else {
+                el.drawer.classList.add('active');
+                el.drawer.setAttribute('aria-hidden', 'false');
+                el.drawer.inert = false;
+                if (el.backdrop) {
+                    el.backdrop.classList.add('active');
+                    el.backdrop.setAttribute('aria-hidden', 'false');
+                }
+                el.btns.forEach(function(b) {
+                    b.classList.add('active');
+                    b.setAttribute('aria-expanded', 'true');
+                });
+                document.body.classList.add('drawer-open');
+            }
+        };
+        window.closeMobileNavDrawer = function() {
+            var el = getDrawerElements();
+            if (!el.drawer) return;
+            el.drawer.classList.remove('active');
+            el.drawer.setAttribute('aria-hidden', 'true');
+            el.drawer.inert = true;
+            if (el.backdrop) {
+                el.backdrop.classList.remove('active');
+                el.backdrop.setAttribute('aria-hidden', 'true');
+            }
+            el.btns.forEach(function(b) {
+                b.classList.remove('active');
+                b.setAttribute('aria-expanded', 'false');
+            });
+            document.body.classList.remove('drawer-open');
+        };
+        window.toggleUniversalDashboard = window.toggleMobileNavDrawer;
+        window.closeUniversalDashboard = window.closeMobileNavDrawer;
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') window.closeMobileNavDrawer();
+        });
+    })();
+    </script>
+
+    <!-- نوار ناوبری ارگونومیک پایین صفحه برای کاربری آسان با شست (Mobile Bottom Bar) -->
+    <nav class="mobile-bottom-bar" id="mobileBottomBar" dir="rtl" aria-label="ناوبری لمسی همراه">
+        <a href="{{ url_for('dashboard.index') }}" class="mobile-bottom-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+            <span>داشبورد</span>
+        </a>
+        <a href="{{ url_for('properties.list_properties') }}" class="mobile-bottom-item {% if 'properties' in request.endpoint and not request.args.get('deal_type') or request.args.get('deal_type') == 'all' %}active{% endif %}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Z"/><path d="M18 14h-8M15 18h-5M10 6h8"/></svg>
+            <span>فایل‌ها</span>
+        </a>
+        <button type="button" onclick="if(window.openSaghfAiAssistant){window.openSaghfAiAssistant();}else{scrollToAssistant();}" class="mobile-bottom-item center-orb-item" title="دستیار هوشمند سقف">
+            <div class="mobile-bottom-orb-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2"><circle cx="12" cy="12" r="9"/><polygon points="12,5 17,12 12,19 7,12" stroke="#ffffff" fill="rgba(212,175,55,0.5)"/></svg>
+            </div>
+            <span>دستیار هوشمند</span>
+        </button>
+        <a href="{{ url_for('crawler.live_monitor') }}" class="mobile-bottom-item {% if 'crawler' in request.endpoint %}active{% endif %}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M11 8a3 3 0 0 0-3 3"/></svg>
+            <span>جستجو زنده</span>
+        </a>
+        <button type="button" onclick="toggleMobileNavDrawer()" class="mobile-bottom-item" aria-label="منوی بیشتر">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+            <span>بیشتر</span>
+        </button>
+    </nav>
+
+    <div class="app-shell">
+        <div class="main-wrapper">
+
+            <!-- Full-width Top Hero Block (e.g. 3D Virtual Tour) -->
+            {% block hero %}{% endblock %}
+
+            <!-- Flash Notifications -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div style="padding: 1.5rem 2rem 0;">
+                        {% for category, message in messages %}
+                            <div class="glass-card" style="margin-bottom: 1rem; border-right: 4px solid {% if category == 'success' %}#10b981{% elif category == 'error' %}#f43f5e{% else %}#d4af37{% endif %}; padding: 0.9rem 1.4rem; display: flex; align-items: center; justify-content: space-between;">
+                                <div>{{ message }}</div>
+                                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem;">✕</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Page Dynamic Body -->
+            <main class="page-content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Omni-Messenger & Divar Session Phone Modals & In-App Ad Viewer Modal (Global) -->
+    {% include "properties/phone_modal.html" %}
+    {% include "properties/messenger_modal.html" %}
+    {% include "properties/in_app_modal.html" %}
+    {% include "properties/gallery_modal.html" %}
+    {% include "auth/modal.html" %}
+
+    <!-- Smart 3D Floating AI Sphere & HUD Assistant (Global Component) -->
+    {% include "components/ai_orb.html" %}
+
+    <!-- Core Antigravity Motion & 3D Interactive Scripts -->
+    <script src="{{ url_for('static', filename='js/luxury_tour.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mansion_tour.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/saghf_webgl_orb.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/saghf_luxury_orb.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ai_orb.js') }}?v=saghf_gold_v3"></script>
+    <script src="{{ url_for('static', filename='js/saghf_motion_fx.js') }}"></script>
+    
+    <!-- Dedicated drawer state: root scroll lock, focus containment and restoration. -->
+    <script src="{{ url_for('static', filename='js/dashboard_drawer.js') }}?v=saghf_lux_v3"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

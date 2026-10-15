@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}بانک متقاضیان و مشتریان | سقف{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 0.35rem;">
+            بانک متقاضیان و مدیریت نیازهای ملکی <span class="text-neon-emerald">«سقف»</span>
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            لیست خریداران و مستاجران فعال، بودجه‌های ثبت شده و وضعیت در قیف فروش
+        </p>
+    </div>
+    <a href="{{ url_for('clients.create') }}" class="btn-neon-emerald">
+        <span>👤</span> ثبت متقاضی جدید
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="glass-panel" style="padding: 1.25rem; margin-bottom: 2rem;">
+    <form method="GET" action="{{ url_for('clients.list_clients') }}" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 1rem; align-items: flex-end;">
+        <div>
+            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">جستجو در نام، شماره یا یادداشت</label>
+            <input type="text" name="q" value="{{ search_query }}" placeholder="مثلاً: افشار، 0912..." class="glass-input">
+        </div>
+        <div>
+            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">وضعیت لید (Stage)</label>
+            <select name="status" class="glass-select">
+                <option value="all">همه وضعیت‌ها</option>
+                <option value="new" {% if selected_status == 'new' %}selected{% endif %}>سرنخ جدید</option>
+                <option value="contacted" {% if selected_status == 'contacted' %}selected{% endif %}>تماس اولیه</option>
+                <option value="visiting" {% if selected_status == 'visiting' %}selected{% endif %}>هماهنگی بازدید</option>
+                <option value="negotiating" {% if selected_status == 'negotiating' %}selected{% endif %}>در حال مذاکره</option>
+                <option value="contract_won" {% if selected_status == 'contract_won' %}selected{% endif %}>عقد قرارداد (موفق)</option>
+            </select>
+        </div>
+        <div>
+            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">نوع تقاضا</label>
+            <select name="deal_type" class="glass-select">
+                <option value="all">همه</option>
+                <option value="sale" {% if selected_deal_type == 'sale' %}selected{% endif %}>خرید</option>
+                <option value="rent" {% if selected_deal_type == 'rent' %}selected{% endif %}>رهن و اجاره</option>
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="glass-btn" style="height: 44px;">
+                <span>🔍</span> فیلتر
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Clients Table -->
+<div class="glass-panel" style="padding: 1.75rem;">
+    <div style="overflow-x: auto;">
+        <table class="glass-table">
+            <thead>
+                <tr>
+                    <th>نام متقاضی</th>
+                    <th>شماره تماس</th>
+                    <th>نوع تقاضا</th>
+                    <th>مناطق مدنظر</th>
+                    <th>بازه بودجه / سقف پرداخت</th>
+                    <th>متراژ و امکانات</th>
+                    <th>وضعیت لید</th>
+                    <th>مشاور مسئول</th>
+                    <th>عملیات و تطبیق</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in clients %}
+                    <tr class="glass-row">
+                        <td>
+                            <a href="{{ url_for('clients.detail', id=c.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 700;">
+                                {{ c.full_name }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="tel:{{ c.phone_number }}" style="color: #00f2fe; text-decoration: none; direction: ltr; display: inline-block;">
+                                {{ c.phone_number }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge-neon {% if c.preferred_deal_type == 'sale' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
+                                {% if c.preferred_deal_type == 'sale' %}خرید{% else %}رهن و اجاره{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if c.preferred_districts %}
+                                {{ c.preferred_districts | join('، ') }}
+                            {% else %}
+                                <span style="color: #64748b;">نامحدود</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.preferred_deal_type == 'sale' %}
+                                <span style="font-weight: 700; color: #00f2fe;">{{ c.max_budget | toman }}</span>
+                            {% else %}
+                                <span style="font-weight: 700; color: #10b981;">{{ c.max_deposit | toman }} رهن</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span>{{ c.min_area | pnum }}{% if c.max_area %} تا {{ c.max_area | pnum }}{% endif %} متر</span>
+                            <span style="color: #64748b; font-size: 0.8rem;">({{ c.min_rooms | pnum }}خواب)</span>
+                        </td>
+                        <td>
+                            <span class="badge-neon {% if c.lead_status == 'contract_won' %}badge-neon-emerald{% elif c.lead_status == 'negotiating' %}badge-neon-purple{% elif c.lead_status == 'visiting' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
+                                {{ c.lead_status | lead_name }}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.85rem; color: #cbd5e1;">{{ c.agent.name if c.agent else 'تعیین نشده' }}</span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('clients.detail', id=c.id) }}" class="btn-neon-cyan" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
+                                <span>⚡</span> املاک پیشنهادی
+                            </a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: #64748b; padding: 2rem;">
+                            متقاضی با این مشخصات یافت نشد.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Smart Luxury Pagination Bar for Clients -->
+    {% macro client_page_url(p) %}
+    {{ url_for('clients.list_clients',
+        page=p,
+        per_page=pagination.per_page,
+        status=request.args.get('status') if request.args.get('status') != 'all' else None,
+        deal_type=request.args.get('deal_type') if request.args.get('deal_type') != 'all' else None,
+        q=request.args.get('q')
+    ) }}
+    {% endmacro %}
+
+    {% if pagination and pagination.total > 0 %}
+    <div class="saghf-pagination-wrapper" style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        
+        <!-- Range & Count Meta -->
+        <div style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: #94a3b8;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981;"></span>
+            <span>نمایش متقاضیان <strong style="color: #f8fafc;">{{ pagination.start_index | pnum }}</strong> تا <strong style="color: #f8fafc;">{{ pagination.end_index | pnum }}</strong> از مجموع <strong style="color: #34d399;">{{ pagination.total | pnum }}</strong> پرونده</span>
+            <span style="color: #64748b;">|</span>
+            <span>صفحه <strong style="color: #fce79f;">{{ pagination.page | pnum }}</strong> از <strong style="color: #fce79f;">{{ pagination.total_pages | pnum }}</strong></span>
+        </div>
+
+        <!-- Navigation Controls (صفحه ۱، ۲...) -->
+        <div style="display: flex; align-items: center; gap: 0.4rem; direction: ltr;">
+            <!-- Previous Page Button -->
+            {% if pagination.has_prev %}
+                <a href="{{ client_page_url(pagination.prev_num) }}" class="saghf-page-btn" title="صفحه قبلی">
+                    <span>‹ قبلی</span>
+                </a>
+            {% else %}
+                <span class="saghf-page-btn disabled" title="در صفحه اول هستید">
+                    <span>‹ قبلی</span>
+                </span>
+            {% endif %}
+
+            <!-- Numbered Page Links -->
+            {% for p_num in pagination.pages %}
+                {% if p_num == pagination.page %}
+                    <span class="saghf-page-num active" title="صفحه فعلی">{{ p_num | pnum }}</span>
+                {% else %}
+                    <a href="{{ client_page_url(p_num) }}" class="saghf-page-num" title="رفتن به صفحه {{ p_num }}">{{ p_num | pnum }}</a>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Next Page Button -->
+            {% if pagination.has_next %}
+                <a href="{{ client_page_url(pagination.next_num) }}" class="saghf-page-btn" title="صفحه بعدی">
+                    <span>بعدی ›</span>
+                </a>
+            {% else %}
+                <span class="saghf-page-btn disabled" title="در صفحه آخر هستید">
+                    <span>بعدی ›</span>
+                </span>
+            {% endif %}
+        </div>
+
+        <!-- Per-page selection -->
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: #94a3b8;">
+            <span>تعداد در صفحه:</span>
+            <div style="display: flex; gap: 0.25rem;">
+                {% for pp in [5, 10, 20] %}
+                    <a href="{{ url_for('clients.list_clients', page=1, per_page=pp, status=request.args.get('status'), deal_type=request.args.get('deal_type'), q=request.args.get('q')) }}" 
+                       class="saghf-per-page-pill {% if pagination.per_page == pp %}active{% endif %}">
+                        {{ pp | pnum }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

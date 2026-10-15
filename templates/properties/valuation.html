@@ -1,0 +1,456 @@
+{% extends 'base.html' %}
+
+{% block title %}ارزیابی هوشمند قیمت ملک | سامانه هوشمند سقف{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/valuation.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="valuation-page-container" dir="rtl">
+    <div class="mim-card" id="mimCard" data-auto-session="{{ auto_session_id or '' }}" data-auto-code="{{ auto_verify_code or '' }}">
+
+        <!-- هدر لوکس کارت ارزیابی -->
+        <div class="mim-header">
+            <div class="mim-logo">
+                <span class="mim-logo-dot"></span>
+                <span class="mim-logo-text" id="brandName">سامانه هوشمند سقف</span>
+            </div>
+            <h1>ارزیابی هوشمند قیمت ملک</h1>
+            <p>منطقه ۵ و ۲ تهران — مبتنی بر هوش مصنوعی و آگهی‌های واقعی</p>
+        </div>
+
+        <!-- نوار پیشرفت گام‌ها -->
+        <div class="mim-progress-wrap" id="progressWrap">
+            <div class="mim-progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="mim-form-body">
+
+            <!-- گام ۱: انتخاب نوع ملک -->
+            <div class="mim-step active" data-step="1">
+                <h2 class="mim-step-title">نوع ملک خود را انتخاب کنید</h2>
+                <p class="mim-step-hint">در حال حاضر مدل هوشمند برای آپارتمان مسکونی کالیبره شده است.</p>
+                <div class="mim-type-grid" id="typeGrid"></div>
+            </div>
+
+            <!-- گام ۲: محله و متراژ -->
+            <div class="mim-step" data-step="2">
+                <h2 class="mim-step-title">محله و متراژ</h2>
+                <p class="mim-step-hint">برای یافتن سریع محله، نام آن را تایپ کنید.</p>
+                <div class="mim-field">
+                    <label for="areaInput">محله (مناطق تهران)</label>
+                    <div class="mim-combo" id="areaCombo">
+                        <svg class="mim-combo-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+                        <input type="text" class="mim-combo-input" id="areaInput" placeholder="جستجو یا انتخاب محله..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="areaList">
+                        <svg class="mim-combo-caret" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                        <div class="mim-combo-list" id="areaList" role="listbox"></div>
+                    </div>
+                    <p class="mim-field-error" id="areaError">لطفاً محله را انتخاب کنید.</p>
+                </div>
+
+                <div class="mim-field-group">
+                    <div class="mim-num-row">
+                        <span class="mim-num-label">
+                            <label for="size">متراژ سندی</label>
+                            <span class="mim-num-hint">متر مربع</span>
+                        </span>
+                        <div class="mim-stepper">
+                            <button class="mim-step-btn" type="button" data-stepper="size" data-dir="1" aria-label="افزایش متراژ">+</button>
+                            <input type="text" class="mim-input" id="size" placeholder="۸۵" inputmode="numeric" autocomplete="off"
+                                   data-min="20" data-max="2000" data-step="1" data-base="85" value="">
+                            <button class="mim-step-btn" type="button" data-stepper="size" data-dir="-1" aria-label="کاهش متراژ">−</button>
+                        </div>
+                    </div>
+
+                    <div class="mim-num-row">
+                        <span class="mim-num-label">
+                            <label for="age">سن بنا</label>
+                            <span class="mim-num-hint">نوساز = ۰</span>
+                        </span>
+                        <div class="mim-stepper">
+                            <button class="mim-step-btn" type="button" data-stepper="age" data-dir="1" aria-label="افزایش سن بنا">+</button>
+                            <input type="text" class="mim-input" id="age" placeholder="۰" inputmode="numeric" autocomplete="off"
+                                   data-min="0" data-max="100" data-step="1" data-base="0" value="">
+                            <button class="mim-step-btn" type="button" data-stepper="age" data-dir="-1" aria-label="کاهش سن بنا">−</button>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="mim-field-error" id="step2Error">لطفاً متراژ و سن بنا را درست وارد کنید.</p>
+
+                <div class="mim-nav-row">
+                    <button class="mim-btn-prev" data-prev type="button">
+                        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+                        مرحله قبل
+                    </button>
+                    <button class="mim-btn-next" data-next type="button">
+                        مرحله بعد
+                        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- گام ۳: مشخصات آپارتمان -->
+            <div class="mim-step" data-step="3">
+                <h2 class="mim-step-title">مشخصات آپارتمان</h2>
+                <p class="mim-step-hint">هرچه دقیق‌تر وارد کنید، ارزیابی هوشمند دقیق‌تر می‌شود.</p>
+
+                <div class="mim-field">
+                    <label>تعداد خواب</label>
+                    <div class="mim-choice-row" data-choice="rooms">
+                        <button class="mim-choice-btn" data-val="0" type="button">بدون خواب</button>
+                        <button class="mim-choice-btn" data-val="1" type="button">۱</button>
+                        <button class="mim-choice-btn" data-val="2" type="button">۲</button>
+                        <button class="mim-choice-btn" data-val="3" type="button">۳</button>
+                        <button class="mim-choice-btn" data-val="4" type="button">۴+</button>
+                    </div>
+                </div>
+
+                <div class="mim-field">
+                    <label>تعداد پارکینگ سندی</label>
+                    <div class="mim-choice-row" data-choice="parking">
+                        <button class="mim-choice-btn" data-val="0" type="button">۰</button>
+                        <button class="mim-choice-btn" data-val="1" type="button">۱</button>
+                        <button class="mim-choice-btn" data-val="2" type="button">۲</button>
+                        <button class="mim-choice-btn" data-val="3" type="button">۳+</button>
+                    </div>
+                </div>
+
+                <div class="mim-field">
+                    <label>موقعیت در ساختمان</label>
+                    <div class="mim-field-group">
+                        <div class="mim-num-row">
+                            <span class="mim-num-label">
+                                <label for="floor">طبقه واحد شما</label>
+                                <span class="mim-num-hint">همکف = ۰</span>
+                            </span>
+                            <div class="mim-stepper">
+                                <button class="mim-step-btn" type="button" data-stepper="floor" data-dir="1" aria-label="افزایش طبقه">+</button>
+                                <input type="text" class="mim-input" id="floor" placeholder="۳" inputmode="numeric" autocomplete="off"
+                                       data-min="-3" data-max="60" data-step="1" data-base="3" value="">
+                                <button class="mim-step-btn" type="button" data-stepper="floor" data-dir="-1" aria-label="کاهش طبقه">−</button>
+                            </div>
+                        </div>
+
+                        <div class="mim-num-row">
+                            <span class="mim-num-label">
+                                <label for="totalFloors">کل طبقات ساختمان</label>
+                                <span class="mim-num-hint">بدون منفی</span>
+                            </span>
+                            <div class="mim-stepper">
+                                <button class="mim-step-btn" type="button" data-stepper="totalFloors" data-dir="1" aria-label="افزایش تعداد طبقات">+</button>
+                                <input type="text" class="mim-input" id="totalFloors" placeholder="۵" inputmode="numeric" autocomplete="off"
+                                       data-min="1" data-max="60" data-step="1" data-base="5" value="">
+                                <button class="mim-step-btn" type="button" data-stepper="totalFloors" data-dir="-1" aria-label="کاهش تعداد طبقات">−</button>
+                            </div>
+                        </div>
+
+                        <div class="mim-num-row">
+                            <span class="mim-num-label">
+                                <label for="floorUnits">واحد در هر طبقه</label>
+                                <span class="mim-num-hint">تعداد واحد</span>
+                            </span>
+                            <div class="mim-stepper">
+                                <button class="mim-step-btn" type="button" data-stepper="floorUnits" data-dir="1" aria-label="افزایش تعداد واحد">+</button>
+                                <input type="text" class="mim-input" id="floorUnits" placeholder="۲" inputmode="numeric" autocomplete="off"
+                                       data-min="1" data-max="30" data-step="1" data-base="2" value="">
+                                <button class="mim-step-btn" type="button" data-stepper="floorUnits" data-dir="-1" aria-label="کاهش تعداد واحد">−</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="mim-field-error" id="step3Error">لطفاً همه فیلدها را کامل کنید.</p>
+
+                <div class="mim-nav-row">
+                    <button class="mim-btn-prev" data-prev type="button">
+                        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+                        مرحله قبل
+                    </button>
+                    <button class="mim-btn-next" data-next type="button">
+                        مرحله بعد
+                        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- گام ۴: سند و امکانات -->
+            <div class="mim-step" data-step="4">
+                <h2 class="mim-step-title">سند و امکانات</h2>
+                <p class="mim-step-hint">موارد موجود در ملک را انتخاب کنید.</p>
+
+                <div class="mim-field">
+                    <label for="sanadInput">نوع سند</label>
+                    <div class="mim-combo plain" id="sanadCombo">
+                        <input type="text" class="mim-combo-input" id="sanadInput" placeholder="انتخاب کنید..." readonly autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sanadList">
+                        <svg class="mim-combo-caret" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                        <div class="mim-combo-list" id="sanadList" role="listbox"></div>
+                    </div>
+                </div>
+
+                <div class="mim-field">
+                    <label>امکانات رفاهی</label>
+                    <div class="mim-check-grid" id="facilitiesGrid">
+                        <button class="mim-check-item" data-fac="has_elevator" type="button">
+                            <span class="mim-check-box"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            آسانسور
+                        </button>
+                        <button class="mim-check-item" data-fac="has_balcony" type="button">
+                            <span class="mim-check-box"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            بالکن
+                        </button>
+                        <button class="mim-check-item" data-fac="has_storage" type="button">
+                            <span class="mim-check-box"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            انباری
+                        </button>
+                        <button class="mim-check-item" data-fac="is_renovated" type="button">
+                            <span class="mim-check-box"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            بازسازی شده
+                        </button>
+                        <button class="mim-check-item full" data-fac="is_luxury" type="button">
+                            <span class="mim-check-box"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            امکانات لوکس (استخر / روف‌گاردن / لابی)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mim-nav-row">
+                    <button class="mim-btn-prev" data-prev type="button">
+                        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+                        مرحله قبل
+                    </button>
+                    <button class="mim-btn-next" id="finishFormBtn" type="button">
+                        انجام ارزیابی
+                        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- گام ۵: ثبت لید و اطلاعات تماس (Lead Capture) -->
+            <div class="mim-step mim-step-lead" data-step="5">
+                <div class="mim-check-icon-wrap">
+                    <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <h2>ارزیابی قیمت ملک شما با موفقیت انجام شد!</h2>
+                <p class="mim-desc">برای مشاهده نتیجه تحلیلی، شماره موبایل خود را وارد کنید.</p>
+
+                <!-- باکس پیش‌نمایش بلورشده ارزش ملک -->
+                <div class="mim-blur-preview">
+                    <p class="mim-blur-label">ارزش برآوردی ملک شما</p>
+                    <div class="mim-blur-row">
+                        <span class="mim-blur-value">۳۷٬۴۷۰٬۰۰۰٬۰۰۰</span>
+                        <span class="mim-blur-unit">تومان</span>
+                    </div>
+                    <span class="mim-blur-lock">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        پس از تایید شماره تماس نمایش داده می‌شود
+                    </span>
+                </div>
+
+                <div class="mim-field">
+                    <label for="phone">شماره موبایل</label>
+                    <div class="mim-phone-wrap">
+                        <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        <input type="tel" class="mim-input" id="phone" placeholder="۰۹۱۲۱۲۳۴۵۶۷" dir="ltr" inputmode="numeric" autocomplete="tel">
+                    </div>
+                    <p class="mim-field-error" id="phoneError">شماره موبایل معتبر نیست.</p>
+                </div>
+
+                <div class="mim-field">
+                    <label for="intentInput">هدف شما از این ارزیابی چیست؟</label>
+                    <div class="mim-combo plain" id="intentCombo">
+                        <input type="text" class="mim-combo-input" id="intentInput" placeholder="یکی را انتخاب کنید..." readonly autocomplete="off" role="combobox" aria-expanded="false" aria-controls="intentList">
+                        <svg class="mim-combo-caret" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                        <div class="mim-combo-list" id="intentList" role="listbox"></div>
+                    </div>
+                    <p class="mim-field-error" id="intentError">لطفاً یکی از گزینه‌ها را انتخاب کنید.</p>
+                </div>
+
+                <div class="mim-delivery-selector">
+                    <span class="mim-delivery-label">درگاه تایید هویت:</span>
+                    <div class="mim-delivery-pills">
+                        <div class="mim-delivery-pill active" id="pillTelegram">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.52 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .37z"/></svg>
+                            <span>ارسال کد به ربات تلگرام سقف (@saghf_bot)</span>
+                            <span class="mim-pill-badge">پیش‌فرض / اتصال مستقیم</span>
+                        </div>
+                    </div>
+                    <p class="mim-delivery-note">کد تایید مستقیماً به تلگرام ارسال می‌شود و نیازی به دریافت پیامک نیست.</p>
+                </div>
+
+                <button class="mim-btn-submit" id="sendOtpBtn" type="button">مشاهده ارزیابی قیمت</button>
+            </div>
+
+            <!-- گام ۶: ورود کد تایید (OTP / Telegram) -->
+            <div class="mim-step mim-step-otp" data-step="6">
+                <h2 class="mim-step-title" style="text-align:center">تایید هویت از طریق تلگرام</h2>
+                <p class="mim-step-hint" style="text-align:center">
+                    کد تایید به تلگرام ارسال شد.
+                    <br>
+                    شماره ثبت‌شده: <span id="maskedPhone" style="direction:ltr;display:inline-block;color:#fef08a;font-weight:700"></span>
+                </p>
+
+                <!-- باکس اختصاصی تایید سریع تلگرام -->
+                <div class="mim-tg-action-box" id="tgActionBox">
+                    <a href="https://t.me/saghf_bot" id="tgBotLink" target="_blank" class="mim-tg-action-btn">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.52 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .37z"/></svg>
+                        <span>دریافت کد و تایید خودکار در ربات تلگرام سقف</span>
+                    </a>
+                    <div class="mim-tg-live-status">
+                        <span class="mim-pulse-dot"></span>
+                        <span id="tgStatusText">در حال گوش دادن به تایید آنی از تلگرام...</span>
+                    </div>
+                </div>
+
+                <div class="mim-otp-inputs" id="otpInputs"></div>
+                <p class="mim-field-error" id="otpError" style="text-align:center"></p>
+                <div class="mim-debug-code" id="debugCode" style="display:none"></div>
+
+                <p class="mim-otp-meta">
+                    <span id="otpTimerWrap">ارسال مجدد تا <span class="mim-otp-timer" id="otpTimer">۰۱:۳۰</span></span>
+                    <button class="mim-link-btn" id="resendBtn" type="button" disabled>ارسال مجدد در تلگرام</button>
+                </p>
+
+                <button class="mim-btn-submit" id="verifyBtn" type="button">تایید و مشاهده قیمت</button>
+
+                <p class="mim-otp-meta" style="margin-top: 1rem;">
+                    <button class="mim-link-btn" id="changePhoneBtn" type="button">تغییر شماره موبایل</button>
+                </p>
+            </div>
+
+            <!-- گام ۷: داشبورد مجلل نتایج ارزیابی هوش مصنوعی سقف -->
+            <div class="mim-step mim-step-result" data-step="7">
+                <h2>نتیجه ارزیابی هوش مصنوعی سامانه سقف</h2>
+                <p class="mim-subtitle" id="resultSubtitle">بر اساس آگهی‌های واقعی محله شما</p>
+
+                <div class="mim-price-card">
+                    <div class="mim-price-head">
+                        <span class="mim-price-label">ارزش برآوردی ملک شما</span>
+                        <span class="mim-price-chip" id="priceChip">—</span>
+                    </div>
+
+                    <div class="mim-price-hero">
+                        <span class="mim-price-hero-num" id="totalAvg">۰</span>
+                        <span class="mim-price-hero-unit">میلیارد تومان</span>
+                    </div>
+
+                    <!-- بار گرافیکی نوسان قیمت با نشانگر متحرک -->
+                    <div class="mim-price-bar">
+                        <div class="mim-price-bar-track">
+                            <div class="mim-price-bar-fill" id="priceBarFill"></div>
+                            <div class="mim-price-bar-dot" id="priceBarDot"></div>
+                        </div>
+                        <div class="mim-price-bar-ends">
+                            <span id="totalMin">۰</span>
+                            <span class="mim-price-bar-caption">بازه احتمالی</span>
+                            <span id="totalMax">۰</span>
+                        </div>
+                    </div>
+
+                    <!-- قیمت هر متر مربع -->
+                    <div class="mim-price-meter">
+                        <div class="mim-price-meter-row">
+                            <span class="mim-pm-key">قیمت هر متر مربع</span>
+                            <span class="mim-pm-val" id="meterAvg">۰</span>
+                        </div>
+                        <div class="mim-price-meter-row sub">
+                            <span class="mim-pm-key">بازه هر متر</span>
+                            <span class="mim-pm-val" id="meterRange">۰</span>
+                        </div>
+                    </div>
+
+                    <p class="mim-price-brand">سامانه هوشمند املاک سقف</p>
+                </div>
+
+                <!-- دکمه درخواست کارشناسی حضوری رایگان ۱ -->
+                <div class="mim-expert-cta">
+                    <button class="mim-btn-expert" type="button" data-expert>
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        درخواست کارشناسی رایگان و دقیق
+                    </button>
+                    <div class="mim-expert-done">✅ درخواست شما ثبت شد. کارشناسان سامانه سقف به‌زودی با شما تماس می‌گیرند.</div>
+                </div>
+
+                <!-- بلوک معادل‌ساز طلا و ارز -->
+                <div class="mim-equiv-block" id="equivBlock" style="display:none">
+                    <p class="mim-equiv-title">ارزش میانگین ملک شما معادل چقدر طلا و دلار است؟</p>
+                    <div class="mim-equiv-grid">
+                        <div class="mim-equiv-card gold">
+                            <span class="mim-equiv-icon-wrap">
+                                <svg class="mim-equiv-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M8.4 5.4h7.2l1.5 4.4H6.9z"/>
+                                    <path d="M3.6 13h7.2l1.5 4.4H2.1z"/>
+                                    <path d="M13.2 13h7.2l1.5 4.4h-10.2z"/>
+                                </svg>
+                            </span>
+                            <div class="mim-equiv-amount">
+                                <span class="mim-equiv-value" id="goldEquiv">—</span>
+                                <span class="mim-equiv-unit">گرم</span>
+                            </div>
+                            <div class="mim-equiv-label">طلای ۱۸ عیار</div>
+                            <div class="mim-equiv-rate" id="goldRate"></div>
+                        </div>
+
+                        <div class="mim-equiv-card usd">
+                            <span class="mim-equiv-icon-wrap">
+                                <svg class="mim-equiv-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <rect x="2" y="6" width="20" height="12" rx="2.5"/>
+                                    <path d="M12 8.8v6.9"/>
+                                    <path d="M13.9 10.9c-.35-.6-1.05-.95-1.9-.95-1.1 0-2 .6-2 1.4 0 1.9 3.9 1 3.9 2.9 0 .8-.9 1.4-2 1.4-.85 0-1.55-.35-1.9-.95"/>
+                                    <path d="M5.2 9.6v4.8"/>
+                                    <path d="M18.8 9.6v4.8"/>
+                                </svg>
+                            </span>
+                            <div class="mim-equiv-amount">
+                                <span class="mim-equiv-value" id="usdEquiv">—</span>
+                                <span class="mim-equiv-unit">دلار</span>
+                            </div>
+                            <div class="mim-equiv-label">دلار آمریکا</div>
+                            <div class="mim-equiv-rate" id="usdRate"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- بلوک آگهی‌های واقعی نزدیک (Comparables) -->
+                <div class="mim-comps-block" id="compsBlock" style="display:none">
+                    <p class="mim-comps-title">آگهی‌های واقعی نزدیک به ملک شما</p>
+                    <p class="mim-comps-sub">از میان آگهی‌های واقعی مالکان در همین محله با تگ رسمی لینک آگهی:</p>
+                    <div id="compsList"></div>
+                </div>
+
+                <!-- باکس هشدارهای کارشناسی -->
+                <div class="mim-warn-box">
+                    <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span>
+                        در این ارزیابی، جزئیات متریال داخلی، نورگیری، نقشه پلان و مشاعات ساختمان اعمال نشده است؛ بنابراین قیمت قطعی معامله ممکن است با این بازه متفاوت باشد.
+                        جهت <strong>ارزیابی دقیق‌تر و رایگان</strong> توسط کارشناسان خبره سقف، درخواست خود را ثبت کنید.
+                    </span>
+                </div>
+
+                <!-- دکمه درخواست کارشناسی حضوری رایگان ۲ -->
+                <div class="mim-expert-cta">
+                    <button class="mim-btn-expert" type="button" data-expert>
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        درخواست کارشناسی رایگان و دقیق
+                    </button>
+                    <div class="mim-expert-done">✅ درخواست شما ثبت شد. کارشناسان سامانه سقف به‌زودی با شما تماس می‌گیرند.</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- توست پیام‌های اعلانات -->
+<div class="mim-toast" id="toast"></div>
+
+<!-- نشانگر راهنمای اسکرول -->
+<div class="mim-scroll-cue" id="scrollCue" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/valuation.js') }}" defer></script>
+{% endblock %}

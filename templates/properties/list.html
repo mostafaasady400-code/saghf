@@ -1,0 +1,1192 @@
+{% extends "base.html" %}
+
+{% block title %}فایلینگ املاک سقف | ویترین تخصصی املاک و هوش مصنوعی{% endblock %}
+
+{% block hero %}
+<!-- ====================================================================
+     Pinned Scroll-Driven 3D Luxury Mansion Tour Hero (با اسکرول ماوس)
+     طبق دستور صوتی کاربر: بازگردانی تور ۳۶۰ درجه عمارت لوکس با نماهای سه‌بعدی
+     ==================================================================== -->
+<div id="mansion-3d-tour-container" aria-label="تور مجازی سه بعدی عمارت لوکس با اسکرول">
+    <div class="tour-sticky-stage">
+        <div class="tour-canvas-layer">
+            <div class="tour-scene-frame active" style="background-image: url('{{ url_for('static', filename='images/luxury/living_room.webp') }}');"></div>
+            <div class="tour-scene-frame" style="background-image: url('{{ url_for('static', filename='images/luxury/kitchen_dining.webp') }}');"></div>
+            <div class="tour-scene-frame" style="background-image: url('{{ url_for('static', filename='images/luxury/master_bedroom.webp') }}');"></div>
+            <div class="tour-scene-frame" style="background-image: url('{{ url_for('static', filename='images/luxury/terrace_pool.webp') }}');"></div>
+            <div class="tour-scene-overlay"></div>
+        </div>
+
+        <!-- Tour Quick Zone Selection Pills -->
+        <div class="tour-zone-pills-bar" aria-label="انتخاب مستقیم فضاهای عمارت">
+            <button type="button" class="tour-zone-pill-btn active" data-zone-index="0">
+                <span>🏰</span> <span>سالن پذیرایی</span>
+            </button>
+            <button type="button" class="tour-zone-pill-btn" data-zone-index="1">
+                <span>🍳</span> <span>آشپزخانه و لانژ</span>
+            </button>
+            <button type="button" class="tour-zone-pill-btn" data-zone-index="2">
+                <span>🛏️</span> <span>سوئیت مستر</span>
+            </button>
+            <button type="button" class="tour-zone-pill-btn" data-zone-index="3">
+                <span>🏊</span> <span>روف‌گاردن و استخر</span>
+            </button>
+        </div>
+
+        <!-- Tour Floating HUD Header -->
+        <div class="tour-hud-header">
+            <div class="tour-hud-room-badge" id="tourRoomBadge">
+                🏰 بخش ۱ از ۴: سالن پذیرایی پانوراما
+            </div>
+            <h2 class="tour-hud-title" id="tourRoomTitle">
+                سالن پذیرایی باشکوه با چشم‌انداز ۳۶۰ درجه
+            </h2>
+            <p class="tour-hud-desc" id="tourRoomDesc">
+                طراحی نئوکلاسیک با پنجره‌های قدی ضد انعکاس، سنگ‌های اسلب بوک‌مچ ایتالیایی و سیستم روشنایی هوشمند داینامیک.
+            </p>
+            <div class="tour-hud-specs" id="tourRoomSpecs">
+                <div class="tour-hud-spec-chip">📐 ۲۵۰ متر مربع</div>
+                <div class="tour-hud-spec-chip">🪟 نورگیر جنوبی</div>
+                <div class="tour-hud-spec-chip">✨ ارتفاع سقف ۴.۲ متر</div>
+                <div class="tour-hud-spec-chip">🛋️ مبلمان ایتالیایی</div>
+            </div>
+        </div>
+
+        <!-- Tour Navigation Arrows (Sides) -->
+        <button type="button" id="tourPrevBtn" class="tour-nav-arrow-btn right" title="اتاق قبلی (کلید ❮)" aria-label="اتاق قبلی">
+            <span>‹</span>
+        </button>
+        <button type="button" id="tourNextBtn" class="tour-nav-arrow-btn left" title="اتاق بعدی (کلید ❯)" aria-label="اتاق بعدی">
+            <span>›</span>
+        </button>
+
+        <!-- Tour Progress & Skip Bar (Bottom Center) -->
+        <div class="tour-hud-footer">
+            <span style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem;">
+                <span style="color: #00f2fe; animation: bounce 2s infinite;">🖱️</span> با اسکرول تور ۳۶۰ درجه را ورق بزنید
+            </span>
+            <div class="tour-progress-track">
+                <div class="tour-progress-fill" id="tourProgressFill"></div>
+            </div>
+            <span id="tourProgressPercent" style="font-size: 0.82rem; font-weight: 800; color: #00f2fe; min-width: 38px;">۰٪</span>
+            <a href="#properties-catalog-section" id="tourSkipToListings" class="tour-skip-btn">
+                <span>مشاهده آگهی‌های املاک سقف</span> <span>⬇</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- هدر معرفی ویترین و دکمه‌های اقدام سریع -->
+<div class="saghf-hero-compact" style="padding: 0.75rem 1.25rem 0.25rem 1.25rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.5rem;">
+        <div>
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.25); border-radius: 9999px; padding: 0.3rem 0.85rem; margin-bottom: 0.6rem;">
+                <span class="luxury-pulse-ring"></span>
+                <span style="font-size: 0.78rem; font-weight: 800; color: #38bdf8;">سامانه هوشمند فایلینگ و املاک تهران (مناطق ۲ و ۵ و سراسر شهر)</span>
+            </div>
+            <h1 style="font-size: 1.95rem; font-weight: 900; margin: 0 0 0.5rem 0; letter-spacing: -0.5px;">
+                بانک فایلینگ تخصصی و فایل‌های مالک <span class="metallic-cyan-text">«سقف»</span>
+            </h1>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin: 0; max-width: 680px; line-height: 1.6;">
+                استخراج لحظه‌ای و اتصال ۱۰۰٪ مستقیم به آگهی‌های مالکین واقعی تهران، بدون واسطه و بدون کمیسیون اضافی
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <a href="{{ url_for('properties.create') }}" class="btn-neon-cyan magnetic-btn" style="text-decoration: none; padding: 0.7rem 1.4rem; border-radius: 14px; font-weight: 800;">
+                <span>➕</span> ثبت فایل جدید با مشخصات مالک
+            </a>
+            <a href="{{ url_for('properties.followup') }}" class="glass-btn magnetic-btn" style="border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.08); color: #fbbf24; text-decoration: none; padding: 0.7rem 1.2rem; border-radius: 14px; font-weight: 700;">
+                <span>⏰</span> یادآوری پیگیری ({{ expired_count | pnum }})
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ایستگاه اختصاصی دستیار صوتی و گوی ۳ بعدی هوشمند سقف -->
+{% include "components/ai_station.html" %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Catalog Section -->
+<div id="properties-catalog-section" style="padding-top: 1rem;">
+
+    <!-- ====================================================================
+         ۱. سوئیچر مجزا و تفکیک‌شده نوع معامله (خرید و فروش در برابر رهن و اجاره)
+         (گزینه حذف‌شده‌ها از دیوار طبق دستور کاربر به هدر بعد از مشتریان منتقل شد)
+         ==================================================================== -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="luxury-deal-segmented-bar deal-tabs-container" id="dealModeSwitcher">
+            <button type="button" 
+                    id="deal-tab-all"
+                    onclick="switchDealTab('all')"
+                    class="deal-segmented-btn magnetic-btn {% if selected_deal_type == 'all' or not request.args.get('deal_type') %}active-all{% endif %}">
+                <span>🌐</span>
+                <span>همه آگهی‌ها</span>
+                <span class="deal-segmented-pill">{{ (sale_count + rent_count) | pnum }}</span>
+            </button>
+            <button type="button" 
+                    id="deal-tab-sale"
+                    onclick="switchDealTab('sale')"
+                    class="deal-segmented-btn magnetic-btn {% if selected_deal_type == 'sale' %}active-sale{% endif %}">
+                <span>🏢</span>
+                <span>خرید و فروش</span>
+                <span class="deal-segmented-pill">{{ sale_count | pnum }} فایل</span>
+            </button>
+            <button type="button" 
+                    id="deal-tab-rent"
+                    onclick="switchDealTab('rent')"
+                    class="deal-segmented-btn magnetic-btn {% if selected_deal_type == 'rent' %}active-rent{% endif %}">
+                <span>🔑</span>
+                <span>رهن و اجاره</span>
+                <span class="deal-segmented-pill">{{ rent_count | pnum }} فایل</span>
+            </button>
+        </div>
+
+        <div style="color: #94a3b8; font-size: 0.84rem; display: flex; align-items: center; gap: 0.6rem;">
+            <span>⚡ موتور استخراج:</span>
+            <span class="badge-neon badge-neon-cyan" style="font-size: 0.74rem;">پایش آنلاین و آرشیو ۷ روز اخیر دیوار</span>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         ۲. کادرهای کامل و حرفه‌ای فیلترهای ملکی (UI/UX Pro Max)
+         طبق خواسته اکید کاربر: کادرها در صفحه باز، منظم و قابل اسکرول باشند نه مخفی در آکاردئون!
+         ==================================================================== -->
+    <div class="saghf-control-deck" style="background: rgba(10, 15, 29, 0.85); border: 1px solid rgba(0, 242, 254, 0.22); border-radius: 20px; padding: 1.4rem; margin-bottom: 1.75rem; backdrop-filter: blur(24px); box-shadow: 0 15px 35px rgba(0,0,0,0.5);">
+        <form method="GET" action="{{ url_for('properties.list_properties') }}" id="propertiesFilterForm">
+            <input type="hidden" name="deal_type" id="formDealType" value="{{ selected_deal_type or 'all' }}">
+            <input type="hidden" name="district" id="filterDistrict" value="{{ selected_district or 'all' }}">
+
+            <!-- ردیف ۱: طبقه‌بندی اصلی و انتخاب محله -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.15rem; align-items: flex-end;">
+                
+                <!-- فیلد ۱: نوع معامله (دپارتمان) -->
+                <div>
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.4rem;">نوع معامله:</label>
+                    <select name="deal_type_select" id="filterDealTypeSelect" class="saghf-glass-control" style="width: 100%; font-size: 0.82rem; padding: 0.6rem 0.75rem; border-radius: 12px; background: rgba(15, 23, 42, 0.85); color: #fff;" onchange="switchDealTab(this.value, true)">
+                        <option value="all" {% if selected_deal_type == 'all' or not selected_deal_type %}selected{% endif %}>🌐 همه آگهی‌ها (فروش و رهن)</option>
+                        <option value="sale" {% if selected_deal_type == 'sale' %}selected{% endif %}>🏢 فقط خرید و فروش</option>
+                        <option value="rent" {% if selected_deal_type == 'rent' %}selected{% endif %}>🔑 فقط رهن و اجاره</option>
+                    </select>
+                </div>
+
+                <!-- فیلد ۲: انتخاب‌گر محله تهران (با چیپ‌های سریع و ارتفاع بهینه) -->
+                <div style="position: relative;">
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.4rem;">منطقه و محله (تهران):</label>
+                    <div id="districtPickerTrigger" class="saghf-glass-control" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; padding: 0.6rem 0.85rem; border-radius: 12px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <span id="districtPickerSelectedLabel" style="font-weight: 700; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f1f5f9;">
+                            📍 {% if selected_district and selected_district != 'all' %}{{ selected_district }}{% else %}همه مناطق تهران{% endif %}
+                        </span>
+                        <div style="display: flex; align-items: center; gap: 0.35rem;">
+                            <span id="districtPickerClearBtn" style="font-size: 0.7rem; color: #ef4444; padding: 0.1rem 0.35rem; border-radius: 4px; background: rgba(239, 68, 68, 0.15); display: {% if selected_district and selected_district != 'all' %}inline-flex{% else %}none{% endif %};" title="حذف محله">✕</span>
+                            <span style="font-size: 0.72rem; color: #64748b;">▼</span>
+                        </div>
+                    </div>
+
+                    <!-- پاپ‌اور انتخاب سریع محله با حداکثر ارتفاع ۲۰۰px و بدون بیرون‌زدگی -->
+                    <div id="districtPickerDropdown" class="glass-card" style="display: none; position: absolute; top: calc(100% + 6px); right: 0; left: 0; min-width: 310px; z-index: 100; background: rgba(10, 15, 29, 0.98); backdrop-filter: blur(24px); border: 1px solid rgba(0, 242, 254, 0.35); border-radius: 16px; padding: 0.85rem; box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75);">
+                        <input type="text" id="districtPickerSearch" class="glass-input" placeholder="🔍 جستجوی محله (مثلاً: پونک، سعادت‌آباد، صادقیه)..." style="font-size: 0.82rem; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; width: 100%;">
+                        
+                        <!-- چیپ‌های مناطق پرتقاضا در بالای پاپ‌اور -->
+                        <div style="margin-bottom: 0.5rem;">
+                            <div style="font-size: 0.7rem; color: #94a3b8; margin-bottom: 0.3rem; font-weight: 700;">⚡ مناطق پرتقاضا:</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">
+                                {% for dist in ['سعادت‌آباد', 'شهرک غرب', 'پونک', 'جنت‌آباد', 'مرزداران', 'صادقیه', 'فردوس', 'نیاوران', 'فرمانیه', 'الهیه'] %}
+                                    <button type="button" onclick="selectDistrictDirect('{{ dist }}')" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 6px; padding: 0.15rem 0.45rem; font-size: 0.72rem; cursor: pointer; transition: all 0.15s;">
+                                        {{ dist }}
+                                    </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div id="districtPickerAllOption" style="padding: 0.45rem 0.75rem; border-radius: 8px; margin-bottom: 0.4rem; background: rgba(0, 242, 254, 0.08); cursor: pointer; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; color: #38bdf8; font-weight: 700;">
+                            <span>🏙️ کل شهر تهران (همه مناطق)</span>
+                            <span style="font-size: 0.7rem; opacity: 0.75;">انتخاب</span>
+                        </div>
+                        <div id="districtPickerList" style="max-height: 180px; overflow-y: auto; scroll-behavior: smooth; padding-right: 0.2rem;"></div>
+                    </div>
+                </div>
+
+                <!-- فیلد ۳: نوع ملک و کاربری -->
+                <div>
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.4rem;">نوع ملک و کاربری:</label>
+                    <select name="property_type" id="filterPropertyType" class="saghf-glass-control" style="width: 100%; font-size: 0.82rem; padding: 0.6rem 0.75rem; border-radius: 12px; background: rgba(15, 23, 42, 0.85); color: #fff;">
+                        <option value="all" {% if selected_property_type == 'all' or not selected_property_type %}selected{% endif %}>همه انواع ملک</option>
+                        <option value="apartment" {% if selected_property_type == 'apartment' %}selected{% endif %}>آپارتمان و برج مسکونی</option>
+                        <option value="villa" {% if selected_property_type == 'villa' %}selected{% endif %}>خانه ویلایی و مستغلات</option>
+                        <option value="old_house" {% if selected_property_type == 'old_house' %}selected{% endif %}>کلنگی و موقعیت ساخت</option>
+                        <option value="office" {% if selected_property_type == 'office' %}selected{% endif %}>دفتر کار و اداری</option>
+                        <option value="commercial" {% if selected_property_type == 'commercial' %}selected{% endif %}>مغازه و تجاری</option>
+                    </select>
+                </div>
+
+                <!-- فیلد ۴: سن بنا و طبقه -->
+                <div>
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.4rem;">سن بنا و طبقه:</label>
+                    <div style="display: flex; gap: 0.4rem;">
+                        <select name="max_age" id="filterMaxAge" class="saghf-glass-control" style="font-size: 0.8rem; padding: 0.6rem 0.5rem; border-radius: 12px; flex: 1.2; background: rgba(15, 23, 42, 0.85); color: #fff;">
+                            <option value="" {% if not max_age %}selected{% endif %}>سن بنا: همه</option>
+                            <option value="0" {% if max_age == 0 %}selected{% endif %}>نوساز / کلید نخورده</option>
+                            <option value="5" {% if max_age == 5 %}selected{% endif %}>تا ۵ سال ساخت</option>
+                            <option value="10" {% if max_age == 10 %}selected{% endif %}>تا ۱۰ سال ساخت</option>
+                            <option value="15" {% if max_age == 15 %}selected{% endif %}>تا ۱۵ سال ساخت</option>
+                            <option value="25" {% if max_age == 25 %}selected{% endif %}>قدیمی‌ساز</option>
+                        </select>
+                        <input type="number" name="floor" id="filterFloor" value="{{ floor if floor is not none else '' }}" placeholder="طبقه" class="saghf-glass-control" style="width: 70px; font-size: 0.8rem; padding: 0.6rem 0.4rem; border-radius: 12px; text-align: center;">
+                    </div>
+                </div>
+
+                <!-- فیلد ۵: وضعیت / چرخه عمر -->
+                <div>
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.4rem;">وضعیت آگهی:</label>
+                    <select name="lifecycle" id="filterLifecycle" class="saghf-glass-control" style="width: 100%; font-size: 0.82rem; padding: 0.6rem 0.75rem; border-radius: 12px; background: rgba(15, 23, 42, 0.85); color: #fff;">
+                        <option value="active" {% if selected_lifecycle == 'active' or not selected_lifecycle %}selected{% endif %}>فقط فعال (زیر ۷ روز)</option>
+                        <option value="expired" {% if selected_lifecycle == 'expired' %}selected{% endif %}>نیازمند پیگیری مجدد (۷+ روز)</option>
+                        <option value="deleted_divar" {% if selected_lifecycle == 'deleted_divar' %}selected{% endif %}>🗑️ فایل‌های حذف‌شده از دیوار</option>
+                        <option value="all" {% if selected_lifecycle == 'all' %}selected{% endif %}>همه فایل‌ها (آرشیو کامل)</option>
+                    </select>
+                </div>
+
+                <!-- فیلد ۶: دکمه‌های اقدام -->
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button type="submit" id="btnApplyFilter" class="btn-neon-cyan magnetic-btn" style="height: 42px; padding: 0 1.35rem; border-radius: 12px; font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; cursor: pointer; flex: 1;">
+                        <span>🔍</span> <span>اعمال فیلتر</span>
+                    </button>
+                    <a href="{{ url_for('properties.list_properties') }}" class="glass-btn magnetic-btn" style="height: 42px; width: 42px; padding: 0; border-radius: 12px; color: #f87171; border-color: rgba(239, 68, 68, 0.35); font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; justify-content: center;" title="پاک‌سازی همه فیلترها">
+                        🔄
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- ردیف ۲: پارامترهای مالی و ابعادی (کاملاً باز و مجهز به پیش‌فرض‌های ۵۰۰ م تا ۱۵ میلیارد و گام‌های ۱۵ م) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 1.15rem; align-items: flex-start;">
+                
+                <!-- بودجه خرید و فروش -->
+                <div id="budgetInputsSale" style="display: {% if selected_deal_type == 'rent' %}none{% else %}block{% endif %};">
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #38bdf8; margin-bottom: 0.4rem;">قیمت خرید کل (تومان):</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="number" name="min_price" id="filterMinPrice" value="{{ min_price or '' }}" placeholder="حداقل قیمت خرید" class="saghf-glass-control" style="font-size: 0.8rem; padding: 0.55rem 0.65rem; border-radius: 10px; width: 50%;">
+                        <input type="number" name="max_price" id="filterMaxPrice" value="{{ max_price or '' }}" placeholder="حداکثر قیمت خرید" class="saghf-glass-control" style="font-size: 0.8rem; padding: 0.55rem 0.65rem; border-radius: 10px; width: 50%;">
+                    </div>
+                </div>
+
+                <!-- بودجه رهن (ودیعه) با پیش‌فرض‌های ۵۰۰ میلیون تا ۱۵ میلیارد -->
+                <div id="budgetInputsDeposit" style="display: {% if selected_deal_type == 'sale' %}none{% else %}block{% endif %};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #fbbf24;">ودیعه و رهن (۵۰۰ م تا ۱۵ میلیارد):</label>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="number" name="min_deposit" id="filterMinDeposit" value="{{ min_deposit or '' }}" placeholder="حداقل ودیعه" class="saghf-glass-control" style="border-color: rgba(245, 158, 11, 0.35); font-size: 0.8rem; padding: 0.55rem 0.65rem; border-radius: 10px; width: 50%;">
+                        <input type="number" name="max_deposit" id="filterMaxDeposit" value="{{ max_deposit or '' }}" placeholder="حداکثر ودیعه" class="saghf-glass-control" style="border-color: rgba(245, 158, 11, 0.35); font-size: 0.8rem; padding: 0.55rem 0.65rem; border-radius: 10px; width: 50%;">
+                    </div>
+                </div>
+
+                <!-- بودجه اجاره ماهانه با پیش‌فرض‌های گام ۱۵ میلیونی تا ۱۵۰ میلیون -->
+                <div id="budgetInputsRent" style="display: {% if selected_deal_type == 'sale' %}none{% else %}block{% endif %};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #fbbf24;">اجاره ماهانه (پله‌های ۱۵ م تا ۱۵۰ م):</label>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="number" name="min_rent" id="filterMinRent" value="{{ min_rent or '' }}" placeholder="حداقل اجاره" class="saghf-glass-control" style="border-color: rgba(245, 158, 11, 0.35); font-size: 0.8rem; padding: 0.55rem 0.65rem; border-radius: 10px; width: 50%;">
+                        <input type="number" name="max_rent" id="filterMaxRent" value="{{ max_rent or '' }}" placeholder="حداکثر اجاره" class="saghf-glass-control" style="border-color: rgba(245, 158, 11, 0.35); font-size: 0.8rem; padding: 0.55rem 0.65rem; border-radius: 10px; width: 50%;">
+                    </div>
+                </div>
+
+                <!-- متراژ بنا -->
+                <div>
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.4rem;">متراژ مسکونی (متر مربع):</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="number" name="min_area" id="filterMinArea" value="{{ min_area or '' }}" placeholder="متراژ از" class="saghf-glass-control" style="font-size: 0.8rem; padding: 0.55rem 0.65rem; border-radius: 10px; width: 50%;">
+                        <input type="number" name="max_area" id="filterMaxArea" value="{{ max_area or '' }}" placeholder="تا" class="saghf-glass-control" style="font-size: 0.8rem; padding: 0.55rem 0.65rem; border-radius: 10px; width: 50%;">
+                    </div>
+                </div>
+
+                <!-- تعداد اتاق و خواب -->
+                <div>
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.4rem;">تعداد خواب:</label>
+                    <div style="display: flex; gap: 0.3rem;">
+                        {% for r_val, r_label in [(0, 'همه'), (1, '۱ خواب'), (2, '۲ خواب'), (3, '۳ خواب'), (4, '۴+ خواب')] %}
+                            <label style="flex: 1; text-align: center; cursor: pointer;">
+                                <input type="radio" name="rooms" value="{% if r_val > 0 %}{{ r_val }}{% endif %}" {% if (rooms == r_val) or (not rooms and r_val == 0) %}checked{% endif %} style="display: none;" onchange="this.parentElement.parentElement.querySelectorAll('span').forEach(s => s.classList.remove('active-chip')); this.nextElementSibling.classList.add('active-chip');">
+                                <span class="{% if (rooms == r_val) or (not rooms and r_val == 0) %}active-chip{% endif %}" style="display: block; padding: 0.55rem 0.2rem; border-radius: 10px; font-size: 0.74rem; font-weight: 700; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; transition: all 0.2s;">
+                                    {{ r_label }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ردیف ۳: امکانات ویژه و اصالت فایل (با چک‌باکس‌های مرتب و بدون شلوغی) -->
+            <div style="padding-top: 0.85rem; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.8rem; color: #cbd5e1;">
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <input type="checkbox" name="has_parking" value="1" {% if has_parking == '1' %}checked{% endif %}>
+                        <span>🚗 پارکینگ</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <input type="checkbox" name="has_elevator" value="1" {% if has_elevator == '1' %}checked{% endif %}>
+                        <span>🛗 آسانسور</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <input type="checkbox" name="has_warehouse" value="1" {% if has_warehouse == '1' %}checked{% endif %}>
+                        <span>📦 انباری</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <input type="checkbox" name="has_balcony" value="1" {% if has_balcony == '1' %}checked{% endif %}>
+                        <span>🌿 بالکن</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <input type="checkbox" name="has_photo" value="1" {% if has_photo == '1' %}checked{% endif %}>
+                        <span>📷 فقط عکس‌دار</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <input type="checkbox" name="verified_only" value="1" {% if verified_only == '1' %}checked{% endif %}>
+                        <span>📞 شماره مالک</span>
+                    </label>
+                </div>
+
+                <!-- چیپ‌های دسترسی سریع به فایل‌های متداول -->
+                <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">⚡ دسترسی سریع:</span>
+                    <button type="button" onclick="applyPresetArea(70, 100)" class="glass-btn" style="padding: 0.25rem 0.55rem; font-size: 0.72rem; border-radius: 6px;">۷۰ تا ۱۰۰ متر</button>
+                    <button type="button" onclick="applyPresetFullOption()" class="glass-btn" style="padding: 0.25rem 0.55rem; font-size: 0.72rem; border-radius: 6px; color: #38bdf8;">فول امکانات</button>
+                    <button type="button" onclick="applyPresetNewBuild()" class="glass-btn" style="padding: 0.25rem 0.55rem; font-size: 0.72rem; border-radius: 6px; color: #fbbf24;">نوساز</button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- ====================================================================
+         ۳. نشانگر رادار استخراج لحظه‌ای دیوار (On-Demand Live Radar Banner)
+         ==================================================================== -->
+    <div id="onDemandScanContainer" class="on-demand-scan-container" style="{% if properties | length == 0 %}display: block;{% else %}display: none;{% endif %} margin-bottom: 2rem;">
+        <div class="on-demand-radar-banner">
+            <div class="radar-pulse-core">
+                <div class="radar-pulse-ring"></div>
+                <span class="radar-icon">📡</span>
+            </div>
+            <div class="radar-text-wrap">
+                <div class="radar-title" id="onDemandRadarTitle">در حال پایش و استخراج بلادرنگ آگهی‌های دیوار...</div>
+                <div class="radar-sub" id="onDemandSubStatus">
+                    موتور کراولر سقف در حال اتصال مستقیم به دیوار جهت دریافت جدیدترین فایل‌های مالک شخصی...
+                </div>
+            </div>
+        </div>
+    </div>    <!-- ماکروی اختصاصی و فوق‌العاده تمیز رندر کارت‌های ۳ بعدی املاک (۲ تا ۴ ستونه) -->
+    {% macro render_property_card(p) %}
+        <div class="saghf-luxury-card-3d property-card antigravity-card-3d {% if p.deal_type == 'rent' %}rent-card{% endif %}" 
+             data-deal-type="{{ p.deal_type }}" 
+             id="prop-card-{{ p.id }}"
+             data-prop-id="{{ p.id }}"
+             data-file-code="{{ p.file_code }}"
+             data-title="{{ p.title | forceescape }}"
+             data-images='{{ p.images | tojson }}'>
+
+            <!-- بخش تصویر بندانگشتی با ارتفاع ثابت ۱۹۵ پیکسل و برچسب‌های شناور روی عکس -->
+            <div class="saghf-card-media" onclick="openGalleryFromCard(this)" title="کلیک برای باز شدن گالری تمام‌صفحه">
+                {% if p.images and p.images[0] %}
+                    <img src="{{ p.images[0] }}" 
+                         referrerpolicy="no-referrer" 
+                         loading="lazy" 
+                         onerror="this.onerror=null; this.src='/static/placeholder.png';" 
+                         alt="{{ p.title }}" 
+                         class="saghf-card-img">
+                {% else %}
+                    <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; background: rgba(15, 23, 42, 0.9);">
+                        <span style="font-size: 2.2rem;">🏢</span>
+                        <span style="font-size: 0.72rem; margin-top: 0.3rem;">فاقد تصویر</span>
+                    </div>
+                {% endif %}
+
+                <!-- برچسب‌های گوشه بالای تصویر -->
+                <div class="saghf-media-overlay-top">
+                    <div style="display: flex; gap: 0.3rem; align-items: center;">
+                        {% if p.deal_type == 'sale' %}
+                            <span class="badge-neon badge-neon-cyan" style="font-size: 0.68rem; padding: 0.15rem 0.5rem; backdrop-filter: blur(8px);">خرید و فروش</span>
+                        {% else %}
+                            <span class="badge-neon badge-neon-amber" style="font-size: 0.68rem; padding: 0.15rem 0.5rem; backdrop-filter: blur(8px);">رهن و اجاره</span>
+                        {% endif %}
+                        <span style="font-size: 0.68rem; padding: 0.15rem 0.45rem; background: rgba(16,185,129,0.88); color: #ffffff; border-radius: 9999px; font-weight: 700;">
+                            🛡️ مالک شخصی
+                        </span>
+                    </div>
+
+                    {% if p.is_divar_deleted %}
+                        <span style="font-size: 0.68rem; padding: 0.15rem 0.45rem; background: rgba(239,68,68,0.92); color: #fff; border-radius: 9999px; font-weight: 700;">
+                            🗑️ حذف از دیوار
+                        </span>
+                    {% elif p.has_verified_phone %}
+                        <span style="font-size: 0.68rem; padding: 0.15rem 0.45rem; background: rgba(34,197,94,0.92); color: #fff; border-radius: 9999px; font-weight: 700;">
+                            📞 شماره تأییدشده
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- نشانگر تعداد تصاویر گوشه پایین عکس -->
+                <div class="saghf-media-overlay-bottom">
+                    {% if p.images and p.images | length > 0 %}
+                        <div style="background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); padding: 0.18rem 0.5rem; border-radius: 6px; font-size: 0.68rem; font-weight: 800; color: #fff;">
+                            📷 {{ p.images | length | pnum }}
+                        </div>
+                    {% else %}
+                        <div></div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- بدنه اطلاعات و مشخصات ملک (دقیقاً زیر تصویر در یک کادر مشخص و تفکیک‌شده) -->
+            <div class="saghf-card-content">
+                
+                <!-- ۱. نوار فراداده: کد فایل، محله، زمان ثبت، لینک مستقیم آگهی -->
+                <div class="saghf-card-top-meta">
+                    <span class="saghf-code-pill" title="کد یکتای فایل در سقف">
+                        🔢 {{ p.file_code | pnum }}
+                    </span>
+                    <span class="saghf-district-pill" title="محله">
+                        <span>📍</span> {{ p.district or 'تهران' }}
+                    </span>
+                    <span class="saghf-time-pill" title="زمان ثبت">
+                        🕒 {{ p.created_at | time_ago }}
+                    </span>
+                    <!-- خط قرمز AGENTS.md: الزام صریح تگ مستقیم لینک آگهی با عنوان «لینک آگهی» -->
+                    {% if p.source_url %}
+                        <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer" class="btn-direct-ad-link" title="مشاهده مستقیم آگهی اصلی در دیوار">
+                            لینک آگهی ↗
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- ۲. عنوان ملک -->
+                <a href="{{ url_for('properties.detail', id=p.id) }}" class="saghf-card-title" title="{{ p.title }}">
+                    {{ p.title }}
+                </a>
+
+                <!-- ۳. کادر مشخصات فنی ۴ تایی (متراژ، خواب، طبقه، سال ساخت) -->
+                <div class="saghf-specs-grid">
+                    <div class="saghf-spec-cell">
+                        <span class="label">متراژ</span>
+                        <span class="val"><strong>{{ p.area | pnum }}</strong> م</span>
+                    </div>
+                    <div class="saghf-spec-cell">
+                        <span class="label">خواب</span>
+                        <span class="val"><strong>{{ p.rooms | pnum }}</strong></span>
+                    </div>
+                    <div class="saghf-spec-cell">
+                        <span class="label">طبقه</span>
+                        <span class="val"><strong>{% if p.floor is not none %}{{ p.floor | pnum }}{% else %}-{% endif %}</strong></span>
+                    </div>
+                    <div class="saghf-spec-cell">
+                        <span class="label">ساخت</span>
+                        <span class="val"><strong>{% if p.build_year and p.build_year > 1300 %}{{ p.build_year | pnum }}{% else %}-{% endif %}</strong></span>
+                    </div>
+                </div>
+
+                <!-- ۴. ردیف امکانات کلیدی -->
+                <div class="saghf-amenities-row">
+                    <span class="saghf-amenity-chip {% if not p.has_parking %}inactive{% endif %}" title="پارکینگ">
+                        🚗 پارکینگ
+                    </span>
+                    <span class="saghf-amenity-chip {% if not p.has_elevator %}inactive{% endif %}" title="آسانسور">
+                        🛗 آسانسور
+                    </span>
+                    <span class="saghf-amenity-chip {% if not p.has_warehouse %}inactive{% endif %}" title="انباری">
+                        📦 انباری
+                    </span>
+                    {% if p.has_balcony %}
+                        <span class="saghf-amenity-chip" title="بالکن">
+                            🌿 بالکن
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- ۵. کادر مبالغ مالی تفکیک‌شده -->
+                <div class="saghf-price-block">
+                    {% if p.deal_type == 'sale' %}
+                        <div class="saghf-main-price sale-cyan">
+                            <span style="font-size: 0.74rem; color: #94a3b8; font-weight: 600;">قیمت کل:</span>
+                            <span>{{ p.total_price | toman }}</span>
+                        </div>
+                        <div class="saghf-sub-price">
+                            <span>قیمت هر متر:</span>
+                            <span style="color: #cbd5e1; font-weight: 700;">
+                                {% if p.meter_price and p.meter_price > 0 %}
+                                    {{ p.meter_price | toman }}
+                                {% else %}
+                                    محاسبه از کل
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% else %}
+                        <div class="saghf-main-price rent-gold">
+                            <span style="font-size: 0.74rem; color: #fde68a; font-weight: 600;">ودیعه:</span>
+                            <span>{{ p.deposit | toman }}</span>
+                        </div>
+                        <div class="saghf-sub-price">
+                            <span style="color: #fef08a;">اجاره ماهانه:</span>
+                            <span style="color: #ffffff; font-weight: 800;">{{ p.monthly_rent | toman }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- ۶. دکمه‌های اقدام زیر کارت -->
+                <div class="saghf-card-actions">
+                    {% if p.owner and p.owner.phone_number and p.has_verified_phone %}
+                        <a href="tel:{{ p.owner.phone_number }}" class="glass-btn" style="padding: 0.45rem 0.65rem; border-radius: 9px; font-size: 0.78rem; font-weight: 800; color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.45); background: rgba(34, 197, 94, 0.12); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem;" title="تماس مستقیم با مالک">
+                            <span>📞</span> <span dir="ltr">{{ p.owner.phone_number }}</span>
+                        </a>
+                    {% elif not p.is_divar_deleted %}
+                        <button type="button" 
+                                class="glass-btn jit-extract-btn" 
+                                data-prop-id="{{ p.id }}" 
+                                data-token="{{ p.source_id | replace('divar_', '') if p.source_id else '' }}"
+                                onclick="requestJitPhone(this)"
+                                style="padding: 0.45rem 0.65rem; border-radius: 9px; font-size: 0.76rem; font-weight: 700; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.45); background: rgba(56, 189, 248, 0.08); display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; cursor: pointer;"
+                                title="استخراج آنی شماره مستقیم مالک از دیوار">
+                            <span class="jit-icon">📱</span>
+                            <span class="jit-text">دریافت شماره</span>
+                        </button>
+                    {% else %}
+                        <span style="padding: 0.45rem 0.65rem; border-radius: 9px; font-size: 0.72rem; color: #f87171; background: rgba(239,68,68,0.08); text-align: center;">
+                            حذف از دیوار
+                        </span>
+                    {% endif %}
+
+                    <a href="{{ url_for('properties.detail', id=p.id) }}" class="glass-btn" style="padding: 0.45rem 0.65rem; border-radius: 9px; font-size: 0.76rem; font-weight: 700; text-decoration: none;" title="پرونده ملک">
+                        <span>🏛️</span> پرونده
+                    </a>
+                    <button type="button" onclick="openGalleryFromCard(this.closest('.saghf-luxury-card-3d'))" class="glass-btn" style="padding: 0.45rem 0.6rem; border-radius: 9px; font-size: 0.76rem;" title="تصاویر">
+                        <span>🖼️</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    {% endmacro %}
+
+    <!-- کانتینر اصلی ویترین با تفکیک قطعی و بدون تداخل دو دپارتمان خرید/فروش و رهن/اجاره -->
+    <div id="propertiesCardsContainer" style="display: flex; flex-direction: column; gap: 2.25rem;">
+        
+        <!-- ==================== دپارتمان ۱: خرید و فروش (اختصاصی مالک شخصی) ==================== -->
+        <div id="salePropertiesSection" class="deal-segregated-section" style="{% if selected_deal_type == 'rent' %}display: none;{% else %}display: block;{% endif %}">
+            <div class="deal-department-banner sale-banner" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding: 1rem 1.4rem; background: linear-gradient(135deg, rgba(6, 182, 212, 0.18) 0%, rgba(15, 23, 42, 0.85) 100%); border-right: 5px solid #06b6d4; border-radius: 16px; margin-bottom: 1.25rem; border: 1px solid rgba(6, 182, 212, 0.35); box-shadow: 0 4px 20px rgba(6, 182, 212, 0.12);">
+                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(6, 182, 212, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; border: 1px solid rgba(6, 182, 212, 0.45); box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);">
+                        🏢
+                    </div>
+                    <div>
+                        <h2 style="font-size: 1.2rem; font-weight: 900; color: #38bdf8; margin: 0; letter-spacing: -0.3px;">دپارتمان فایل‌های خرید و فروش (مالک شخصی)</h2>
+                        <span style="font-size: 0.8rem; color: #94a3b8;">فروش نقدی آپارتمان با استعلام قطعی سند و بدون واسطه دلال</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span class="badge-neon badge-neon-cyan" id="saleSectionCountBadge" style="font-size: 0.84rem; padding: 0.35rem 0.9rem; font-weight: 800;">
+                        {{ sale_count | pnum }} فایل فروش
+                    </span>
+                </div>
+            </div>
+
+            <!-- گرید ۲ تا ۴ ستونه ریسپانسیو دپارتمان خرید و فروش -->
+            <div class="saghf-properties-grid sale-cards-stack" id="saleCardsStack">
+                {% for p in sale_properties %}
+                    {{ render_property_card(p) }}
+                {% endfor %}
+                {% if sale_properties | length == 0 %}
+                    <div id="no-sale-placeholder" style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1.5rem; background: rgba(15, 23, 42, 0.45); border-radius: 16px; border: 1px dashed rgba(6, 182, 212, 0.3); color: #94a3b8;">
+                        <span style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">🏢</span>
+                        <span style="font-weight: 700; color: #cbd5e1;">در حال حاضر فایلی در دپارتمان خرید و فروش با فیلترهای انتخابی موجود نیست.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ==================== دیوایدر لوکس نئونی تفکیک‌کننده دو بخش ==================== -->
+        <div id="dealSectionsDivider" style="{% if selected_deal_type != 'all' and selected_deal_type %}display: none;{% else %}display: block;{% endif %} height: 1px; background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.45), rgba(245, 158, 11, 0.45), transparent); margin: 0.5rem 0;"></div>
+
+        <!-- ==================== دپارتمان ۲: رهن و اجاره (اختصاصی مالک شخصی) ==================== -->
+        <div id="rentPropertiesSection" class="deal-segregated-section" style="{% if selected_deal_type == 'sale' %}display: none;{% else %}display: block;{% endif %}">
+            <div class="deal-department-banner rent-banner" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding: 1rem 1.4rem; background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(15, 23, 42, 0.85) 100%); border-right: 5px solid #f59e0b; border-radius: 16px; margin-bottom: 1.25rem; border: 1px solid rgba(245, 158, 11, 0.35); box-shadow: 0 4px 20px rgba(245, 158, 11, 0.12);">
+                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(245, 158, 11, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; border: 1px solid rgba(245, 158, 11, 0.45); box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);">
+                        🔑
+                    </div>
+                    <div>
+                        <h2 style="font-size: 1.2rem; font-weight: 900; color: #fbbf24; margin: 0; letter-spacing: -0.3px;">دپارتمان فایل‌های رهن و اجاره (مالک شخصی)</h2>
+                        <span style="font-size: 0.8rem; color: #94a3b8;">رهن کامل و اجاره ماهانه مسکونی مستقیم از مالکین تهران</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span class="badge-neon badge-neon-amber" id="rentSectionCountBadge" style="font-size: 0.84rem; padding: 0.35rem 0.9rem; font-weight: 800;">
+                        {{ rent_count | pnum }} فایل اجاره
+                    </span>
+                </div>
+            </div>
+
+            <!-- گرید ۲ تا ۴ ستونه ریسپانسیو دپارتمان رهن و اجاره -->
+            <div class="saghf-properties-grid rent-cards-stack" id="rentCardsStack">
+                {% for p in rent_properties %}
+                    {{ render_property_card(p) }}
+                {% endfor %}
+                {% if rent_properties | length == 0 %}
+                    <div id="no-rent-placeholder" style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1.5rem; background: rgba(15, 23, 42, 0.45); border-radius: 16px; border: 1px dashed rgba(245, 158, 11, 0.3); color: #94a3b8;">
+                        <span style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">🔑</span>
+                        <span style="font-weight: 700; color: #cbd5e1;">در حال حاضر فایلی در دپارتمان رهن و اجاره با فیلترهای انتخابی موجود نیست.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- وضعیت عدم وجود فایل -->
+    <div id="no-files-placeholder" style="{% if properties | length > 0 %}display: none;{% else %}display: block;{% endif %} text-align: center; padding: 3.5rem 1.5rem; background: rgba(15, 23, 42, 0.45); border-radius: 20px; border: 1px dashed rgba(255, 255, 255, 0.1); margin-top: 1.5rem;">
+        <span style="font-size: 2.5rem; display: block; margin-bottom: 0.75rem;">🔍</span>
+        <h3 style="font-size: 1.2rem; font-weight: 800; color: #f8fafc; margin-bottom: 0.4rem;">فایلی با این مشخصات یافت نشد</h3>
+        <p style="color: #94a3b8; font-size: 0.88rem; max-width: 480px; margin: 0 auto 1.25rem auto;">
+            می‌توانید فیلترهای بودجه یا متراژ را کمی بازتر کنید، یا با کلیک روی دکمه زیر اجازه دهید کراولر زنده مجدداً دیوار را اسکن کند.
+        </p>
+        <button type="button" onclick="triggerOnDemandSearch(true)" class="btn-neon-cyan magnetic-btn" style="padding: 0.65rem 1.5rem; border-radius: 12px; font-weight: 800;">
+            <span>⚡</span> اسکن مجدد دیوار با استخراج درلحظه
+        </button>
+    </div>
+
+</div>
+
+<!-- ====================================================================
+     ۵. مدال گالری تصاویر تمام‌صفحه لوکس (Full-Screen Lightbox)
+     ==================================================================== -->
+<div id="propertyLightboxModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(16px); align-items: center; justify-content: center; flex-direction: column;">
+    <button type="button" onclick="closeLightboxModal()" style="position: absolute; top: 20px; left: 24px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+    <div style="max-width: 90vw; max-height: 80vh; position: relative;">
+        <img id="lightboxMainImg" src="" alt="تصویر ملک" style="max-width: 100%; max-height: 80vh; border-radius: 14px; object-fit: contain; box-shadow: 0 25px 60px rgba(0,0,0,0.8);">
+    </div>
+    <div id="lightboxThumbsRow" style="display: flex; gap: 0.5rem; margin-top: 1rem; max-width: 90vw; overflow-x: auto; padding: 0.5rem;"></div>
+</div>
+
+<!-- اسکریپت‌های کلاینت ۳ بعدی، فیلترینگ ایجکس بدون پرش اسکرول و گالری -->
+<script>
+let onDemandPollInterval = null;
+
+// ۱. کنترل پایدار و آرام کارت‌های املاک بدون لرزش و تلاطم
+function initCard3DPhysics() {
+    // کارت‌ها ثابت و با هاور نرم CSS کار می‌کنند تا کلیک روی تصاویر و شماره‌ها بدون خطا باشد
+    const cards = document.querySelectorAll('.saghf-luxury-card-3d');
+    cards.forEach(card => {
+        card.style.transform = '';
+    });
+}
+
+// کنترل باز و بسته شدن پنل فیلترهای گام‌به‌گام دیوار
+window.toggleDivarFiltersAccordion = function(explicitState) {
+    const accordion = document.getElementById('divarFiltersAccordion');
+    const chevron = document.getElementById('accordionChevron');
+    if (!accordion) return;
+    const shouldOpen = explicitState !== undefined ? explicitState : (accordion.style.display === 'none');
+    accordion.style.display = shouldOpen ? 'block' : 'none';
+    if (chevron) {
+        chevron.style.transform = shouldOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+};
+
+// نمایش بج تعداد فیلترهای فعال دیوار
+function updateActiveFiltersBadge() {
+    let count = 0;
+    const propType = document.getElementById('filterPropertyType');
+    if (propType && propType.value && propType.value !== 'all') count++;
+    const maxAge = document.getElementById('filterMaxAge');
+    if (maxAge && maxAge.value !== '') count++;
+    const floor = document.getElementById('filterFloor');
+    if (floor && floor.value !== '') count++;
+    const roomsChecked = document.querySelector('input[name="rooms"]:checked');
+    if (roomsChecked && roomsChecked.value) count++;
+    ['has_parking', 'has_elevator', 'has_warehouse', 'has_balcony', 'has_photo', 'verified_only'].forEach(name => {
+        const el = document.querySelector(`input[name="${name}"]:checked`);
+        if (el) count++;
+    });
+    const badge = document.getElementById('activeFiltersBadge');
+    if (badge) {
+        if (count > 0) {
+            badge.innerText = count.toLocaleString('fa-IR');
+            badge.style.display = 'inline-block';
+            const accordion = document.getElementById('divarFiltersAccordion');
+            if (accordion) accordion.style.display = 'block';
+            const chevron = document.getElementById('accordionChevron');
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+document.addEventListener('DOMContentLoaded', updateActiveFiltersBadge);
+
+// ۲. سوئیچر مجزا و تفکیک‌شده نوع معامله بدون رفرش و بدون پرش اسکرول
+function switchDealTab(dealType, triggerSearch = true) {
+    const currentUrl = new URL(window.location);
+    if (currentUrl.searchParams.get('lifecycle') === 'deleted_divar') {
+        currentUrl.searchParams.delete('lifecycle');
+        if (dealType === 'all') currentUrl.searchParams.delete('deal_type');
+        else currentUrl.searchParams.set('deal_type', dealType);
+        window.location.href = currentUrl.toString();
+        return;
+    }
+
+    document.querySelectorAll('.deal-segmented-btn').forEach(btn => {
+        btn.classList.remove('active-sale', 'active-rent', 'active-all');
+    });
+
+    const targetBtn = document.getElementById(`deal-tab-${dealType}`);
+    if (targetBtn) {
+        targetBtn.classList.add(`active-${dealType}`);
+    }
+
+    const formDealType = document.getElementById('formDealType');
+    if (formDealType) formDealType.value = dealType;
+
+    // تطبیق دقیق ورودی‌های فیلتر با نوع معامله (خرید/فروش vs رهن/ودیعه و اجاره)
+    const saleInputs = document.getElementById('budgetInputsSale');
+    const depositInputs = document.getElementById('budgetInputsDeposit');
+    const rentInputs = document.getElementById('budgetInputsRent');
+    if (dealType === 'sale') {
+        if (saleInputs) saleInputs.style.display = 'block';
+        if (depositInputs) depositInputs.style.display = 'none';
+        if (rentInputs) rentInputs.style.display = 'none';
+    } else if (dealType === 'rent') {
+        if (saleInputs) saleInputs.style.display = 'none';
+        if (depositInputs) depositInputs.style.display = 'block';
+        if (rentInputs) rentInputs.style.display = 'block';
+    } else {
+        if (saleInputs) saleInputs.style.display = 'block';
+        if (depositInputs) depositInputs.style.display = 'block';
+        if (rentInputs) rentInputs.style.display = 'block';
+    }
+
+    // تفکیک قطعی نمایش دپارتمان‌ها
+    const saleSection = document.getElementById('salePropertiesSection');
+    const rentSection = document.getElementById('rentPropertiesSection');
+    const divider = document.getElementById('dealSectionsDivider');
+
+    if (dealType === 'sale') {
+        if (saleSection) saleSection.style.display = 'block';
+        if (rentSection) rentSection.style.display = 'none';
+        if (divider) divider.style.display = 'none';
+    } else if (dealType === 'rent') {
+        if (saleSection) saleSection.style.display = 'none';
+        if (rentSection) rentSection.style.display = 'block';
+        if (divider) divider.style.display = 'none';
+    } else {
+        if (saleSection) saleSection.style.display = 'block';
+        if (rentSection) rentSection.style.display = 'block';
+        if (divider) divider.style.display = 'block';
+    }
+
+    // به‌روزرسانی URL در نوار آدرس مرورگر بدون لود مجدد
+    const url = new URL(window.location);
+    if (dealType === 'all') {
+        url.searchParams.delete('deal_type');
+    } else {
+        url.searchParams.set('deal_type', dealType);
+    }
+    window.history.replaceState({}, '', url);
+
+    if (triggerSearch) {
+        triggerOnDemandSearch(false);
+    }
+}
+
+// ۳. استخراج ایجکس بلادرنگ با حفظ دقیق موقعیت اسکرول
+function getFilterParams() {
+    const form = document.getElementById('propertiesFilterForm');
+    if (!form) return new URLSearchParams();
+    return new URLSearchParams(new FormData(form));
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatPersianNum(num) {
+    if (num === null || num === undefined) return '';
+    const faDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    return String(num).replace(/[0-9]/g, d => faDigits[parseInt(d)]);
+}
+
+function formatToman(num) {
+    if (!num || num === 0) return 'توافقی';
+    if (num >= 1000000000) {
+        const b = num / 1000000000;
+        return `${formatPersianNum(b.toFixed(1))} میلیارد تومان`;
+    }
+    if (num >= 1000000) {
+        const m = Math.round(num / 1000000);
+        return `${formatPersianNum(m)} میلیون تومان`;
+    }
+    return `${formatPersianNum(num.toLocaleString('fa-IR'))} تومان`;
+}
+
+function createPropertyCardElement(p) {
+    const card = document.createElement('div');
+    const isRent = p.deal_type === 'rent';
+    card.className = `saghf-luxury-card-3d property-card antigravity-card-3d ${isRent ? 'rent-card' : ''}`;
+    card.setAttribute('data-deal-type', p.deal_type);
+    card.id = `prop-card-${p.id}`;
+    card.setAttribute('data-prop-id', p.id);
+    card.setAttribute('data-file-code', p.file_code);
+    card.setAttribute('data-title', p.title);
+    card.setAttribute('data-images', JSON.stringify(p.images || []));
+
+    const imgUrl = (p.images && p.images[0]) ? p.images[0] : '';
+    const imgHtml = imgUrl ? `
+        <img src="${imgUrl}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/static/placeholder.png';" alt="${escapeHtml(p.title)}" class="saghf-card-img">
+    ` : `
+        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b;">
+            <span style="font-size: 2.2rem;">🏢</span>
+            <span style="font-size: 0.72rem; margin-top: 0.3rem;">فاقد عکس</span>
+        </div>
+    `;
+
+    const priceHtml = isRent ? `
+        <div class="saghf-main-price rent-gold">ودیعه: ${formatToman(p.deposit)}</div>
+        <div class="saghf-sub-price" style="color: #fde68a;">اجاره ماهانه: ${formatToman(p.monthly_rent)}</div>
+    ` : `
+        <div class="saghf-main-price sale-cyan">${formatToman(p.total_price)}</div>
+        ${p.meter_price ? `<div class="saghf-sub-price">متری: ${formatToman(p.meter_price)}</div>` : ''}
+    `;
+
+    const directLinkHtml = p.source_url ? `
+        <a href="${p.source_url}" target="_blank" rel="noopener noreferrer" class="btn-direct-ad-link" style="margin-right: auto;" title="مشاهده آگهی اصلی در دیوار">
+            لینک آگهی ↗
+        </a>
+    ` : '';
+
+    card.innerHTML = `
+        <div class="card-specular-glare"></div>
+        <div class="saghf-card-media" onclick="openGalleryFromCard(this)" title="کلیک برای باز شدن گالری تمام‌صفحه">
+            ${imgHtml}
+            ${(p.images && p.images.length > 0) ? `
+                <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); padding: 0.2rem 0.55rem; border-radius: 8px; font-size: 0.72rem; font-weight: 800; color: #fff;">
+                    📷 ${formatPersianNum(p.images.length)}
+                </div>
+            ` : ''}
+        </div>
+        <div class="saghf-card-content">
+            <div>
+                <div class="saghf-card-top-pills">
+                    <span class="saghf-code-pill">🔢 کد: ${formatPersianNum(p.file_code)}</span>
+                    <span class="badge-neon ${isRent ? 'badge-neon-amber' : 'badge-neon-cyan'}" style="font-size: 0.72rem; padding: 0.15rem 0.55rem;">
+                        ${isRent ? 'رهن و اجاره' : 'خرید و فروش'}
+                    </span>
+                    <span class="saghf-verified-owner-pill">
+                        <span>🛡️</span> مالک شخصی تاییدشده
+                    </span>
+                    <span style="font-size: 0.78rem; color: #94a3b8; display: inline-flex; align-items: center; gap: 0.25rem;">
+                        <span>📍</span> ${escapeHtml(p.district || 'تهران')}
+                    </span>
+                    <span style="font-size: 0.75rem; color: #64748b;">🕒 ${p.time_ago || 'لحظاتی پیش'}</span>
+                    ${directLinkHtml}
+                </div>
+                <a href="/properties/${p.id}" class="saghf-card-title" title="${escapeHtml(p.title)}">
+                    ${escapeHtml(p.title)}
+                </a>
+                <div class="saghf-specs-row">
+                    <span class="saghf-spec-item">📐 <strong>${formatPersianNum(p.area)}</strong> متر</span>
+                    <span class="saghf-spec-item">🛏️ <strong>${formatPersianNum(p.rooms)}</strong> خواب</span>
+                    ${p.floor !== null && p.floor !== undefined ? `<span class="saghf-spec-item">🏢 طبقه <strong>${formatPersianNum(p.floor)}</strong></span>` : ''}
+                    <span style="color: #64748b; margin-right: 0.5rem;">|</span>
+                    ${p.has_parking ? '<span style="color: #38bdf8;">🚗 پارکینگ</span>' : ''}
+                    ${p.has_elevator ? '<span style="color: #38bdf8;">🛗 آسانسور</span>' : ''}
+                    ${p.has_warehouse ? '<span style="color: #38bdf8;">📦 انباری</span>' : ''}
+                    ${p.has_balcony ? '<span style="color: #38bdf8;">🌿 بالکن</span>' : ''}
+                </div>
+            </div>
+            <div class="saghf-card-bottom-bar">
+                <div class="saghf-price-block">
+                    ${priceHtml}
+                </div>
+                <div class="saghf-card-actions">
+                    <a href="/properties/${p.id}" class="glass-btn magnetic-btn" style="padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
+                        <span>🏛️</span> پرونده ملک
+                    </a>
+                    <button type="button" onclick="openGalleryFromCard(this.closest('.saghf-luxury-card-3d'))" class="glass-btn magnetic-btn" style="padding: 0.5rem 0.9rem; border-radius: 10px; font-size: 0.8rem;">
+                        <span>🖼️</span> تصاویر
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    return card;
+}
+
+async function triggerOnDemandSearch(forceCrawl = false) {
+    const params = getFilterParams();
+    if (forceCrawl) {
+        params.set('force_crawl', '1');
+    }
+
+    const container = document.getElementById('onDemandScanContainer');
+    const skeletonWrap = document.getElementById('skeletonCardsWrap');
+    const cardsContainer = document.getElementById('propertiesCardsContainer');
+    const btnIcon = document.getElementById('btnFilterIcon');
+    const btnText = document.getElementById('btnFilterText');
+
+    if (btnIcon) btnIcon.textContent = '⏳';
+    if (btnText) btnText.textContent = 'در حال استخراج...';
+
+    const preservedScrollY = window.scrollY;
+
+    if (container) container.style.display = 'block';
+    if (skeletonWrap) skeletonWrap.style.display = 'flex';
+
+    try {
+        const resp = await fetch(`/properties/api/on-demand-search?${params.toString()}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const res = await resp.json();
+
+        if (res.items && res.items.length > 0) {
+            const saleCardsStack = document.getElementById('saleCardsStack');
+            const rentCardsStack = document.getElementById('rentCardsStack');
+            if (saleCardsStack) saleCardsStack.innerHTML = '';
+            if (rentCardsStack) rentCardsStack.innerHTML = '';
+
+            let saleCount = 0;
+            let rentCount = 0;
+
+            res.items.forEach(item => {
+                const el = createPropertyCardElement(item);
+                if (item.deal_type === 'rent') {
+                    if (rentCardsStack) rentCardsStack.appendChild(el);
+                    rentCount++;
+                } else {
+                    if (saleCardsStack) saleCardsStack.appendChild(el);
+                    saleCount++;
+                }
+            });
+
+            // به‌روزرسانی پیام‌های خالی بودن در صورت نیاز
+            const noSalePlaceholder = document.getElementById('no-sale-placeholder');
+            const noRentPlaceholder = document.getElementById('no-rent-placeholder');
+            if (noSalePlaceholder) noSalePlaceholder.style.display = saleCount === 0 ? 'block' : 'none';
+            if (noRentPlaceholder) noRentPlaceholder.style.display = rentCount === 0 ? 'block' : 'none';
+
+            // به‌روزرسانی نشان‌ها و شمارنده‌ها
+            const saleBadge = document.getElementById('saleSectionCountBadge');
+            const rentBadge = document.getElementById('rentSectionCountBadge');
+            if (saleBadge) saleBadge.textContent = `${formatPersianNum(saleCount)} فایل فروش`;
+            if (rentBadge) rentBadge.textContent = `${formatPersianNum(rentCount)} فایل اجاره`;
+
+            initCard3DPhysics();
+            const noFilesMsg = document.getElementById('no-files-placeholder');
+            if (noFilesMsg) noFilesMsg.style.display = 'none';
+
+            if (window.scrollY !== preservedScrollY) {
+                window.scrollTo({ top: preservedScrollY, behavior: 'instant' });
+            }
+        }
+
+        if (skeletonWrap) skeletonWrap.style.display = 'none';
+        if (res.items && res.items.length > 0 && container) {
+            container.style.display = 'none';
+        }
+    } catch (err) {
+        console.error('Search error:', err);
+    } finally {
+        if (btnIcon) btnIcon.textContent = '🔍';
+        if (btnText) btnText.textContent = 'استخراج و فیلتر';
+    }
+}
+
+// ۴. گالری تصاویر تمام‌صفحه (Lightbox)
+function openGalleryFromCard(triggerEl) {
+    const card = triggerEl.closest('.saghf-luxury-card-3d') || triggerEl.closest('.property-card');
+    if (!card) return;
+    const imagesAttr = card.getAttribute('data-images');
+    let images = [];
+    try {
+        images = JSON.parse(imagesAttr) || [];
+    } catch (e) {
+        images = [];
+    }
+    if (!images || images.length === 0) return;
+
+    const modal = document.getElementById('propertyLightboxModal');
+    const mainImg = document.getElementById('lightboxMainImg');
+    const thumbsRow = document.getElementById('lightboxThumbsRow');
+
+    mainImg.src = images[0];
+    thumbsRow.innerHTML = '';
+
+    images.forEach(img => {
+        const t = document.createElement('img');
+        t.src = img;
+        t.style.width = '64px';
+        t.style.height = '64px';
+        t.style.objectFit = 'cover';
+        t.style.borderRadius = '8px';
+        t.style.cursor = 'pointer';
+        t.style.border = '2px solid transparent';
+        t.onclick = () => { mainImg.src = img; };
+        thumbsRow.appendChild(t);
+    });
+
+    modal.style.display = 'flex';
+}
+
+function closeLightboxModal() {
+    const modal = document.getElementById('propertyLightboxModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function requestJitPhone(btn) {
+    if (!btn || btn.disabled) return;
+    const propId = btn.getAttribute('data-prop-id');
+    const token = btn.getAttribute('data-token');
+    const iconSpan = btn.querySelector('.jit-icon');
+    const textSpan = btn.querySelector('.jit-text');
+    const origText = textSpan ? textSpan.innerText : '';
+    
+    btn.disabled = true;
+    if (iconSpan) iconSpan.innerText = '⏳';
+    if (textSpan) textSpan.innerText = 'در حال استعلام...';
+    btn.style.opacity = '0.75';
+
+    try {
+        const resp = await fetch('/crawler/divar-session/extract-phone-jit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ property_id: propId, token: token })
+        });
+        const res = await resp.json();
+        
+        if (res.success && res.phone) {
+            const card = btn.closest('.property-card') || btn.parentElement;
+            const callLink = document.createElement('a');
+            callLink.href = `tel:${res.phone}`;
+            callLink.className = 'glass-btn magnetic-btn';
+            callLink.style.cssText = 'padding: 0.5rem 0.95rem; border-radius: 10px; font-size: 0.82rem; font-weight: 800; color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.45); background: rgba(34, 197, 94, 0.12); text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;';
+            callLink.title = 'تماس مستقیم با مالک';
+            callLink.innerHTML = `<span>📞</span> <span dir="ltr">${res.phone}</span>`;
+            btn.replaceWith(callLink);
+
+            if (card) {
+                const pillsRow = card.querySelector('.saghf-card-top-pills');
+                if (pillsRow && !pillsRow.querySelector('.verified-phone-pill')) {
+                    const pill = document.createElement('span');
+                    pill.className = 'verified-phone-pill';
+                    pill.style.cssText = 'font-size: 0.72rem; padding: 0.15rem 0.55rem; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); color: #4ade80; border-radius: 9999px; font-weight: 700;';
+                    pill.innerHTML = '📞 شماره تأییدشده';
+                    pillsRow.insertBefore(pill, pillsRow.children[1] || null);
+                }
+            }
+        } else if (res.is_chat_only) {
+            if (iconSpan) iconSpan.innerText = '💬';
+            if (textSpan) textSpan.innerText = 'فقط چت دیوار';
+            btn.style.color = '#fbbf24';
+            btn.style.borderColor = 'rgba(251, 191, 36, 0.4)';
+            btn.style.background = 'rgba(251, 191, 36, 0.1)';
+            btn.title = 'مالک گزینه تماس را بسته و فقط چت فعال است';
+        } else {
+            if (iconSpan) iconSpan.innerText = '⚠️';
+            if (textSpan) textSpan.innerText = res.message || 'عدم دسترسی به شماره';
+            btn.style.color = '#f87171';
+            btn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+            btn.style.background = 'rgba(239, 68, 68, 0.1)';
+        }
+    } catch (err) {
+        btn.disabled = false;
+        if (iconSpan) iconSpan.innerText = '📱';
+        if (textSpan) textSpan.innerText = origText;
+        btn.style.opacity = '1';
+        alert('خطای ارتباط با سرور: ' + err.message);
+    }
+}
+
+// توابع کمکی دسترسی سریع به فیلترها طبق طراحی UI/UX Pro Max
+window.selectDistrictDirect = function(name) {
+    const hiddenInput = document.getElementById('filterDistrict');
+    const label = document.getElementById('districtPickerSelectedLabel');
+    const clearBtn = document.getElementById('districtPickerClearBtn');
+    const dropdown = document.getElementById('districtPickerDropdown');
+    if (hiddenInput) hiddenInput.value = name || 'all';
+    if (label) label.textContent = name ? ('📍 ' + name) : '📍 همه مناطق تهران';
+    if (clearBtn) clearBtn.style.display = (name && name !== 'all') ? 'inline-flex' : 'none';
+    if (dropdown) dropdown.style.display = 'none';
+    triggerOnDemandSearch(true);
+};
+
+window.applyPresetArea = function(min, max) {
+    const minInput = document.getElementById('filterMinArea');
+    const maxInput = document.getElementById('filterMaxArea');
+    if (minInput) minInput.value = min || '';
+    if (maxInput) maxInput.value = max || '';
+    triggerOnDemandSearch(true);
+};
+
+window.applyPresetFullOption = function() {
+    ['has_parking', 'has_elevator', 'has_warehouse'].forEach(id => {
+        const el = document.querySelector(`input[name="${id}"]`);
+        if (el) el.checked = true;
+    });
+    triggerOnDemandSearch(true);
+};
+
+window.applyPresetNewBuild = function() {
+    const ageSelect = document.getElementById('filterMaxAge');
+    if (ageSelect) ageSelect.value = '0';
+    triggerOnDemandSearch(true);
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('propertiesFilterForm');
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            triggerOnDemandSearch(true);
+        });
+    }
+
+    const btnApply = document.getElementById('btnApplyFilter');
+    if (btnApply) {
+        btnApply.addEventListener('click', (e) => {
+            e.preventDefault();
+            triggerOnDemandSearch(true);
+        });
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentDeal = urlParams.get('deal_type') || 'all';
+    switchDealTab(currentDeal, false);
+    initCard3DPhysics();
+
+    // هدایت نرم و مستقیم کاربر به بخش فایل‌ها هنگام فیلتر یا کلیک روی دپارتمان‌ها
+    const hasDepartmentFilter = urlParams.get('deal_type') || urlParams.get('property_type') || urlParams.get('lifecycle') || urlParams.get('district');
+    if (hasDepartmentFilter || window.location.hash === '#properties-catalog-section') {
+        const catalogEl = document.getElementById('properties-catalog-section');
+        if (catalogEl) {
+            setTimeout(() => {
+                catalogEl.scrollIntoView({ behavior: 'smooth' });
+            }, 80);
+        }
+    }
+});
+</script>
+
+<script>
+    window.__TEHRAN_DISTRICTS_DATA__ = {{ all_regions | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/district_picker.js') }}?v=2.0"></script>
+<script src="{{ url_for('static', filename='js/filter_inputs.js') }}?v=2.0"></script>
+
+{% endblock %}

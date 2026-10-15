@@ -1,0 +1,47 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDEs & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Agent & local instructions
+AGENTS.md
+agents.md
+
+# Temporary scratch & inspection files
+scratch/
+divar_token.json
+divar_cookies.json
+divar_storage_state.json
+playwright/.auth/
+divar_parsed_sample.txt
+divar_rent_sample.json
+divar_sample_post.json
+browser_test_shots/
+.claude/
+.codex/
+instance/
+*.db-shm
+*.db-wal
+*.db.bak
+*.db.backup*
+*.bak
+*.csv

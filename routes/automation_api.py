@@ -1,0 +1,198 @@
+"""
+=============================================================================
+درگاه وب‌هوک‌ها و API اتوماسیون بومی سامانه‌های CRM سقف
+مسیر پیش‌فرض: /api/automation
+پشتیبانی از هر ۸ درگاه ورودی + وب‌اپ تلگرام
+=============================================================================
+"""
+
+import logging
+from flask import Blueprint, request, jsonify, render_template
+from services.stt_service import stt_processor
+from services.nlp_extractor import PropertyLeadNLPExtractor
+from services.voice_ai_engine import VoiceAiPipeline
+from services.automation_crm_service import (
+    PropertiesOwnersCRM, BuyersTenantsCRM, 
+    SmartFollowupEngine, TelegramAdminNotifier, CHANNEL_NAMES_FA
+)
+from database.models import Property, Owner, CustomerLead, OutreachLog
+from services.omnichannel_engine import omnichannel_engine
+from services.inbound_identity import InboundValidationError, resolve_inbound_identity
+
+logger = logging.getLogger(__name__)
+
+automation_bp = Blueprint('automation_api', __name__)
+
+# =====================================================================
+# ۱. درگاه‌های ورودی چندکاناله و وب‌هوک‌ها (Omni-Channel Ingestion)
+# =====================================================================
+
+@automation_bp.route('/api/automation/ingest/<channel>', methods=['POST'])
+def ingest_channel(channel):
+    """
+    دریافت پیام‌ها و رویدادهای ورودی از هریک از ۸ کانال:
+    voip, sms, instagram, whatsapp, telegram, bale, eitaa, rubika
+    """
+    channel = channel.lower()
+    if channel not in CHANNEL_NAMES_FA:
+        return jsonify({'success': False, 'error': f'درگاه ارتباطی {channel} نامعتبر است.'}), 400
+
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    
+    # استخراج پارامترهای پایه‌ای
+    caller_phone = data.get('caller_phone') or data.get('phone_number') or data.get('from') or data.get('sender')
+    audio_url = data.get('audio_url') or data.get('recording_url') or data.get('voice_url')
+    raw_text = data.get('text') or data.get('message') or data.get('caption') or ''
+    sender_id = data.get('sender_id') or data.get('user_id') or caller_phone
+    media_urls = data.get('media_urls') or data.get('photos') or []
+
+    # شماره تلفن استخراج‌شده از متن فقط وقتی استفاده می‌شود که منبع آن را نداده باشد.
+    if not caller_phone:
+        caller_phone = VoiceAiPipeline.extract_phone_number(raw_text)
+
+    try:
+        identity = resolve_inbound_identity(channel, sender_id, caller_phone)
+    except InboundValidationError as exc:
+        return jsonify({'success': False, 'error': str(exc), 'code': 'INVALID_INBOUND_IDENTITY'}), 422
+
+    result = omnichannel_engine.process_incoming_interaction(
+        channel=channel,
+        sender_id=identity.contact_key,
+        content=raw_text,
+        audio_url=audio_url,
+        metadata={
+            **identity.as_metadata(),
+            'media_attachments': media_urls,
+            'call_id': data.get('call_id'),
+            'duration_seconds': data.get('duration_seconds', data.get('call_duration', 0)),
+            'sender_name': data.get('sender_name') or data.get('full_name') or data.get('name'),
+        },
+    )
+    result['ingest_channel'] = channel
+    result['channel_title'] = CHANNEL_NAMES_FA[channel]
+    return jsonify(result)
+
+
+# =====================================================================
+# ۲. اندپوینت‌های روتر LLM و تفکیک موجودیت (LLM Router)
+# =====================================================================
+
+@automation_bp.route('/api/automation/router/classify-and-extract', methods=['POST'])
+def router_classify_and_extract():
+    """
+    تحلیل معنایی و تفکیک ساختاریافته JSON برای موتور بومی
+    """
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    text = data.get('text', '').strip()
+
+    if not text and data.get('audio_url'):
+        stt_res = stt_processor.transcribe(audio_url_or_path=data['audio_url'])
+        text = stt_res.get('text', '')
+
+    intent = VoiceAiPipeline.detect_intent(text)
+    criteria = PropertyLeadNLPExtractor.extract_criteria(text)
+    phone = VoiceAiPipeline.extract_phone_number(text)
+
+    return jsonify({
+        'success': True,
+        'role': 'property_owner' if intent == 'listing_intake' else 'lead_buyer_tenant',
+        'intent': intent,
+        'detected_phone': phone,
+        'criteria': criteria,
+        'clean_text': text
+    })
+
+
+# =====================================================================
+# ۳. ثبت مستقیم در دو پایگاه داده CRM مجزا
+# =====================================================================
+
+@automation_bp.route('/api/automation/crm/owner-property', methods=['POST'])
+def crm_owner_property():
+    """ثبت مستقیم در پایگاه داده CRM مالکین و املاک"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    try:
+        res = PropertiesOwnersCRM.register_owner_property(data)
+        return jsonify(res)
+    except Exception as e:
+        logger.error(f"Error in crm_owner_property: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@automation_bp.route('/api/automation/crm/buyer-tenant', methods=['POST'])
+def crm_buyer_tenant():
+    """ثبت مستقیم در پایگاه داده CRM مشتریان و متقاضیان"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    try:
+        res = BuyersTenantsCRM.register_or_update_lead(data)
+        return jsonify(res)
+    except Exception as e:
+        logger.error(f"Error in crm_buyer_tenant: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+# =====================================================================
+# ۴. پایپلاین فالوآپ ۲۴ ساعته و دریافت فیدبک (Follow-up Cron Job)
+# =====================================================================
+
+@automation_bp.route('/api/automation/cron/follow-up-24h', methods=['POST', 'GET'])
+def cron_followup_24h():
+    """اجرای کران‌جاب پیگیری هوشمند ۲۴ ساعته لیدها"""
+    res = SmartFollowupEngine.run_daily_followup()
+    return jsonify(res)
+
+@automation_bp.route('/api/automation/feedback/process', methods=['POST'])
+def feedback_process():
+    """پردازش فیدبک دریافتی از مشتری در پیام‌رسان و اعمال در CRM"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    phone = data.get('phone_number') or data.get('phone') or data.get('from')
+    text = data.get('feedback_text') or data.get('text') or data.get('message') or ''
+    lead_id = data.get('lead_id')
+
+    if not phone and lead_id:
+        lead = CustomerLead.query.get(lead_id)
+        if lead:
+            phone = lead.phone_number
+
+    if not phone:
+        # Fallback to last lead if exists
+        last_lead = CustomerLead.query.order_by(CustomerLead.id.desc()).first()
+        if last_lead:
+            phone = last_lead.phone_number
+        else:
+            return jsonify({'success': False, 'error': 'شماره تلفن یا شناسه لید الزامی است.'}), 400
+
+    res = SmartFollowupEngine.process_lead_feedback(phone, text)
+    return jsonify(res)
+
+
+# =====================================================================
+# ۵. لایه کنترل و مانیتورینگ ادمین در پوسته تلگرام (Telegram Mini App)
+# =====================================================================
+
+@automation_bp.route('/admin/telegram-mini-app')
+def telegram_mini_app():
+    """
+    رابط کاربری ادمین مبتنی بر پوسته تلگرام (Telegram Mini App)
+    مدیریت دوگانه CRM، آلارم‌های بلادرنگ و پرش به چت‌ها
+    """
+    recent_properties = Property.query.filter_by(source='direct_owner').order_by(Property.created_at.desc()).limit(10).all()
+    recent_leads = CustomerLead.query.order_by(CustomerLead.created_at.desc()).limit(10).all()
+    outreach_logs = OutreachLog.query.order_by(OutreachLog.sent_at.desc()).limit(15).all()
+
+    return render_template(
+        'admin/telegram_mini_app.html',
+        properties=recent_properties,
+        leads=recent_leads,
+        logs=outreach_logs,
+        channel_names=CHANNEL_NAMES_FA
+    )
+
+@automation_bp.route('/api/automation/admin/stats')
+def admin_stats():
+    """آمار زنده برای مینی‌اپ و مانیتورینگ اتوماسیون بومی"""
+    return jsonify({
+        'total_direct_properties': Property.query.filter_by(source='direct_owner').count(),
+        'total_leads': CustomerLead.query.count(),
+        'total_outreach_dispatched': OutreachLog.query.filter_by(status='sent').count(),
+        'active_channels': list(CHANNEL_NAMES_FA.keys())
+    })

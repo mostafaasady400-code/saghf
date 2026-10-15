@@ -1,0 +1,7 @@
+/* Reference-inspired navy/gold refinement; preserves sections, tour and menus. */
+body{--saghf-surface:#0f2944;--saghf-accent:#c9a961;--saghf-focus:#93c5fd}
+.floating-3d-navbar{background:rgba(11,31,58,.96)!important;border-color:rgba(201,169,97,.3)!important;box-shadow:0 12px 32px rgba(0,0,0,.2)!important}
+.floating-nav-link{min-height:44px;white-space:nowrap}.floating-nav-links{overflow-x:auto;scrollbar-width:thin}.floating-nav-link:focus-visible,.mobile-bottom-item:focus-visible{outline:3px solid var(--saghf-focus);outline-offset:3px}
+.glass-card{border-radius:20px;border-color:rgba(201,169,97,.22)}
+.floating-nav-links{min-width:0;flex:1;margin-inline:16px}.floating-nav-links .floating-nav-link{flex-shrink:0}.floating-nav-brand,.floating-nav-actions{flex-shrink:0}
+@media(prefers-reduced-motion:reduce){.floating-3d-navbar,.floating-nav-link,.brand-logo-img{animation:none!important;transition:none!important}}

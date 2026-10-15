@@ -1,0 +1,43 @@
+<!-- =================================================== -->
+<!-- FULL-SCREEN LIGHTBOX PHOTO GALLERY MODAL (GLOBAL)    -->
+<!-- =================================================== -->
+<div id="saghfPhotoGalleryModal" class="saghf-gallery-modal" onclick="if(event.target===this) closePhotoGallery();">
+    <!-- Header -->
+    <div class="saghf-gallery-header">
+        <div class="gallery-prop-info">
+            <span id="galleryModalCode" class="property-code-badge" style="font-size: 0.9rem;">کد: -----</span>
+            <h3 id="galleryModalTitle" style="font-size: 1.05rem; font-weight: 800; color: #f8fafc; margin: 0; max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h3>
+            <span id="galleryModalCounter" style="color: #94a3b8; font-size: 0.85rem; font-weight: 700;"></span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <!-- Interactive Send Album to Telegram button -->
+            <button type="button" id="gallerySendTgBtn" class="btn-compact-telegram" style="padding: 0.5rem 0.9rem; font-size: 0.82rem;" title="ارسال کل این آلبوم به تلگرام">
+                <span>📤</span> ارسال به تلگرام
+            </button>
+            <a id="galleryTgDeepLink" href="#" target="_blank" class="glass-btn" style="padding: 0.5rem 0.85rem; font-size: 0.82rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); text-decoration: none;" title="مشاهده در تلگرام">
+                <span>📱</span> باز کردن در تلگرام
+            </a>
+            <!-- Close Modal -->
+            <button type="button" onclick="closePhotoGallery()" class="glass-btn" style="padding: 0.5rem 0.8rem; font-size: 1rem; color: #ef4444;" title="بستن گالری (Esc)">
+                ✕
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Image Stage with Nav Arrows -->
+    <div class="gallery-stage" onclick="event.stopPropagation()">
+        <button type="button" class="gallery-nav-arrow prev" onclick="navigateGallery(-1)" title="تصویر قبلی (کلید راست)">
+            &#10095;
+        </button>
+
+        <img id="galleryMainImage" src="/static/placeholder.png" alt="Property Gallery" class="gallery-main-img" onerror="this.src='/static/placeholder.png'">
+
+        <button type="button" class="gallery-nav-arrow next" onclick="navigateGallery(1)" title="تصویر بعدی (کلید چپ)">
+            &#10094;
+        </button>
+    </div>
+
+    <!-- Thumbnail Strip Bar -->
+    <div id="galleryThumbStrip" class="gallery-footer-strip"></div>
+</div>

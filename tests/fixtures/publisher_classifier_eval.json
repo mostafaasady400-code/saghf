@@ -1,0 +1,18 @@
+{
+  "dataset_kind": "synthetic_reviewable_evaluation",
+  "note": "این داده‌ها ساختگی و فقط برای ارزیابی قواعد هستند؛ معیار دادهٔ واقعی دیوار نیستند.",
+  "items": [
+    {"id":"e01","label":"likely_owner","title":"آپارتمان ۸۰ متری پونک","description":"مالک هستم، واحد شخصی و بدون واسطه واگذار می‌شود.","structured":{}},
+    {"id":"e02","label":"likely_owner","title":"فروش فوری واحد","description":"مشاوران لطفا تماس نگیرند؛ مستقیم از مالک.","structured":{}},
+    {"id":"e03","label":"likely_owner","title":"واحد نورگیر و اکازیون","description":"فرصت استثنایی، خودم مالک هستم و سکونت خودم بوده.","structured":{"is_business":false}},
+    {"id":"e04","label":"likely_owner","title":"اجاره آپارتمان","description":"واگذاری توسط مالک؛ بدون کمیسیون.","structured":{"account_type":"personal"}},
+    {"id":"e05","label":"explicit_agency","title":"فروش آپارتمان","description":"مالک هستم؛ تماس بگیرید.","structured":{"publisher_type":"real_estate_agency"}},
+    {"id":"e06","label":"explicit_agency","title":"رهن کامل","description":"واحد مناسب خانواده","structured":{"is_business":true}},
+    {"id":"e07","label":"likely_intermediary","title":"آپارتمان اکازیون","description":"مشاور املاک و کارشناس منطقه؛ فایل‌های مشابه موجود است.","structured":{}},
+    {"id":"e08","label":"likely_intermediary","title":"فروش زیر قیمت","description":"دپارتمان فروش، جهت دریافت فایل‌های دیگر تماس بگیرید.","structured":{}},
+    {"id":"e09","label":"likely_intermediary","title":"فرصت خرید","description":"با همکار همکاری نمی‌کنیم؛ بازدید با هماهنگی دفتر.","structured":{}},
+    {"id":"e10","label":"unknown","title":"آپارتمان دو خواب","description":"تخلیه و آماده تحویل.","structured":{}},
+    {"id":"e11","label":"unknown","title":"واحد خوش نقشه","description":"نورگیر عالی و دسترسی مناسب.","structured":{}},
+    {"id":"e12","label":"unknown","title":"اجاره فوری","description":"برای اطلاعات بیشتر پیام بدهید.","structured":{}}
+  ]
+}

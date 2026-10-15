@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}نتایج جست‌وجوی قابل‌دسترسی دیوار | سقف{% endblock %}
+
+{% block content %}
+{% set report = run.report or {} %}
+<section dir="rtl" style="max-width: 1180px; margin: 0 auto;">
+    <header class="glass-panel" style="padding: 1.25rem; margin-bottom: 1rem;">
+        <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
+            <div>
+                <h1 style="font-size:1.4rem; margin:0 0 .4rem;">نتایج جست‌وجوی ۲۴ ساعت گذشته</h1>
+                <p style="margin:0; color:#94a3b8;">{{ run.query_text or 'جست‌وجوی ساختاریافته' }}</p>
+            </div>
+            <div style="text-align:left; font-size:.82rem; color:#cbd5e1;">
+                <div>وضعیت اجرا: <strong>{{ run.status }}</strong></div>
+                <div>پوشش: <strong>{{ run.coverage_status }}</strong></div>
+                <div>منطقهٔ زمانی نمایش: تهران</div>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:.65rem; margin-top:1rem;">
+            {% for label, value in [
+                ('یکتای دریافت‌شده', report.get('unique_received', 0)),
+                ('داخل بازه', report.get('within_window', 0)),
+                ('منطبق با مشخصات', report.get('criteria_matched', 0)),
+                ('مالک احتمالی', report.get('likely_owner', 0)),
+                ('واسطه/دفتر', report.get('explicit_agency', 0) + report.get('likely_intermediary', 0)),
+                ('نامشخص', report.get('unknown', 0)),
+                ('صفحات پیمایش‌شده', report.get('pages_traversed', 0))
+            ] %}
+            <div style="background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:.7rem;">
+                <small style="color:#94a3b8;">{{ label }}</small>
+                <div style="font-size:1.15rem; font-weight:800;">{{ value }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if run.stop_reason %}
+        <p style="margin:.9rem 0 0; padding:.7rem; border-radius:9px; background:rgba(245,158,11,.08); color:#fbbf24;">
+            علت توقف: {{ run.stop_reason }}{% if run.can_resume %} — ادامه از نقطهٔ ذخیره‌شده ممکن است.{% endif %}
+        </p>
+        {% endif %}
+        <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.8rem;">
+            {% if run.can_resume %}
+            <button class="glass-btn" style="border-color:#10b981; color:#34d399; cursor:pointer;" onclick="resumeRun('{{ run.run_id }}')">
+                ▶ ادامهٔ پیمایش از Checkpoint
+            </button>
+            {% endif %}
+            {% if report.get('pending_model_review', 0) > 0 %}
+            <button class="glass-btn" style="border-color:#38bdf8; color:#38bdf8; cursor:pointer;" onclick="processPending('{{ run.run_id }}')">
+                🧠 تحلیل معوق صف مدل ({{ report.get('pending_model_review') }} آگهی)
+            </button>
+            {% endif %}
+        </div>
+    </header>
+
+    <nav aria-label="بخش‌های نتایج" style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+        {% for key, label in [('main','مالک‌های احتمالی'), ('review','نیازمند بررسی'), ('after_reference','منتشرشده پس از شروع'), ('intermediary','واسطه‌ها')] %}
+        <a class="glass-btn" href="{{ url_for('crawler.search_run_view', run_id=run.run_id, section=key) }}"
+           {% if section == key %}aria-current="page" style="border-color:#00f2fe;color:#00f2fe;"{% endif %}>{{ label }}</a>
+        {% endfor %}
+    </nav>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.7rem; color:#cbd5e1;">
+        <strong>{{ pagination.total }} نتیجه در این بخش</strong>
+        <span>صفحه {{ pagination.page }} از {{ pagination.total_pages }}</span>
+    </div>
+
+    {% if items %}
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(285px,1fr)); gap:1rem;">
+        {% for item in items %}
+        <article class="glass-panel" style="padding:1rem; display:flex; flex-direction:column; gap:.65rem;">
+            <div>
+                <h2 style="font-size:1rem; margin:0 0 .35rem;">{{ item.title }}</h2>
+                <div style="font-size:.82rem; color:#94a3b8;">{{ item.district or 'محله نامشخص' }} · {{ item.area or 'متراژ نامشخص' }}{% if item.area %} متر{% endif %} · {{ item.rooms if item.rooms is not none else 'اتاق نامشخص' }}</div>
+            </div>
+            <div style="font-size:.85rem; line-height:1.7;">
+                {% if item.deal_type == 'sale' %}
+                    قیمت: {{ '{:,}'.format(item.total_price) if item.total_price else 'نامشخص' }}
+                {% else %}
+                    ودیعه: {{ '{:,}'.format(item.deposit) if item.deposit else 'نامشخص' }}<br>
+                    اجاره: {{ '{:,}'.format(item.monthly_rent) if item.monthly_rent is not none else 'نامشخص' }}
+                {% endif %}
+            </div>
+            <div style="font-size:.8rem; color:#cbd5e1;">
+                زمان انتشار: {{ item.published_at or item.publication_source_text or 'نامشخص' }}
+                <span style="color:#94a3b8;">({{ item.publication_accuracy }})</span>
+            </div>
+            <div style="font-size:.82rem; padding:.65rem; background:rgba(16,185,129,.07); border-radius:8px;">
+                <strong>{{ item.effective_publisher_category }}</strong> — {{ item.publisher_reason or 'بدون شواهد کافی' }}
+                <div style="color:#94a3b8;">اطمینان: {{ ((item.publisher_confidence or 0) * 100)|round|int }}٪ · نسخه {{ item.publisher_classifier_version or 'نامشخص' }}</div>
+            </div>
+            <a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer nofollow" title="لینک آگهی" class="glass-btn" style="margin-top:auto; text-align:center;">لینک آگهی</a>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="glass-panel" style="padding:2rem; text-align:center; color:#94a3b8;">
+        نتیجهٔ معتبری در این بخش ثبت نشده است؛ فهرست با دادهٔ نمایشی پر نشده.
+    </div>
+    {% endif %}
+
+    <nav aria-label="صفحه‌بندی" style="display:flex; justify-content:center; gap:.65rem; margin-top:1.25rem;">
+        {% if pagination.has_prev %}
+        <a class="glass-btn" href="{{ url_for('crawler.search_run_view', run_id=run.run_id, section=section, page=pagination.page-1, per_page=pagination.per_page) }}">صفحهٔ قبل</a>
+        {% endif %}
+        {% if pagination.has_next %}
+        <a class="glass-btn" href="{{ url_for('crawler.search_run_view', run_id=run.run_id, section=section, page=pagination.page+1, per_page=pagination.per_page) }}">صفحهٔ بعد</a>
+        {% endif %}
+    </nav>
+</section>
+<script>
+function resumeRun(runId) {
+    fetch('/crawler/search-runs/' + runId + '/resume', { method: 'POST', headers: {'Content-Type': 'application/json'} })
+        .then(r => r.json())
+        .then(d => {
+            alert(d.message || 'درخواست ادامه ثبت شد.');
+            window.location.reload();
+        })
+        .catch(e => alert('خطا در ارتباط: ' + e));
+}
+function processPending(runId) {
+    fetch('/crawler/search-runs/' + runId + '/process-pending', { method: 'POST', headers: {'Content-Type': 'application/json'} })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('پردازش انجام شد: ' + d.result.processed + ' آگهی تحلیل شد (تبدیل به مالک: ' + d.result.converted_to_owner + ').');
+                window.location.reload();
+            } else {
+                alert('خطا: ' + (d.result ? d.result.reason : 'نامشخص'));
+            }
+        })
+        .catch(e => alert('خطا در ارتباط: ' + e));
+}
+</script>
+{% if run.status in ['pending', 'running'] %}
+<script>window.setTimeout(function(){ window.location.reload(); }, 5000);</script>
+{% endif %}
+{% endblock %}

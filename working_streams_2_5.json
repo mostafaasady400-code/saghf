@@ -1,0 +1,32 @@
+[
+  [
+    "buy-apartment",
+    "https://divar.ir/s/tehran/buy-apartment?districts=925",
+    25,
+    "آسمان"
+  ],
+  [
+    "rent-apartment",
+    "https://divar.ir/s/tehran/rent-apartment?districts=925",
+    24,
+    "آسمان"
+  ],
+  [
+    "buy-apartment",
+    "https://divar.ir/s/tehran/buy-apartment?districts=173",
+    24,
+    "اباذر"
+  ],
+  [
+    "rent-apartment",
+    "https://divar.ir/s/tehran/rent-apartment?districts=shahrak-nezami",
+    26,
+    "شهرک نظامی"
+  ],
+  [
+    "buy-apartment",
+    "https://divar.ir/s/tehran/buy-apartment?districts=921",
+    25,
+    "شهرک نفت"
+  ]
+]

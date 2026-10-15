@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>بررسی انسانی مالکیت | سقف</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/neon-dark.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+.review-page {max-width:44rem;margin:2rem auto;padding:1.25rem;background:var(--bg-surface);color:var(--gold-pale)}
+.review-page h1,.review-page h2,.review-page p {margin-block:1rem;overflow-wrap:anywhere}
+.review-page a {color:var(--gold-light);text-underline-offset:.2em}
+.review-page label {display:block;margin-block:1rem .5rem}
+.review-page input:not([type=hidden]),.review-page select {font:inherit;min-height:44px;max-width:100%}
+.review-page input[type=text],.review-page select {width:100%;padding:.5rem;background:var(--bg-base);color:var(--gold-pale);border:1px solid var(--gold-light)}
+.review-page button {font:inherit;min-height:44px;padding:.5rem 1rem;margin-block:1rem;color:var(--bg-base);background:var(--gold-light)}
+.review-page :focus-visible {outline:3px solid var(--gold-light);outline-offset:3px}
+.review-page li {margin:1rem}.review-page input[type=checkbox] {width:24px;vertical-align:middle}
+</style></head><body><main class="review-page">
+<h1>بررسی انسانی مالکیت توسط تیم سقف</h1>
+<p><a href="/properties/">بازگشت به فایل‌ها</a> | <a href="{{ url_for('team_review.index') }}">صف بررسی آگهی‌ها</a></p>
+{% if listing %}
+<h2>{{ listing.title }}</h2><p>{{ listing.district }} · {{ listing.area }} متر</p>
+<p><a href="{{ listing.source_url }}" target="_blank" rel="noopener noreferrer">لینک آگهی</a></p>
+<p role="status">وضعیت: {{ state_label }}</p>
+<p><a href="{{ url_for('owner_consent.review', listing_id=listing.id) }}">بررسی دومرحله‌ای رضایت مالک</a></p>
+<p>این نتیجه تصمیم انسانی تیم دربارهٔ مشخصات ذخیره‌شده است، نه تضمین صددرصدی سامانه.
+این فرم رضایت صاحب شماره را ثبت نمی‌کند، شماره استخراج نمی‌کند و تأیید کنترل شماره نیست.
+نتیجه پس از هفت روز یا تغییر مشخصات نیازمند بررسی مجدد است.</p>
+{% if latest %}<p>شناسهٔ بازبین: {{ latest.reviewer_id }} · روش بررسی: {{ latest.method }}</p>{% endif %}
+{% if saved %}<p role="status">نتیجهٔ بررسی ثبت شد.</p>{% endif %}
+{% if error %}<p role="alert" id="review-error" tabindex="-1">{{ error }}</p>{% endif %}
+<form method="post">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="fingerprint" value="{{ fingerprint }}">
+<input type="hidden" name="previous_id" value="{{ latest.id if latest else 0 }}">
+<label for="decision">نتیجهٔ بررسی</label>
+<select id="decision" name="decision" required><option value="">انتخاب کنید</option>
+<option value="team_approved">تأیید مالکیت توسط تیم</option><option value="rejected">رد مالکیت</option><option value="needs_review">نیازمند بررسی بیشتر</option></select>
+<label for="method">مبنای بررسی انسانی</label>
+<select id="method" name="method" required><option value="">انتخاب کنید</option>
+<option value="owner_interview">گفت‌وگو با مدعی مالکیت</option><option value="document_review">بررسی مدارک</option><option value="in_person">بررسی حضوری</option><option value="insufficient_evidence">شواهد ناکافی</option></select>
+<label for="evidence">کد مرجع بررسی در دفتر تیم</label>
+<input type="text" id="evidence" name="evidence" required minlength="6" maxlength="200" autocomplete="off" aria-describedby="evidence-help">
+<p id="evidence-help">فقط کد مرجع داخلی وارد کنید؛ شماره، کد ملی یا متن مدارک وارد نکنید. فقط هش مرجع ذخیره می‌شود.</p>
+<label><input type="checkbox" name="acknowledged" value="yes" required> بررسی را شخصاً انجام داده‌ام و مسئول ثبت این نتیجه هستم.</label>
+<button type="submit">ثبت نتیجهٔ بررسی انسانی</button></form>
+{% if error %}<script>document.getElementById('review-error').focus();</script>{% endif %}
+{% else %}<p>حداکثر ۵۰ آگهی با آخرین زمان مشاهده؛ انتخاب آگهی به معنی تأیید مالکیت نیست.</p>
+<ul>{% for item in listings %}<li><a href="{{ url_for('team_review.review', listing_id=item.id) }}">{{ item.title }}</a></li>{% else %}<li>آگهی ثبت‌شده‌ای وجود ندارد.</li>{% endfor %}</ul>
+{% endif %}</main></body></html>

@@ -1,0 +1,319 @@
+/* ===================================================
+   SAGHF REAL ESTATE INTELLIGENCE & CRM
+   BLACK & GOLD LUXURY GLASSMORPHYSIC DESIGN SYSTEM
+   =================================================== */
+
+.glass-panel {
+    background: rgba(14, 16, 22, 0.78);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(212, 175, 55, 0.22);
+    border-radius: 18px;
+    box-shadow: 0 12px 38px 0 rgba(0, 0, 0, 0.6), 0 0 18px rgba(212, 175, 55, 0.05);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel:hover {
+    border-color: rgba(212, 175, 55, 0.45);
+    box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.7), 0 0 24px rgba(212, 175, 55, 0.15);
+}
+
+.glass-card {
+    background: rgba(16, 18, 24, 0.75);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(212, 175, 55, 0.18);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
+                border-color 0.3s ease, 
+                box-shadow 0.35s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(212, 175, 55, 0.48);
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.65), 0 0 25px rgba(212, 175, 55, 0.18);
+}
+
+/* Glass Header / Topbar */
+.glass-nav {
+    background: rgba(10, 12, 16, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+/* Glass Sidebar */
+.glass-sidebar {
+    background: rgba(8, 10, 14, 0.88);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-left: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+/* Glass Form Inputs */
+.glass-input, .glass-select, .glass-textarea {
+    background: rgba(20, 22, 28, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(212, 175, 55, 0.22);
+    border-radius: 12px;
+    color: #f8fafc;
+    padding: 0.75rem 1.1rem;
+    font-size: 0.95rem;
+    width: 100%;
+    transition: all 0.25s ease;
+}
+
+.glass-input:focus, .glass-select:focus, .glass-textarea:focus {
+    outline: none;
+    background: rgba(28, 30, 38, 0.85);
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+}
+
+.glass-select option {
+    background: #0f1118;
+    color: #f8fafc;
+}
+
+/* Glass Buttons */
+.glass-btn {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-radius: 12px;
+    color: #fce295;
+    padding: 0.65rem 1.25rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    transition: all 0.25s ease;
+}
+
+.glass-btn:hover {
+    background: rgba(212, 175, 55, 0.12);
+    border-color: rgba(245, 215, 127, 0.6);
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.25);
+    transform: translateY(-2px);
+}
+
+/* Glass Modal Overlay */
+.glass-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 5, 8, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1.5rem;
+}
+
+.glass-modal-overlay.active {
+    display: flex;
+}
+
+.glass-modal-box {
+    background: rgba(14, 16, 22, 0.94);
+    backdrop-filter: blur(32px);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 22px;
+    box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.2);
+    max-width: 680px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 2rem;
+    animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: perspective(1000px) rotateX(-8deg) scale(0.92); }
+    to { opacity: 1; transform: perspective(1000px) rotateX(0deg) scale(1); }
+}
+
+/* Glass Table */
+.glass-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.5rem;
+}
+
+.glass-table th {
+    color: var(--gold-light);
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 1rem 1.25rem;
+    text-align: right;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.glass-table tr.glass-row {
+    background: rgba(14, 16, 22, 0.55);
+    backdrop-filter: blur(10px);
+    transition: all 0.25s ease;
+}
+
+.glass-table tr.glass-row:hover {
+    background: rgba(24, 27, 36, 0.8);
+    transform: scale(1.003);
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.12);
+}
+
+.glass-table td {
+    padding: 1.1rem 1.25rem;
+    font-size: 0.92rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.08);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.08);
+}
+
+.glass-table td:first-child {
+    border-right: 1px solid rgba(212, 175, 55, 0.08);
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.glass-table td:last-child {
+    border-left: 1px solid rgba(212, 175, 55, 0.08);
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+
+/* ===================================================
+   ANTIGRAVITY 3D SPATIAL DESIGN SYSTEM (SKILL ENHANCEMENT)
+   Weightlessness, Spatial Depth, and 3D Perspective
+   =================================================== */
+
+:root {
+    --ag-perspective: 1200px;
+    --ag-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --ag-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --ag-glow-gold: rgba(212, 175, 55, 0.4);
+    --ag-glow-cyan: rgba(0, 242, 254, 0.4);
+    --ag-glow-amber: rgba(245, 158, 11, 0.4);
+    --ag-glow-purple: rgba(147, 51, 234, 0.4);
+}
+
+.perspective-container {
+    perspective: var(--ag-perspective);
+    transform-style: preserve-3d;
+}
+
+/* Antigravity 3D Card with Glare Reflection */
+.antigravity-card-3d {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.45s var(--ag-ease), 
+                box-shadow 0.45s var(--ag-ease), 
+                border-color 0.3s ease;
+    will-change: transform;
+}
+
+.antigravity-card-3d::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.antigravity-card-3d:hover::before {
+    opacity: 1;
+}
+
+.antigravity-card-3d:hover {
+    box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.75), 
+                0 0 30px rgba(212, 175, 55, 0.15);
+}
+
+/* Spatial Z-Layering Elements */
+.depth-surface {
+    transform: translateZ(0px);
+}
+
+.depth-subtle {
+    transform: translateZ(10px);
+}
+
+.depth-floating {
+    transform: translateZ(22px);
+    transform-style: preserve-3d;
+}
+
+.depth-elevated {
+    transform: translateZ(35px);
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5));
+}
+
+/* Quick Filter Chips (Pill Buttons) */
+.quick-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    transition: all 0.25s var(--ag-ease);
+    user-select: none;
+    text-decoration: none;
+}
+
+.quick-filter-chip:hover {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: rgba(212, 175, 55, 0.4);
+    color: #f5d77f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+}
+
+.quick-filter-chip.active {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(245, 215, 127, 0.15));
+    border-color: #d4af37;
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.3);
+}
+
+.quick-filter-chip.chip-rent:hover,
+.quick-filter-chip.chip-rent.active {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: #f59e0b;
+    color: #fbbf24;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.3);
+}
+
+/* Staggered Animations */
+@keyframes fadeInUpStagger {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stagger-in {
+    animation: fadeInUpStagger 0.4s var(--ag-ease) both;
+}
+

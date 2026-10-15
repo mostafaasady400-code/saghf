@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>بررسی رضایت مالک | سقف</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/neon-dark.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+main{max-width:44rem;margin:2rem auto;padding:1.25rem;background:var(--bg-surface);color:var(--gold-pale)}
+h1,h2,p,li{margin-block:1rem;overflow-wrap:anywhere}a{color:var(--gold-light)}
+label{display:block;margin-block:1rem .5rem}input,select,button{font:inherit;min-height:44px;max-width:100%}
+input[type=text],select{width:100%;padding:.5rem;background:var(--bg-base);color:var(--gold-pale);border:1px solid var(--gold-light)}
+button{padding:.5rem 1rem;margin-block:1rem;background:var(--gold-light);color:var(--bg-base)}
+:focus-visible{outline:3px solid var(--gold-light);outline-offset:3px}input[type=checkbox]{width:24px;vertical-align:middle}
+</style></head><body><main>
+<h1>صف بررسی رضایت مالک</h1>
+<p><a href="/properties/">بازگشت به فایل‌ها</a> | <a href="{{ url_for('owner_consent.index') }}">صف پشتیبانی و مدیریت</a></p>
+{% if listing %}
+<h2>{{ listing.title }}</h2><p>{{ listing.district }} · {{ listing.area }} متر</p>
+<p><a href="{{ listing.source_url }}" target="_blank" rel="noopener noreferrer">لینک آگهی</a></p>
+{% if manager %}<p><a href="{{ url_for('team_review.review', listing_id=listing.id) }}">فرم بررسی انسانی مالکیت</a></p>{% endif %}
+<p role="status">وضعیت رضایت: {{ state_label }}</p>
+<p>بررسی معتبر مالکیت تیم: {{ 'موجود است' if ownership_valid else 'موجود نیست' }}.
+وضعیت مشترک بررسی و رضایت: {{ 'تأیید انسانی معتبر' if effective else 'تأیید نهایی معتبر نیست' }}.</p>
+<p>پشتیبانی باید رضایت واقعی مالک برای ثبت و نمایش اطلاعات همین آگهی در سقف را دریافت و مستند کند؛ انتشار آگهی رضایت نیست.
+محدودهٔ رضایت: پیگیری همین آگهی و نمایش به کارکنان مجاز سقف، حداکثر هفت روز؛ نه انتشار عمومی یا واگذاری به دیگران.
+مدیری دیگر مستند را بررسی می‌کند. فقط هش کد مرجع و هویت بازبین ذخیره می‌شود؛ مدارک در دفتر تیم می‌مانند.
+این فرم شماره جمع‌آوری نمی‌کند، کنترل شماره را ثابت نمی‌کند و استخراج خودکار تماس را فعال نمی‌کند.</p>
+{% if latest %}<p>ثبت‌کنندهٔ پشتیبانی: {{ latest.support_id }} · آخرین بازبین: {{ latest.actor_id }} · شناسهٔ رویداد: {{ latest.id }}</p>{% endif %}
+{% if saved %}<p role="status">رویداد بررسی ثبت شد.</p>{% endif %}
+{% if error %}<div id="consent-error" role="alert" tabindex="-1"><p>{{ error }}</p><a href="#action">اقدام</a> · <a href="#method">روش</a> · <a href="#evidence">مرجع</a></div>{% endif %}
+<form method="post">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="fingerprint" value="{{ fingerprint }}">
+<input type="hidden" name="previous_id" value="{{ latest.id if latest else 0 }}">
+<label for="action">اقدام — الزامی</label>
+<select id="action" name="action" required {% if error %}aria-describedby="consent-error"{% endif %}>
+<option value="">انتخاب کنید</option>
+<option value="support_recorded" {% if values.action == 'support_recorded' %}selected{% endif %}>ثبت دریافت واقعی رضایت توسط پشتیبانی</option>
+{% if manager %}<option value="management_approved" {% if values.action == 'management_approved' %}selected{% endif %}>تأیید مدیریت پس از بررسی مستند</option>
+<option value="rejected" {% if values.action == 'rejected' %}selected{% endif %}>رد توسط مدیریت</option>{% endif %}
+<option value="withdrawn" {% if values.action == 'withdrawn' %}selected{% endif %}>ثبت لغو رضایت توسط مالک</option></select>
+<label for="method">روش دریافت / بررسی رضایت — الزامی</label>
+<select id="method" name="method" required {% if error %}aria-describedby="consent-error"{% endif %}>
+<option value="">انتخاب کنید</option>
+{% for value,label in [('written','رضایت کتبی'),('recorded_verbal','رضایت شفاهی مستند با اجازه مالک'),('in_person_signed','رضایت حضوری امضاشده')] %}
+<option value="{{ value }}" {% if values.method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+<label for="evidence">کد مرجع مستند در دفتر تیم — الزامی</label>
+<input id="evidence" type="text" name="evidence" minlength="6" maxlength="200" required autocomplete="off" aria-describedby="evidence-help{% if error %} consent-error{% endif %}">
+<p id="evidence-help">کد داخلی مستند واقعی را بنویسید؛ شماره تماس، کد ملی، فایل صوتی یا متن مدرک وارد نکنید.</p>
+<label><input type="checkbox" name="acknowledged" value="yes" required> رضایت واقعی / مستند مربوط به اقدام را شخصاً بررسی کرده‌ام؛ از طرف مالک رضایت فرضی ثبت نمی‌کنم.</label>
+<button type="submit">ثبت رویداد بررسی</button></form>
+<section aria-labelledby="history-title"><h2 id="history-title">تاریخچهٔ ۲۰ رویداد اخیر</h2>
+<ol>{% for event in history %}<li>{{ event.label }} · بازبین {{ event.actor_id }} · <bdi>{{ event.time }}</bdi></li>{% else %}<li>رویدادی ثبت نشده است.</li>{% endfor %}</ol></section>
+{% if error %}<script>document.getElementById('consent-error').focus();</script>{% endif %}
+{% else %}
+<p>مشخصات و لینک آگهی‌ها برای بررسی تیم؛ هیچ شماره‌ای از دیوار به این صف منتقل نشده است.</p>
+<ul>{% for item in pagination.items %}<li><a href="{{ url_for('owner_consent.review', listing_id=item.id) }}">{{ item.title }}</a></li>{% else %}<li>آگهی‌ای در این صفحه نیست.</li>{% endfor %}</ul>
+<nav aria-label="صفحه‌بندی صف بررسی">{% if pagination.has_prev %}<a href="{{ url_for('owner_consent.index', page=pagination.prev_num) }}">صفحه قبل</a>{% endif %}
+<span>صفحه {{ pagination.page }}</span>
+{% if pagination.has_next %}<a href="{{ url_for('owner_consent.index', page=pagination.next_num) }}">صفحه بعد</a>{% endif %}</nav>
+{% endif %}</main></body></html>

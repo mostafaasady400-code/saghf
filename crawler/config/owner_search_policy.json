@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "scope": {"city": "tehran", "property_type": "apartment", "deal_types": ["rent", "sale"]},
+  "windows": {"head_hours": 24, "archive_hours": 168},
+  "user_filters": {"districts": [], "min_area": 70, "max_area": 100, "rooms": null, "max_price": null, "max_deposit": null, "max_rent": null, "has_parking": null, "has_elevator": null, "has_warehouse": null, "has_balcony": null},
+  "owner_guard": {"account_type": "personal", "reject_agency_metadata": true, "require_shared_owner_filter_approval": true, "require_direct_owner_claim": true, "reject_phrases": ["فایل شخصی", "کلید در اختیار", "عکس مشابه", "همکار"], "ownership_is_independently_verified": false},
+  "truthfulness": {"anonymous_fallback": false, "archive_is_live": false, "unknown_contact_is_verified": false, "unknown_publication_is_fresh": false, "coverage_requires_source_evidence": true},
+  "output": {"target_total": 30, "source_link_required": true, "deduplicate_source_id": true, "cdn_images_only": true}
+}

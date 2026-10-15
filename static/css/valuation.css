@@ -1,0 +1,1489 @@
+/* ====================================================================
+   سامانه سقف - استایل‌های جامع ارزیابی و تخمین هوشمند قیمت ملک
+   معماری ۷ مرحله‌ای و لایه‌بندی کامل smart.amlakmim.com با تم دارک نئون لوکس سقف
+   ==================================================================== */
+
+:root {
+  --val-navy: #0b1329;
+  --val-navy-card: rgba(15, 23, 42, 0.88);
+  --val-royal: #132247;
+  --val-gold: #d4af37;
+  --val-gold-light: #fef08a;
+  --val-gold-glow: rgba(212, 175, 55, 0.4);
+  --val-cyan: #00f2fe;
+  --val-cyan-light: #38bdf8;
+  --val-cyan-glow: rgba(0, 242, 254, 0.35);
+  --val-border-glass: rgba(255, 255, 255, 0.12);
+  --val-border-active: rgba(212, 175, 55, 0.5);
+  --val-r-card: 26px;
+  --val-r-input: 14px;
+  --val-r-btn: 14px;
+  --val-r-pill: 9999px;
+  --val-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --val-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.valuation-page-container {
+  width: 100%;
+  max-width: 580px;
+  margin: 3rem auto 5rem;
+  padding: 0 16px;
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ====== کارت شیشه‌ای لوکس اصلی (Luxury Card) ====== */
+.mim-card {
+  position: relative;
+  width: 100%;
+  background: var(--val-navy-card);
+  border: 1px solid var(--val-border-glass);
+  border-radius: var(--val-r-card);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 35px rgba(212, 175, 55, 0.12);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  overflow: visible;
+  z-index: 1;
+  animation: cardFadeIn 0.5s var(--val-ease) both;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.mim-card:hover {
+  border-color: var(--val-border-active);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.8), 0 0 45px rgba(212, 175, 55, 0.18);
+}
+
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ====== هدر کارت ====== */
+.mim-header {
+  background: linear-gradient(135deg, rgba(11, 19, 41, 0.95) 0%, rgba(19, 34, 71, 0.95) 100%);
+  padding: 30px 24px 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--val-r-card) var(--val-r-card) 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mim-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--val-gold), var(--val-cyan), transparent);
+}
+
+.mim-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mim-logo-dot {
+  width: 9px; height: 9px;
+  background: var(--val-gold);
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow: 0 0 10px var(--val-gold-glow);
+}
+
+.mim-logo-text {
+  font-size: 1.25rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffffff 20%, #fef08a 60%, #d4af37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
+}
+
+.mim-header h1 {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0 0 6px;
+}
+
+.mim-header p {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ====== نوار پیشرفت (Progress Bar) ====== */
+.mim-progress-wrap {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  width: 100%;
+}
+
+.mim-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--val-cyan), var(--val-gold));
+  transition: width 0.45s var(--val-ease);
+  width: 14%;
+  box-shadow: 0 0 12px var(--val-cyan-glow);
+}
+
+/* ====== بدنه فرم ====== */
+.mim-form-body {
+  padding: 28px 24px 34px;
+  min-height: 380px;
+  position: relative;
+}
+
+.mim-step {
+  display: none;
+}
+
+.mim-step.active {
+  display: block;
+  animation: stepSlideIn 0.35s var(--val-ease) both;
+}
+
+@keyframes stepSlideIn {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.mim-step-title {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-bottom: 6px;
+}
+
+.mim-step-hint {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin-bottom: 22px;
+  line-height: 1.7;
+}
+
+/* ====== گرید نوع ملک (Step 1) ====== */
+.mim-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.mim-type-card {
+  position: relative;
+  padding: 24px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(30, 41, 59, 0.45);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.25s var(--val-ease);
+  font-family: inherit;
+  color: #cbd5e1;
+}
+
+.mim-type-card:hover:not(.disabled) {
+  border-color: var(--val-gold);
+  transform: translateY(-3px);
+  background: rgba(30, 41, 59, 0.75);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.mim-type-card.selected {
+  border-color: var(--val-gold);
+  background: rgba(212, 175, 55, 0.14);
+  color: #fef08a;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+}
+
+.mim-type-card svg {
+  width: 42px; height: 42px;
+  color: var(--val-cyan);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: color 0.2s ease;
+}
+
+.mim-type-card.selected svg {
+  color: var(--val-gold);
+}
+
+.mim-type-card span {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.mim-type-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.mim-soon-badge {
+  position: absolute;
+  top: 10px; left: 10px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--val-r-pill);
+}
+
+/* ====== فیلدها و استپرها (Step 2 & 3) ====== */
+.mim-field {
+  margin-bottom: 20px;
+}
+
+.mim-field label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+
+.mim-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mim-num-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--val-r-input);
+  transition: border-color 0.2s ease;
+}
+
+.mim-num-row:focus-within {
+  border-color: var(--val-gold);
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.mim-num-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mim-num-label label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0;
+  cursor: pointer;
+}
+
+.mim-num-hint {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.mim-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mim-step-btn {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.8);
+  color: #f8fafc;
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.mim-step-btn:hover {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--val-gold);
+  color: var(--val-gold-light);
+  transform: scale(1.05);
+}
+
+.mim-input {
+  width: 65px;
+  height: 38px;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #f8fafc;
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.mim-input:focus {
+  border-color: var(--val-cyan);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
+}
+
+/* ====== کامبوباکس جستجوی محله و سند ====== */
+.mim-combo {
+  position: relative;
+  width: 100%;
+}
+
+.mim-combo-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 42px 0 36px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--val-r-input);
+  color: #f8fafc;
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.mim-combo.plain .mim-combo-input {
+  padding-right: 14px;
+  cursor: pointer;
+}
+
+.mim-combo-input:focus,
+.mim-combo.open .mim-combo-input {
+  border-color: var(--val-gold);
+  background: rgba(15, 23, 42, 0.9);
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.22);
+}
+
+.mim-combo-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px; height: 18px;
+  color: #64748b;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.mim-combo-caret {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  color: #64748b;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: transform 0.25s ease;
+  pointer-events: none;
+}
+
+.mim-combo.open .mim-combo-caret {
+  transform: translateY(-50%) rotate(180deg);
+  color: var(--val-gold);
+}
+
+.mim-combo-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  background: #0b1329;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: var(--val-r-input);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+  overflow-y: auto;
+  z-index: 50;
+  max-height: 220px;
+}
+
+.mim-combo.open .mim-combo-list {
+  display: block;
+}
+
+.mim-combo.drop-up .mim-combo-list {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.mim-combo-option {
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.mim-combo-option:hover,
+.mim-combo-option.highlight {
+  background: rgba(212, 175, 55, 0.12);
+  color: #fef08a;
+}
+
+.mim-combo-option.selected {
+  background: rgba(212, 175, 55, 0.2);
+  color: #fef08a;
+  font-weight: 700;
+}
+
+.mim-combo-empty {
+  padding: 14px;
+  text-align: center;
+  font-size: 0.84rem;
+  color: #64748b;
+}
+
+/* ====== دکمه‌های گزینش تک‌کلیک خواب و پارکینگ (Choice Row) ====== */
+.mim-choice-row {
+  display: flex;
+  gap: 8px;
+}
+
+.mim-choice-btn {
+  flex: 1;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--val-r-input);
+  background: rgba(30, 41, 59, 0.45);
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mim-choice-btn:hover {
+  background: rgba(30, 41, 59, 0.75);
+  border-color: var(--val-gold);
+}
+
+.mim-choice-btn.selected {
+  background: rgba(212, 175, 55, 0.18);
+  border-color: var(--val-gold);
+  color: #fef08a;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.2);
+}
+
+/* ====== گرید امکانات (Facilities) ====== */
+.mim-check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.mim-check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--val-r-input);
+  background: rgba(30, 41, 59, 0.45);
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mim-check-item.full {
+  grid-column: 1 / -1;
+}
+
+.mim-check-item:hover {
+  background: rgba(30, 41, 59, 0.75);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.mim-check-item.active {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: var(--val-gold);
+  color: #fef08a;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.15);
+}
+
+.mim-check-box {
+  width: 20px; height: 20px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.mim-check-item.active .mim-check-box {
+  background: var(--val-gold);
+  border-color: var(--val-gold);
+}
+
+.mim-check-box svg {
+  width: 14px; height: 14px;
+  stroke: #0b1329;
+  stroke-width: 2.5;
+  fill: none;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.2s ease;
+}
+
+.mim-check-item.active .mim-check-box svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ====== دکمه‌های ناوبری فرم (Nav Row) ====== */
+.mim-nav-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.mim-btn-prev,
+.mim-btn-next,
+.mim-btn-submit {
+  min-height: 48px;
+  border-radius: var(--val-r-btn);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s var(--val-ease-spring);
+  border: none;
+}
+
+.mim-btn-prev {
+  background: rgba(30, 41, 59, 0.75);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 20px;
+}
+
+.mim-btn-prev:hover {
+  background: rgba(51, 65, 85, 0.85);
+  color: #f8fafc;
+}
+
+.mim-btn-prev svg,
+.mim-btn-next svg {
+  width: 16px; height: 16px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
+}
+
+.mim-btn-next,
+.mim-btn-submit {
+  flex: 1;
+  background: linear-gradient(135deg, var(--val-gold) 0%, #f59e0b 100%);
+  color: #0b1329;
+  box-shadow: 0 4px 18px rgba(212, 175, 55, 0.35);
+}
+
+.mim-btn-next:hover,
+.mim-btn-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(212, 175, 55, 0.5);
+  filter: brightness(1.08);
+}
+
+/* ====== گام ۵: لید کپچر (Step 5) ====== */
+.mim-step-lead {
+  text-align: center;
+}
+
+.mim-check-icon-wrap {
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.mim-check-icon-wrap svg {
+  width: 28px; height: 28px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
+}
+
+.mim-step-lead h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin: 0 0 6px;
+}
+
+.mim-desc {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  margin-bottom: 22px;
+}
+
+/* باکس بلورشده قیمت */
+.mim-blur-preview {
+  position: relative;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: var(--val-r-card);
+  padding: 24px 16px;
+  margin-bottom: 22px;
+  overflow: hidden;
+}
+
+.mim-blur-label {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+}
+
+.mim-blur-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  filter: blur(8px);
+  user-select: none;
+  opacity: 0.7;
+}
+
+.mim-blur-value {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #fef08a;
+}
+
+.mim-blur-unit {
+  font-size: 0.95rem;
+  color: #cbd5e1;
+}
+
+.mim-blur-lock {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 19, 41, 0.75);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #fef08a;
+}
+
+.mim-blur-lock svg {
+  width: 16px; height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.mim-phone-wrap {
+  position: relative;
+}
+
+.mim-phone-wrap svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px; height: 18px;
+  color: #64748b;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.mim-phone-wrap .mim-input {
+  width: 100%;
+  height: 48px;
+  text-align: right;
+  direction: ltr;
+  padding: 0 16px 0 42px;
+  border-radius: var(--val-r-input);
+}
+
+/* ====== گام ۶: ورود کد تایید پیامکی (OTP) ====== */
+.mim-step-otp {
+  text-align: center;
+}
+
+.mim-otp-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  direction: ltr;
+  margin: 20px 0 16px;
+}
+
+.mim-otp-box {
+  width: 48px; height: 56px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  color: #fef08a;
+  font-family: inherit;
+  font-size: 1.45rem;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.mim-otp-box:focus {
+  border-color: var(--val-gold);
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.35);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.mim-otp-box.filled {
+  border-color: var(--val-cyan);
+}
+
+.mim-debug-code {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #4ade80;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin: 10px auto;
+  width: fit-content;
+}
+
+.mim-otp-meta {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  margin: 14px 0 20px;
+}
+
+.mim-otp-timer {
+  color: #fef08a;
+  font-weight: 700;
+}
+
+.mim-link-btn {
+  background: none;
+  border: none;
+  color: #38bdf8;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.mim-link-btn:hover {
+  color: #7dd3fc;
+}
+
+.mim-link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* ====== گام ۷: داشبورد ارزیابی هوشمند (Step 7 Result) ====== */
+.mim-step-result h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fef08a;
+  margin: 0 0 4px;
+}
+
+.mim-subtitle {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  margin-bottom: 20px;
+}
+
+.mim-price-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(19, 34, 71, 0.9) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: var(--val-r-card);
+  padding: 24px 20px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.6), 0 0 25px rgba(212, 175, 55, 0.15);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.mim-price-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #d4af37, #00f2fe, #f59e0b);
+}
+
+.mim-price-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.mim-price-label {
+  font-size: 0.86rem;
+  color: #cbd5e1;
+}
+
+.mim-price-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #fef08a;
+  padding: 3px 10px;
+  border-radius: var(--val-r-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.mim-chip-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--val-gold);
+}
+
+.mim-price-hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+
+.mim-price-hero-num {
+  font-size: clamp(2.2rem, 5vw, 2.85rem);
+  font-weight: 900;
+  color: #4ade80;
+  background: linear-gradient(135deg, #a7f3d0 20%, #4ade80 70%, #22c55e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 35px rgba(34, 197, 94, 0.35);
+}
+
+.mim-price-hero-unit {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+/* نوار نوسان قیمت */
+.mim-price-bar {
+  margin: 20px 0 16px;
+}
+
+.mim-price-bar-track {
+  position: relative;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--val-r-pill);
+  overflow: visible;
+}
+
+.mim-price-bar-fill {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #38bdf8, #22c55e, #eab308);
+  border-radius: var(--val-r-pill);
+  transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mim-price-bar-dot {
+  position: absolute;
+  top: 50%;
+  right: 50%;
+  transform: translate(50%, -50%) scale(0);
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #d4af37;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.7);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s;
+}
+
+.mim-price-bar-dot.show {
+  transform: translate(50%, -50%) scale(1);
+}
+
+.mim-price-bar-ends {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.mim-price-bar-caption {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+/* پنل قیمت هر متر */
+.mim-price-meter {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mim-price-meter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.86rem;
+}
+
+.mim-price-meter-row.sub {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 6px;
+}
+
+.mim-pm-key { color: #cbd5e1; }
+.mim-pm-val { color: #f8fafc; font-weight: 700; }
+.mim-pm-unit { font-size: 0.75rem; color: #94a3b8; margin-right: 4px; }
+.mim-price-brand {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 16px 0 0;
+}
+
+/* دکمه درخواست کارشناسی */
+.mim-expert-cta {
+  margin: 18px 0;
+}
+
+.mim-btn-expert {
+  width: 100%;
+  min-height: 48px;
+  border-radius: var(--val-r-btn);
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  color: #fef08a;
+  font-family: inherit;
+  font-size: 0.94rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s var(--val-ease);
+}
+
+.mim-btn-expert:hover {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: #d4af37;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.25);
+}
+
+.mim-btn-expert svg {
+  width: 18px; height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.mim-expert-done {
+  display: none;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #4ade80;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.mim-expert-done.show { display: block; }
+
+/* بلوک معادل‌ساز طلا و دلار */
+.mim-equiv-block {
+  margin: 22px 0;
+}
+
+.mim-equiv-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-bottom: 12px;
+}
+
+.mim-equiv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.mim-equiv-card {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px;
+  text-align: center;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.mim-equiv-card:hover {
+  transform: translateY(-2px);
+}
+
+.mim-equiv-card.gold {
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.mim-equiv-card.usd {
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.mim-equiv-icon-wrap {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mim-equiv-card.gold .mim-equiv-icon-wrap {
+  background: rgba(212, 175, 55, 0.15);
+  color: #fef08a;
+}
+
+.mim-equiv-card.usd .mim-equiv-icon-wrap {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+
+.mim-equiv-icon {
+  width: 20px; height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.mim-equiv-amount {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #f8fafc;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.mim-equiv-unit {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.mim-equiv-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-top: 4px;
+}
+
+.mim-equiv-rate {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* بلوک مقایسه‌ها (Comparables) */
+.mim-comps-block {
+  margin: 22px 0;
+}
+
+.mim-comps-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fef08a;
+  margin-bottom: 4px;
+}
+
+.mim-comps-sub {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.mim-comp-card {
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  transition: all 0.2s ease;
+}
+
+.mim-comp-card:hover {
+  background: rgba(30, 41, 59, 0.75);
+  border-color: rgba(212, 175, 55, 0.35);
+}
+
+.mim-comp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #f8fafc;
+}
+
+.mim-comp-price {
+  color: #4ade80;
+}
+
+.mim-comp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.mim-comp-meta span {
+  background: rgba(15, 23, 42, 0.6);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.mim-comp-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #64748b;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 6px;
+  margin-top: 6px;
+}
+
+.mim-comp-link {
+  color: #38bdf8;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.mim-comp-link:hover {
+  background: rgba(56, 189, 248, 0.22);
+  color: #ffffff;
+}
+
+/* باکس هشدار کارشناسی */
+.mim-warn-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 0.8rem;
+  line-height: 1.8;
+  color: #fcd34d;
+  margin: 20px 0;
+}
+
+.mim-warn-box svg {
+  width: 20px; height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* پیام‌های خطا و توست */
+.mim-field-error {
+  display: none;
+  font-size: 0.78rem;
+  color: #f87171;
+  margin-top: 6px;
+}
+
+.mim-field-error.show { display: block; }
+.mim-input.error,
+.mim-combo-input.error { border-color: #ef4444 !important; }
+
+.mim-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(40px);
+  background: #0f172a;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: #f8fafc;
+  padding: 12px 24px;
+  border-radius: var(--val-r-pill);
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 100;
+}
+
+.mim-toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.mim-toast.error {
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.mim-toast.success {
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+.mim-spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(11, 19, 41, 0.3);
+  border-top-color: #0b1329;
+  border-radius: 50%;
+  animation: mimSpin 0.7s linear infinite;
+}
+
+@keyframes mimSpin {
+  to { transform: rotate(360deg); }
+}
+
+.mim-scroll-cue {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fef08a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 50;
+  animation: bounceCue 1.5s infinite;
+}
+
+.mim-scroll-cue.on { opacity: 1; }
+.mim-scroll-cue svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2.2; fill: none; }
+
+@keyframes bounceCue {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(6px); }
+}
+
+/* ====== استایل‌های درگاه تایید تلگرام (Telegram Verification) ====== */
+.mim-delivery-selector {
+  margin: 18px 0;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(34, 158, 217, 0.25);
+  border-radius: var(--val-r-card);
+}
+
+.mim-delivery-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+.mim-delivery-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mim-delivery-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--val-r-btn);
+  background: linear-gradient(135deg, rgba(34, 158, 217, 0.15), rgba(15, 23, 42, 0.8));
+  border: 1px solid rgba(34, 158, 217, 0.4);
+  color: #f8fafc;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.mim-delivery-pill svg {
+  color: #229ED9;
+  flex-shrink: 0;
+}
+
+.mim-pill-badge {
+  margin-right: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(34, 158, 217, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.mim-delivery-note {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 8px;
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
+/* باکس اقدام و وضعیت زنده تلگرام در گام ۶ */
+.mim-tg-action-box {
+  margin: 16px 0 20px;
+  padding: 16px;
+  background: radial-gradient(circle at top left, rgba(34, 158, 217, 0.18), rgba(15, 23, 42, 0.75));
+  border: 1px solid rgba(34, 158, 217, 0.35);
+  border-radius: var(--val-r-card);
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(34, 158, 217, 0.12);
+}
+
+.mim-tg-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: var(--val-r-btn);
+  background: linear-gradient(135deg, #229ED9, #0284c7);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(34, 158, 217, 0.4);
+  transition: all 0.25s var(--val-ease-spring);
+}
+
+.mim-tg-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(34, 158, 217, 0.6);
+  color: #ffffff;
+}
+
+.mim-tg-live-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.mim-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: pulseDot 1.6s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(0.85); opacity: 0.4; }
+  50% { transform: scale(1.3); opacity: 1; }
+}
+
+@media (max-width: 600px) {
+  .valuation-page-container {
+    padding: 0 10px;
+    margin: 1.5rem auto 4rem;
+  }
+  .mim-form-body {
+    padding: 22px 16px 28px;
+  }
+  .mim-type-grid {
+    gap: 10px;
+  }
+  .mim-check-grid {
+    grid-template-columns: 1fr;
+  }
+  .mim-equiv-grid {
+    grid-template-columns: 1fr;
+  }
+}

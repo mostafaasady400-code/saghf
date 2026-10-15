@@ -1,0 +1,102 @@
+<div class="glass-panel" style="padding: 1.35rem 1.5rem; border-right: 5px solid {% if rec.match_score >= 85 %}#10b981{% elif rec.match_score >= 70 %}#00f2fe{% else %}#f59e0b{% endif %}; transition: all 0.2s ease;">
+    <div class="matching-card-grid">
+        
+        <!-- Property Box (Filing) -->
+        <div class="glass-card" style="padding: 1rem 1.15rem; background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.06);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                <span style="font-size: 0.72rem; padding: 0.15rem 0.55rem; border-radius: 6px; font-weight: 700; background: {% if rec.source_type == 'property' %}rgba(16, 185, 129, 0.15); color: #34d399;{% else %}rgba(56, 189, 248, 0.15); color: #38bdf8;{% endif %}">
+                    ● {{ rec.item_source_label }}
+                </span>
+                <span style="font-size: 0.72rem; color: #94a3b8;">
+                    {% if rec.deal_type == 'sale' %}فروش نقدی{% else %}رهن و اجاره{% endif %}
+                </span>
+            </div>
+            
+            <a href="{{ rec.detail_url }}" style="color: #ffffff; text-decoration: none; font-weight: 800; font-size: 0.96rem; line-height: 1.45; display: block; margin-bottom: 0.45rem;">
+                {{ rec.item_title }}
+            </a>
+            
+            <div style="font-size: 0.82rem; color: #cbd5e1; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 0.4rem;">
+                <span>📍 {{ rec.item_district }}</span>
+                <span>📐 {{ rec.item_area | pnum }} متر</span>
+                {% if rec.deal_type == 'sale' %}
+                    <span style="color: #34d399; font-weight: 800;">
+                        {{ rec.item_total_price | toman }}
+                    </span>
+                {% else %}
+                    <span style="color: #38bdf8; font-weight: 800;">
+                        {{ rec.item_deposit | toman }} رهن | {{ rec.item_monthly_rent | toman }} اجاره
+                    </span>
+                {% endif %}
+            </div>
+
+            {% if rec.item_source_url %}
+                <div>
+                    <a href="{{ rec.item_source_url }}" target="_blank" rel="noopener noreferrer" 
+                       style="color: #fbbf24; text-decoration: underline; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+                        <span>🔗</span> لینک آگهی مستقیم
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Match Score Pill Connector -->
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem; min-width: 80px;">
+            <div class="match-score-pill {% if rec.match_score >= 85 %}match-high{% elif rec.match_score >= 70 %}match-medium{% else %}match-low{% endif %}" 
+                 style="font-size: 1.15rem; font-weight: 900; padding: 0.4rem 0.85rem; border-radius: 20px; box-shadow: 0 0 15px {% if rec.match_score >= 85 %}rgba(16, 185, 129, 0.3){% elif rec.match_score >= 70 %}rgba(0, 242, 254, 0.3){% else %}rgba(245, 158, 11, 0.3){% endif %};">
+                {{ rec.match_score | pnum }}٪
+            </div>
+            <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">تطابق هوشمند</div>
+            <div style="color: {% if rec.deal_type == 'sale' %}#34d399{% else %}#00f2fe{% endif %}; font-size: 1.25rem; line-height: 1;">⟷</div>
+        </div>
+
+        <!-- Client Box (Demand) -->
+        <div class="glass-card" style="padding: 1rem 1.15rem; background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.06);">
+            <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.4rem; display: flex; justify-content: space-between;">
+                <span>متقاضی تاییدشده (Demand)</span>
+                <span style="color: #10b981; font-weight: 700;">آماده معامله</span>
+            </div>
+            
+            <a href="{{ url_for('clients.detail', id=rec.client.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 800; font-size: 0.96rem; display: block; margin-bottom: 0.45rem;">
+                {{ rec.client.full_name }}
+            </a>
+            
+            <div style="font-size: 0.82rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.3rem;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>📞 تلفن:</span>
+                    <a href="tel:{{ rec.client.phone_number }}" style="direction: ltr; color: #38bdf8; text-decoration: none; font-weight: 700;">
+                        {{ rec.client.phone_number }}
+                    </a>
+                </div>
+                <div style="font-size: 0.78rem; font-weight: 700;">
+                    {% if rec.client.preferred_deal_type == 'sale' %}
+                        <span style="color: #34d399;">سقف بودجه خرید: {{ rec.client.max_budget | toman }}</span>
+                    {% else %}
+                        <span style="color: #38bdf8;">سقف ودیعه: {{ rec.client.max_deposit | toman }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Match Reasons & Action Buttons -->
+        <div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.85rem; max-height: 68px; overflow-y: auto;">
+                {% for r in rec.match_reasons %}
+                    <span class="badge-neon" style="font-size: 0.7rem; background: rgba(0, 242, 254, 0.08); border-color: rgba(0, 242, 254, 0.25); color: #38bdf8; padding: 0.2rem 0.5rem;">
+                        ✓ {{ r }}
+                    </span>
+                {% endfor %}
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.45rem;">
+                <a href="{{ rec.detail_url }}" class="btn-neon-cyan" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; justify-content: center; text-decoration: none;">
+                    <span>⚡</span> هماهنگی بازدید و معرفی
+                </a>
+                <button onclick="markSuggested({{ rec.id }}, this)" class="glass-btn" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; justify-content: center;">
+                    {% if rec.is_suggested %}✓ معرفی‌شده به متقاضی{% else %}نشانه‌گذاری به عنوان پیشنهاد{% endif %}
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>

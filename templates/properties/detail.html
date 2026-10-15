@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+
+{% block title %}{{ prop.title }} | فایلینگ سقف{% endblock %}
+
+{% block content %}
+<!-- Back and Action Bar -->
+<div style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+    <a href="{{ url_for('properties.list_properties') }}" class="glass-btn">
+        <span>←</span> بازگشت به لیست فایل‌ها
+    </a>
+    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <button type="button" onclick="openInAppAdModal({{ prop.id }}, event)" class="btn-luxury-gold">
+            <span>🏛️</span> نمایش در مودال سه‌بعدی
+        </button>
+        {% if prop.status != 'verified' %}
+            <form action="{{ url_for('properties.verify', id=prop.id) }}" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-neon-emerald">
+                    <span>✓</span> تبدیل به فایل رسمی دفتر سقف
+                </button>
+            </form>
+        {% endif %}
+        <button onclick="openModal('scheduleVisitModal')" class="btn-neon-cyan">
+            <span>📅</span> هماهنگی بازدید برای این ملک
+        </button>
+    </div>
+</div>
+
+<div class="grid-2" style="margin-bottom: 2rem;">
+    <!-- Main Property Info -->
+    <div class="glass-panel" style="padding: 1.75rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="property-code-badge" style="font-size: 0.85rem; padding: 0.2rem 0.65rem;">
+                    🔢 کد فایل: {{ prop.file_code | pnum }}
+                </span>
+                <span class="badge-neon {% if prop.deal_type == 'sale' %}badge-neon-cyan{% else %}badge-neon-amber{% endif %}">
+                    {{ prop.deal_type | deal_name }}
+                </span>
+                <span class="badge-neon badge-neon-purple">
+                    منبع: {% if prop.source == 'divar' %}دیوار{% elif prop.source == 'sheypoor' %}شیپور{% else %}مالک مستقیم{% endif %}
+                </span>
+                {% if prop.source_url %}
+                    <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" class="badge-neon badge-neon-cyan" style="text-decoration: none;">
+                        لینک آگهی
+                    </a>
+                {% endif %}
+                <button type="button" onclick="sendPropertyPhotosToTelegram({{ prop.id }}, '{{ prop.file_code }}', event)" class="btn-compact-telegram" style="padding: 0.25rem 0.65rem; font-size: 0.78rem;" title="ارسال آلبوم تصاویر به تلگرام">
+                    <span>📸</span> ارسال به تلگرام
+                </button>
+            </div>
+            <div class="match-score-pill match-high">
+                امتیاز کارشناسی: {{ prop.score | pnum }}
+            </div>
+        </div>
+
+        <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; line-height: 1.4;">
+            {{ prop.title }}
+        </h2>
+        <div style="color: #94a3b8; font-size: 0.92rem; margin-bottom: 1.5rem;">
+            📍 {{ prop.address or prop.district }}
+        </div>
+
+        <!-- All Images Showcase Gallery -->
+        {% if prop.images and prop.images | length > 0 %}
+            <div class="property-gallery-container" style="margin-bottom: 1.75rem;">
+                <div style="position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer;" 
+                     onclick="openPhotoGallery({{ prop.id }}, {{ prop.images | tojson | forceescape }}, '{{ prop.title | forceescape }}', '{{ prop.file_code }}')" 
+                     title="کلیک برای باز شدن گالری تمام‌صفحه">
+                    <img id="mainFeaturedImage" src="{{ prop.images[0] }}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null; this.src='/static/placeholder.png';" style="width: 100%; height: 380px; object-fit: cover; transition: opacity 0.25s ease;" alt="تصویر شاخص آگهی">
+                    <div style="position: absolute; bottom: 12px; right: 12px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.82rem; color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); font-weight: 700;">
+                        📷 {{ prop.images | length | pnum }} تصویر ثبت‌شده (کلیک برای بزرگنمایی)
+                    </div>
+                </div>
+
+                <!-- Thumbnails Strip for ALL Images -->
+                {% if prop.images | length > 1 %}
+                    <div style="display: flex; gap: 0.6rem; overflow-x: auto; padding-bottom: 0.5rem;">
+                        {% for img in prop.images %}
+                            <img src="{{ img }}" 
+                                 referrerpolicy="no-referrer" 
+                                 loading="lazy" 
+                                 onerror="this.onerror=null; this.src='/assets/placeholder.png';"
+                                 onclick="document.getElementById('mainFeaturedImage').src = this.src; document.querySelectorAll('.gallery-thumb-item').forEach(t => t.style.borderColor = 'rgba(255,255,255,0.12)'); this.style.borderColor = '#00f2fe';"
+                                 class="gallery-thumb-item" 
+                                 style="width: 80px; height: 60px; object-fit: cover; border-radius: 10px; cursor: pointer; border: 2px solid {% if loop.first %}#00f2fe{% else %}rgba(255,255,255,0.12){% endif %}; transition: transform 0.2s, border-color 0.2s; flex-shrink: 0;" 
+                                 onmouseover="this.style.transform='scale(1.05)'"
+                                 onmouseout="this.style.transform='scale(1)'"
+                                 alt="تصویر شماره {{ loop.index | pnum }}">
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div style="margin-bottom: 1.5rem; background: rgba(15, 23, 42, 0.6); border: 1px dashed rgba(255,255,255,0.15); border-radius: 14px; padding: 2rem; text-align: center;">
+                <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🏢</div>
+                <div style="color: #94a3b8; font-size: 0.92rem; font-weight: 600;">این آگهی بدون عکس در دیوار ثبت شده است</div>
+                <div style="color: #64748b; font-size: 0.78rem; margin-top: 0.35rem;">(جهت رعایت اصالت داده‌ها، هیچ تصویر ساختگی یا فیک جایگزین نشده است)</div>
+            </div>
+        {% endif %}
+
+        <!-- Pricing Highlight -->
+        <div class="glass-card" style="margin-bottom: 1.5rem; background: rgba(0, 242, 254, 0.05); border-color: rgba(0, 242, 254, 0.25);">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                {% if prop.deal_type == 'sale' %}
+                    <div>
+                        <div style="font-size: 0.8rem; color: #94a3b8;">قیمت کل</div>
+                        <div style="font-size: 1.5rem; font-weight: 800; color: #00f2fe;">
+                            {{ prop.total_price | toman }}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #94a3b8;">قیمت هر متر مربع</div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: #f8fafc;">
+                            {{ prop.meter_price | toman }}
+                        </div>
+                    </div>
+                {% else %}
+                    <div>
+                        <div style="font-size: 0.8rem; color: #94a3b8;">مبلغ ودیعه (رهن)</div>
+                        <div style="font-size: 1.5rem; font-weight: 800; color: #10b981;">
+                            {{ prop.deposit | toman }}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #94a3b8;">اجاره ماهانه</div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: #f8fafc;">
+                            {{ prop.monthly_rent | toman }}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Physical Specs Grid -->
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">مشخصات فنی و فیزیکی</h3>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">متراژ سندی</div>
+                <div style="font-size: 1.15rem; font-weight: 700;">{{ prop.area | pnum }} متر</div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">تعداد اتاق خواب</div>
+                <div style="font-size: 1.15rem; font-weight: 700;">{{ prop.rooms | pnum }} خواب</div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">سال ساخت</div>
+                <div style="font-size: 1.15rem; font-weight: 700;">{{ prop.build_year | pnum }}</div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">طبقه</div>
+                <div style="font-size: 1.15rem; font-weight: 700;">
+                    طبقه {{ prop.floor | pnum }}
+                    {% if prop.total_floors %} از {{ prop.total_floors | pnum }}{% endif %}
+                </div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">آسانسور</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: {% if prop.has_elevator %}#10b981{% else %}#64748b{% endif %};">
+                    {% if prop.has_elevator %}دارد ✓{% else %}ندارد ✕{% endif %}
+                </div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">پارکینگ</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: {% if prop.has_parking %}#10b981{% else %}#64748b{% endif %};">
+                    {% if prop.has_parking %}دارد ✓{% else %}ندارد ✕{% endif %}
+                </div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">انباری</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: {% if prop.has_warehouse %}#10b981{% else %}#64748b{% endif %};">
+                    {% if prop.has_warehouse %}دارد ✓{% else %}ندارد ✕{% endif %}
+                </div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">بالکن / تراس</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: {% if prop.has_balcony %}#10b981{% else %}#64748b{% endif %};">
+                    {% if prop.has_balcony %}دارد ✓{% else %}ندارد ✕{% endif %}
+                </div>
+            </div>
+            <div class="glass-card" style="padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.8rem; color: #94a3b8;">وضعیت آگهی‌دهنده</div>
+                <div style="font-size: 1.05rem; font-weight: 700; color: #10b981;">
+                    مالک شخصی ✓
+                </div>
+            </div>
+        </div>
+
+        <!-- Description Box -->
+        <div style="margin-bottom: 1.5rem; background: rgba(255,255,255,0.03); border-radius: 14px; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                    <span>📝</span> توضیحات کامل آگهی
+                </h3>
+                <span class="badge-neon badge-neon-cyan" style="font-size: 0.75rem;">متن استخراج‌شده اصلی</span>
+            </div>
+            <div style="color: #e2e8f0; line-height: 2; font-size: 0.94rem; white-space: pre-line;">
+                {{ (prop.description or 'توضیحاتی برای این فایل درج نشده است.') | linkify_ad }}
+            </div>
+        </div>
+
+        <!-- Features Pills -->
+        {% if prop.features %}
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                {% for f in prop.features %}
+                    <span class="badge-neon badge-neon-purple">{{ f }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Owner Profile & Matching Engine -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Owner Card -->
+        <div class="glass-panel" style="padding: 1.5rem; border-right: 4px solid #00f2fe;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>👤</span> مشخصات و تماس مالک
+                </h3>
+                <span class="badge-neon badge-neon-emerald">مالک شخصی</span>
+            </div>
+
+            {% if prop.owner %}
+                <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #94a3b8; font-size: 0.88rem;">نام مالک:</span>
+                        <strong style="font-size: 0.95rem;">{{ prop.owner.full_name }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; background: {% if prop.owner.phone_number and prop.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.1){% else %}rgba(0, 242, 254, 0.08){% endif %}; padding: 0.75rem; border-radius: 10px; border: 1px solid {% if prop.owner.phone_number and prop.owner.phone_number.startswith('09') %}rgba(16, 185, 129, 0.35){% else %}rgba(0, 242, 254, 0.25){% endif %};">
+                        <div>
+                            <span style="color: #cbd5e1; font-size: 0.85rem; font-weight: 700;">📞 شماره تماس مالک:</span>
+                        </div>
+                        {% if prop.owner.phone_number and prop.owner.phone_number.startswith('09') %}
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <a href="tel:{{ prop.owner.phone_number }}" style="color: #10b981; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); padding: 0.35rem 0.75rem; border-radius: 8px; text-decoration: none; font-weight: 800; direction: ltr; font-size: 1.1rem; letter-spacing: 1.5px;">
+                                    {{ prop.owner.phone_number }}
+                                </a>
+                                <a href="tel:{{ prop.owner.phone_number }}" class="btn-neon-emerald" style="padding: 0.3rem 0.65rem; font-size: 0.75rem; text-decoration: none;">
+                                    تماس فوری
+                                </a>
+                                <button type="button" onclick="navigator.clipboard.writeText({{ (prop.owner.phone_number or '') | tojson }}); alert('شماره در حافظه کپی شد');" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #10b981;" title="کپی شماره">
+                                    📋
+                                </button>
+                                <button type="button" onclick="openMessengerModal({{ prop.id }})" class="glass-btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; color: #38bdf8;" title="استعلام وضعیت در ۵ پیام‌رسان">
+                                    💬
+                                </button>
+                                <button type="button" onclick="promptSavePhone({{ prop.id }}, {{ (prop.owner.phone_number or '') | tojson }}, {{ (prop.owner.full_name or '') | tojson }})" class="glass-btn" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #94a3b8;" title="ویرایش شماره">
+                                    ✏️
+                                </button>
+                            </div>
+                        {% else %}
+                            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                <button type="button" onclick="fetchDivarPhoneDirect({{ prop.id }})" class="btn-neon-cyan" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; font-weight: 700;">
+                                    <span>⚡</span> استخراج خودکار شماره
+                                </button>
+                                <button type="button" onclick="promptSavePhone({{ prop.id }}, '', {{ (prop.owner.full_name or '') | tojson }})" class="glass-btn" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                                    <span>✏️</span> ثبت شماره
+                                </button>
+                                {% if prop.source_url %}
+                                    <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" class="glass-btn" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; text-decoration: none; color: #00f2fe; border-color: rgba(0, 242, 254, 0.3);">
+                                        🌐 دیوار
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #94a3b8; font-size: 0.88rem;">میزان فوریت:</span>
+                        <span class="badge-neon {% if prop.owner.urgency == 'high' %}badge-neon-crimson{% else %}badge-neon-amber{% endif %}">
+                            {{ prop.owner.urgency }}
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #94a3b8; font-size: 0.88rem;">انعطاف در قیمت:</span>
+                        <span>{{ prop.owner.flexibility }}</span>
+                    </div>
+                    {% if prop.owner.notes %}
+                        <div style="background: rgba(255,255,255,0.04); padding: 0.75rem; border-radius: 10px; font-size: 0.82rem; color: #cbd5e1;">
+                            {{ prop.owner.notes | linkify_ad }}
+                        </div>
+                    {% endif %}
+                    {% if prop.source_url %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                            <span style="color: #94a3b8; font-size: 0.88rem;">صفحه منبع:</span>
+                            <a href="{{ prop.source_url }}" target="_blank" rel="noopener noreferrer" style="color: #00f2fe; text-decoration: underline; font-weight: 700;">
+                                لینک آگهی
+                            </a>
+                        </div>
+                    {% endif %}
+                    <!-- Lifecycle Status & Omni-Messenger Inquiry -->
+                    <div style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <span style="font-size: 0.82rem; color: #94a3b8;">چرخه عمر فایل:</span>
+                            {% if prop.is_expired %}
+                                <span class="badge-neon" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #ef4444; font-weight: 700;">
+                                    ⏰ معوق ({{ prop.age_in_days | pnum }} روزه)
+                                </span>
+                            {% else %}
+                                <span class="badge-neon badge-neon-emerald">
+                                    ✓ فعال ({{ prop.age_in_days | pnum }} روز گذشته)
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <button type="button" onclick="openMessengerModal({{ prop.id }})" class="glass-btn" style="width: 100%; justify-content: center; background: linear-gradient(135deg, rgba(37, 211, 102, 0.15), rgba(34, 158, 217, 0.15)); border-color: rgba(0, 242, 254, 0.3); color: #00f2fe; font-weight: 700; margin-bottom: 0.5rem;">
+                            <span>💬</span> استعلام وضعیت در ۵ پیام‌رسان
+                        </button>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
+                            <form method="POST" action="{{ url_for('properties.reactivate', id=prop.id) }}" style="margin:0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; color: #10b981; border-color: rgba(16,185,129,0.3);">
+                                    ✓ تایید موجودی
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('properties.archive', id=prop.id) }}" style="margin:0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="glass-btn" style="width: 100%; justify-content: center; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245,158,11,0.3);">
+                                    📦 واگذار شد (بایگانی)
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div style="color: #64748b; font-size: 0.88rem; margin-bottom: 1rem;">
+                    مالک اختصاصی برای این فایل خام ثبت نشده است.
+                </div>
+            {% endif %}
+
+            <div style="margin-top: 1rem;">
+                <button onclick="openModal('logCallModal')" class="glass-btn" style="width: 100%; justify-content: center;">
+                    <span>📞</span> ثبت گزارش تماس با مالک
+                </button>
+            </div>
+        </div>
+
+        <!-- Connected Demands / Matching Clients -->
+        <div class="glass-panel" style="padding: 1.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="text-neon-emerald">⚡</span> متقاضیان منطبق با این فایل
+                </h3>
+                <span class="badge-neon badge-neon-emerald">
+                    {{ matches | length | pnum }} متقاضی سازگار
+                </span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                {% for m in matches %}
+                    <div class="glass-card" style="padding: 1rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <a href="{{ url_for('clients.detail', id=m.client.id) }}" style="color: #ffffff; text-decoration: none; font-weight: 700;">
+                                {{ m.client.full_name }}
+                            </a>
+                            <div class="match-score-pill {% if m.score >= 85 %}match-high{% else %}match-medium{% endif %}" style="font-size: 0.85rem; padding: 0.2rem 0.6rem;">
+                                {{ m.score | pnum }}٪ تطابق
+                            </div>
+                        </div>
+
+                        <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.6rem;">
+                            <span>بودجه: 
+                                {% if m.client.preferred_deal_type == 'sale' %}
+                                    {{ m.client.max_budget | toman }}
+                                {% else %}
+                                    {{ m.client.max_deposit | toman }} رهن
+                                {% endif %}
+                            </span>
+                            <span style="margin-right: 0.75rem;">تماس: <span style="direction: ltr; display: inline-block;">{{ m.client.phone_number }}</span></span>
+                        </div>
+
+                        <!-- Match reasons -->
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem;">
+                            {% for r in m.reasons %}
+                                <span class="badge-neon" style="font-size: 0.7rem; background: rgba(0, 242, 254, 0.08); border-color: rgba(0, 242, 254, 0.2); color: #38bdf8;">
+                                    ✓ {{ r }}
+                                </span>
+                            {% endfor %}
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a href="{{ url_for('clients.detail', id=m.client.id) }}" class="glass-btn" style="padding: 0.35rem 0.75rem; font-size: 0.78rem; flex: 1; justify-content: center;">
+                                پرونده متقاضی
+                            </a>
+                            <button onclick="scheduleVisitForClient({{ m.client.id }}, '{{ m.client.full_name }}')" class="btn-neon-cyan" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
+                                تنظیم بازدید
+                            </button>
+                        </div>
+                    </div>
+                {% else %}
+                    <div style="color: #64748b; font-size: 0.88rem; text-align: center; padding: 1.5rem;">
+                        در حال حاضر هیچ متقاضی فعالی با معیارهای این فایل تطابق بالای ۵۰٪ ندارد.
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Log Call -->
+<div id="logCallModal" class="glass-modal-overlay">
+    <div class="glass-modal-box">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">ثبت تاریخچه تماس و پیگیری</h3>
+        <form action="{{ url_for('crm.create_call') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="target_type" value="owner">
+            <input type="hidden" name="target_id" value="{{ prop.owner_id or 1 }}">
+            <input type="hidden" name="property_id" value="{{ prop.id }}">
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">نوع ارتباط</label>
+                <select name="type" class="glass-select">
+                    <option value="call">تماس تلفنی</option>
+                    <option value="whatsapp">پیام‌رسان واتساپ/تلگرام</option>
+                    <option value="meeting">جلسه حضوری در دفتر</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">نتیجه گفتگو</label>
+                <select name="outcome" class="glass-select">
+                    <option value="interested">علاقه‌مند و همراه</option>
+                    <option value="requested_visit">هماهنگی ساعت بازدید</option>
+                    <option value="price_high">اصرار بر قیمت بالا</option>
+                    <option value="call_back">درخواست پیگیری مجدد</option>
+                    <option value="rejected">منصرف شده</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">خلاصه مذاکره و توضیحات</label>
+                <textarea name="summary" rows="3" class="glass-textarea" required placeholder="نکات مهم مطرح شده توسط مالک..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="closeModal('logCallModal')" class="glass-btn">انصراف</button>
+                <button type="submit" class="btn-neon-cyan">ثبت در پرونده</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Schedule Visit -->
+<div id="scheduleVisitModal" class="glass-modal-overlay">
+    <div class="glass-modal-box">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem;">هماهنگی و برنامه‌ریزی بازدید ملک</h3>
+        <form action="{{ url_for('crm.schedule_visit') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="property_id" value="{{ prop.id }}">
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">انتخاب متقاضی (خریدار/مستاجر)</label>
+                <select id="modal_client_select" name="client_id" class="glass-select" required>
+                    {% for m in matches %}
+                        <option value="{{ m.client.id }}">{{ m.client.full_name }} ({{ m.score }}٪ تطابق)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">کارشناس همراه بازدید</label>
+                <select name="agent_id" class="glass-select">
+                    {% for ag in agents %}
+                        <option value="{{ ag.id }}">{{ ag.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.35rem;">زمان پیشنهادی بازدید</label>
+                <input type="datetime-local" name="scheduled_time" class="glass-input" required>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="closeModal('scheduleVisitModal')" class="glass-btn">انصراف</button>
+                <button type="submit" class="btn-neon-emerald">ثبت در تقویم بازدید</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- Omni-Messenger Inquiry Modal -->
+{% include "properties/messenger_modal.html" %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function scheduleVisitForClient(clientId, clientName) {
+        const select = document.getElementById('modal_client_select');
+        if (select) {
+            select.value = clientId;
+        }
+        openModal('scheduleVisitModal');
+    }
+</script>
+{% endblock %}

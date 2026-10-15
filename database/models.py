@@ -1,0 +1,1349 @@
+from datetime import datetime
+import json
+from werkzeug.security import generate_password_hash, check_password_hash
+from .db import db
+
+class User(db.Model):
+    """
+    جدول جامع مدیریت کاربران و ادمین‌های سامانه سقف (CRUD)
+    پشتیبانی از نقش‌های: super_admin (مدیر ارشد), admin (مدیر), agent (مشاور), user (کاربر عادی)
+    همگام‌سازی دوطرفه با شناسه تلگرام و پنل مدیریت وب
+    """
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    full_name = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(30), nullable=True, index=True)
+    telegram_id = db.Column(db.String(50), nullable=True, index=True)
+    bale_id = db.Column(db.String(50), nullable=True, index=True)
+    role = db.Column(db.String(30), default='admin', index=True)  # super_admin, admin, agent, user
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    notes = db.Column(db.Text, nullable=True)
+    last_login = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def set_password(self, password: str):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def role_title(self) -> str:
+        titles = {
+            'super_admin': 'مدیر ارشد (Super Admin)',
+            'admin': 'مدیر سیستم (Admin)',
+            'agent': 'مشاور املاک',
+            'user': 'کاربر عادی'
+        }
+        return titles.get(self.role, self.role)
+
+    @property
+    def is_super_admin(self) -> bool:
+        return self.role == 'super_admin' or str(self.telegram_id or '').strip() == '7495565146' or str(self.bale_id or '').strip() == '7495565146'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'full_name': self.full_name,
+            'phone': self.phone or '',
+            'telegram_id': self.telegram_id or '',
+            'bale_id': self.bale_id or '',
+            'role': self.role,
+            'role_title': self.role_title,
+            'is_active': self.is_active,
+            'notes': self.notes or '',
+            'last_login': self.last_login.strftime('%Y-%m-%d %H:%M') if self.last_login else '-',
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else '',
+            'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else ''
+        }
+
+class Agent(db.Model):
+    __tablename__ = 'agents'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=True)
+    role = db.Column(db.String(50), default='مشاور املاک')
+    avatar_color = db.Column(db.String(20), default='#00f2fe')
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    properties = db.relationship('Property', backref='agent', lazy=True)
+    clients = db.relationship('Client', backref='agent', lazy=True)
+    interactions = db.relationship('Interaction', backref='agent', lazy=True)
+    visits = db.relationship('Visit', backref='agent', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'phone': self.phone,
+            'role': self.role,
+            'avatar_color': self.avatar_color,
+            'active_properties_count': len([p for p in self.properties if p.status in ['verified', 'available']]),
+            'active_clients_count': len([c for c in self.clients if c.lead_status not in ['contract_won', 'lost']])
+        }
+
+class Owner(db.Model):
+    __tablename__ = 'owners'
+    id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(100), nullable=False)
+    phone_number = db.Column(db.String(30), nullable=False, index=True)
+    secondary_phone = db.Column(db.String(30), nullable=True)
+    urgency = db.Column(db.String(20), default='medium')  # low, medium, high, very_urgent
+    flexibility = db.Column(db.String(50), default='معمولی')  # تخفیف‌پذیر، مقطوع، منعطف
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    properties = db.relationship('Property', backref='owner', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'full_name': self.full_name,
+            'phone_number': self.phone_number,
+            'secondary_phone': self.secondary_phone,
+            'urgency': self.urgency,
+            'flexibility': self.flexibility,
+            'notes': self.notes,
+            'properties_count': len(self.properties),
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
+
+class Property(db.Model):
+    __tablename__ = 'properties'
+    id = db.Column(db.Integer, primary_key=True)
+    source = db.Column(db.String(30), default='direct_owner', index=True)  # divar, sheypoor, direct_owner, colleague
+    source_id = db.Column(db.String(100), unique=True, nullable=True, index=True)
+    source_url = db.Column(db.String(300), nullable=True)
+    
+    title = db.Column(db.String(250), nullable=False)
+    deal_type = db.Column(db.String(20), nullable=False, index=True)  # sale, rent
+    transaction_type = db.Column(db.String(20), nullable=True, index=True)  # buy, rent
+    property_type = db.Column(db.String(30), default='apartment', index=True)  # apartment, villa, commercial, land, office
+    
+    city = db.Column(db.String(50), default='تهران', index=True)
+    district = db.Column(db.String(100), nullable=False, index=True)
+    address = db.Column(db.String(250), nullable=True)
+    
+    # Financial fields
+    total_price = db.Column(db.BigInteger, default=0)  # for sale in Tomans
+    meter_price = db.Column(db.BigInteger, default=0)
+    deposit = db.Column(db.BigInteger, default=0)      # رهن
+    monthly_rent = db.Column(db.BigInteger, default=0) # اجاره
+    
+    # Physical specs
+    area = db.Column(db.Float, nullable=False, index=True)
+    rooms = db.Column(db.Integer, default=1)
+    floor = db.Column(db.Integer, default=1)
+    total_floors = db.Column(db.Integer, nullable=True)
+    units_per_floor = db.Column(db.Integer, nullable=True)
+    build_year = db.Column(db.Integer, nullable=True)
+    
+    # Core Amenities
+    has_elevator = db.Column(db.Boolean, default=False)
+    has_parking = db.Column(db.Boolean, default=False)
+    has_warehouse = db.Column(db.Boolean, default=False)
+    has_balcony = db.Column(db.Boolean, default=False)
+    
+    features_json = db.Column(db.Text, default='[]')
+    description = db.Column(db.Text, nullable=True)
+    images_json = db.Column(db.Text, default='[]')
+    
+    # Status & scoring
+    status = db.Column(db.String(30), default='raw_crawled', index=True) # raw_crawled, verified, available, reserved, sold, archived, needs_followup
+    score = db.Column(db.Integer, default=70) # 0 to 100 quality score
+    
+    # 7-Day Lifecycle & Omni-Messenger Inquiry
+    inquiry_status = db.Column(db.String(30), default='none', index=True) # none, waiting_reply, confirmed_available, confirmed_sold
+    last_inquiry_at = db.Column(db.DateTime, nullable=True)
+    
+    # Owner verification and filtering
+    owner_type = db.Column(db.String(30), default='personal', index=True) # personal, agency
+    is_personal_owner = db.Column(db.Boolean, default=True, index=True)
+    filter_log = db.Column(db.String(250), nullable=True)
+    has_verified_phone = db.Column(db.Boolean, default=False, index=True)  # شماره واقعی تأییدشده
+    
+    # Divar deletion tracking
+    is_divar_deleted = db.Column(db.Boolean, default=False, index=True)   # آگهی از دیوار حذف شده
+    divar_deleted_at = db.Column(db.DateTime, nullable=True)               # زمان شناسایی حذف
+
+    owner_id = db.Column(db.Integer, db.ForeignKey('owners.id'), nullable=True)
+    assigned_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('ix_properties_deal_status_created', 'deal_type', 'status', 'created_at'),
+        db.Index('ix_properties_personal_status_created', 'is_personal_owner', 'status', 'created_at'),
+        db.Index('ix_properties_district_deal', 'district', 'deal_type'),
+    )
+
+    matches = db.relationship('MatchRecord', backref='property', lazy='dynamic', cascade="all, delete-orphan")
+    visits = db.relationship('Visit', backref='property', lazy=True)
+    interactions = db.relationship('Interaction', backref='property', lazy=True)
+
+    @property
+    def age_in_days(self):
+        """محاسبه دقیق تعداد روزهای سپری شده از زمان ثبت یا آخرین تمدید"""
+        if not self.created_at:
+            return 0
+        delta = datetime.utcnow() - self.created_at
+        return max(0, delta.days)
+
+    @property
+    def is_expired(self):
+        """بررسی رد شدن از بازه ۷ روزه یا وضعیت نیازمند پیگیری"""
+        return self.age_in_days >= 7 or self.status == 'needs_followup'
+
+    def reactivate(self):
+        """تایید مجدد موجودی توسط مالک یا کارشناس: بازنشانی تایمر ۷ روزه و انتقال به فایل‌های فعال"""
+        self.created_at = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
+        self.status = 'available'
+        self.inquiry_status = 'confirmed_available'
+
+    def archive(self, reason='sold'):
+        """بایگانی قطعی ملک به دلیل واگذاری یا انصراف مالک"""
+        self.status = 'archived'
+        self.updated_at = datetime.utcnow()
+        if reason == 'sold':
+            self.inquiry_status = 'confirmed_sold'
+        else:
+            self.inquiry_status = 'archived'
+
+    @property
+    def file_code(self):
+        """کد ۵ رقمی کوتاه و اختصاصی ملک جهت پرزنت، استعلام تلفنی و ربات تلگرام (مانند 10001)"""
+        if not self.id:
+            return ""
+        return str(10000 + self.id)
+
+    @property
+    def time_ago(self):
+        """نمایش متنی زمان ثبت آگهی به صورت نسبی (مثلاً: ۲ ساعت پیش)"""
+        if not self.created_at:
+            return "به تازگی"
+        diff = datetime.utcnow() - self.created_at
+        if diff.days == 0:
+            hours = diff.seconds // 3600
+            if hours == 0:
+                mins = max(1, diff.seconds // 60)
+                return f"{mins} دقیقه پیش"
+            return f"{hours} ساعت پیش"
+        elif diff.days == 1:
+            return "دیروز"
+        elif diff.days < 7:
+            return f"{diff.days} روز پیش"
+        elif diff.days < 30:
+            weeks = max(1, diff.days // 7)
+            return f"{weeks} هفته پیش"
+        else:
+            months = max(1, diff.days // 30)
+            return f"{months} ماه پیش"
+
+    @classmethod
+    def get_by_code(cls, code):
+        """
+        جستجوی سریع ملک با کد ۵ رقمی یا شناسه عددی.
+        پشتیبانی از ارقام فارسی و انگلیسی.
+        """
+        if not code:
+            return None
+        fa_to_en = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
+        clean_code = ''.join(filter(str.isdigit, str(code).translate(fa_to_en)))
+        if not clean_code:
+            return None
+        try:
+            num = int(clean_code)
+            if num >= 10000:
+                target_id = num - 10000
+                prop = db.session.get(cls, target_id)
+                if prop:
+                    return prop
+            return db.session.get(cls, num)
+        except Exception:
+            return None
+
+    @classmethod
+    def find_by_file_code(cls, code):
+        """نام مستعار برای get_by_code"""
+        return cls.get_by_code(code)
+
+    @property
+    def features(self):
+        try:
+            return json.loads(self.features_json or '[]')
+        except Exception:
+            return []
+
+    @features.setter
+    def features(self, val):
+        self.features_json = json.dumps(val, ensure_ascii=False)
+
+    @property
+    def images(self):
+        """لیست URLهای مستقیم تصاویر در CDN مبدأ (بدون ذخیره فایل فیزیکی یا باینری)"""
+        try:
+            urls = json.loads(self.images_json or '[]')
+            if isinstance(urls, list):
+                # فقط URLهای معتبر و مستقیم CDN برگردانده می‌شوند (عدم اجازه به Base64)
+                return [
+                    u for u in urls
+                    if isinstance(u, str) and u.startswith(('http://', 'https://')) and not u.startswith('data:')
+                ]
+            elif isinstance(urls, str) and urls.startswith(('http://', 'https://')):
+                return [urls]
+            return []
+        except Exception:
+            return []
+
+    @images.setter
+    def images(self, val):
+        """
+        قانون بهینه‌سازی دیتابیس (جلوگیری از اشغال فضای دیتابیس):
+        - به هیچ عنوان داده باینری (Base64 / Blob) یا فایل فیزیکی در دیتابیس ذخیره نمی‌شود.
+        - فقط آدرس مستقیم تصویر در سایت مبدأ (URL مستقیم CDN منبع) به عنوان آرایه‌ای از رشته‌ها ذخیره می‌شود.
+        """
+        clean_urls = []
+        if isinstance(val, str):
+            val = val.strip()
+            if val.startswith('[') and val.endswith(']'):
+                try:
+                    val = json.loads(val)
+                except Exception:
+                    val = [val]
+            else:
+                val = [val]
+
+        if isinstance(val, (list, tuple)):
+            for item in val:
+                if isinstance(item, str):
+                    item = item.strip()
+                    # اکیداً فیلتر و رد کردن هرگونه رشته Base64 یا باینری
+                    if item.startswith('data:') or ';base64,' in item or len(item) > 1500:
+                        continue
+                    if item.startswith(('http://', 'https://')):
+                        clean_urls.append(item)
+
+        self.images_json = json.dumps(clean_urls, ensure_ascii=False)
+
+    def to_messenger_dict(self, masked: bool = False, mask_style: str = "asterisk"):
+        """ساختار استاندارد و آماده جهت ارسال به پایپ‌لاین پیام‌رسان‌ها (تلگرام، بله، ایتا و پیامک) با پشتیبانی از محرمانگی"""
+        deal_label = 'فروش' if self.deal_type == 'sale' else 'رهن و اجاره'
+        if self.deal_type == 'sale':
+            price_txt = f"{self.total_price:,} تومان" if self.total_price else "توافقی"
+        else:
+            price_txt = f"ودیعه: {self.deposit:,} تومان | اجاره: {self.monthly_rent:,} تومان"
+
+        owner_name = self.owner.full_name if self.owner else 'مالک محترم'
+        raw_phone = self.owner.phone_number if self.owner else 'ثبت در سیستم'
+        try:
+            from crawler.privacy import PrivacyManager
+            owner_phone = PrivacyManager.mask_phone(raw_phone, style=mask_style) if (masked and raw_phone != 'ثبت در سیستم') else raw_phone
+        except Exception:
+            owner_phone = raw_phone
+
+        features_str = ' | '.join(self.features) if self.features else 'سند رسمی، نورگیر عالی'
+        messenger_text = (
+            f"💎 **فایل شخصی (مالک مستقیم)**\n\n"
+            f"📌 **{self.title}**\n"
+            f"📍 **منطقه:** {self.city}، {self.district}\n"
+            f"📐 **متراژ:** {self.area} متر | {self.rooms} خواب | طبقه {self.floor}\n"
+            f"💰 **قیمت:** {price_txt}\n"
+            f"👤 **مالک:** {owner_name}\n"
+            f"📞 **تماس:** `{owner_phone}`\n"
+            f"🔗 **لینک آگهی:** {self.source_url}\n"
+            f"✨ **امکانات:** {features_str}\n\n"
+            f"🆔 #فایل_شخصی #{self.district.replace(' ', '_')} #{deal_label}"
+        )
+
+        return {
+            'property_id': self.id,
+            'file_code': self.file_code,
+            'source': self.source,
+            'source_url': self.source_url,
+            'is_personal_owner': self.is_personal_owner if self.is_personal_owner is not None else True,
+            'owner_type': self.owner_type or 'personal',
+            'title': self.title,
+            'deal_type': self.deal_type,
+            'transaction_type': self.transaction_type or ('buy' if self.deal_type in ('sale', 'buy') else 'rent'),
+            'deal_label': deal_label,
+            'city': self.city,
+            'district': self.district,
+            'address': self.address,
+            'total_price': self.total_price,
+            'deposit': self.deposit,
+            'monthly_rent': self.monthly_rent,
+            'price_formatted': price_txt,
+            'area': self.area,
+            'rooms': self.rooms,
+            'floor': self.floor,
+            'build_year': self.build_year,
+            'has_elevator': self.has_elevator,
+            'has_parking': self.has_parking,
+            'has_warehouse': self.has_warehouse,
+            'has_balcony': self.has_balcony,
+            'features': self.features,
+            'images': self.images,
+            'owner_name': owner_name,
+            'owner_phone': owner_phone,
+            'messenger_text': messenger_text,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
+
+    def to_dict(self):
+        deal_label = 'خرید و فروش' if self.deal_type == 'sale' else 'رهن و اجاره'
+        type_labels = {
+            'apartment': 'آپارتمان',
+            'villa': 'ویلا / باغ',
+            'commercial': 'تجاری / مغازه',
+            'office': 'اداری / دفتر کار',
+            'land': 'زمین / کلنگی'
+        }
+        type_label = type_labels.get(self.property_type, 'آپارتمان')
+
+        return {
+            'id': self.id,
+            'file_code': self.file_code,
+            'source': self.source,
+            'source_id': self.source_id,
+            'source_url': self.source_url,
+            'title': self.title,
+            'deal_type': self.deal_type,
+            'transaction_type': self.transaction_type or ('buy' if self.deal_type in ('sale', 'buy') else 'rent'),
+            'deal_label': deal_label,
+            'property_type': self.property_type,
+            'property_type_label': type_label,
+            'city': self.city,
+            'district': self.district,
+            'address': self.address,
+            'total_price': self.total_price,
+            'meter_price': self.meter_price,
+            'deposit': self.deposit,
+            'monthly_rent': self.monthly_rent,
+            'area': self.area,
+            'rooms': self.rooms,
+            'floor': self.floor,
+            'total_floors': self.total_floors,
+            'units_per_floor': self.units_per_floor,
+            'build_year': self.build_year,
+            'has_elevator': self.has_elevator,
+            'has_parking': self.has_parking,
+            'has_warehouse': self.has_warehouse,
+            'has_balcony': self.has_balcony,
+            'features': self.features,
+            'description': self.description,
+            'images': self.images,
+            'status': self.status,
+            'score': self.score,
+            'age_in_days': self.age_in_days,
+            'time_ago': self.time_ago,
+            'is_expired': self.is_expired,
+            'inquiry_status': self.inquiry_status or 'none',
+            'last_inquiry_at': self.last_inquiry_at.strftime('%Y-%m-%d %H:%M') if self.last_inquiry_at else '',
+            'is_personal_owner': self.is_personal_owner if self.is_personal_owner is not None else True,
+            'owner_type': self.owner_type or 'personal',
+            'filter_log': self.filter_log,
+            'has_verified_phone': bool(self.has_verified_phone),
+            'is_divar_deleted': bool(self.is_divar_deleted),
+            'divar_deleted_at': self.divar_deleted_at.strftime('%Y-%m-%d %H:%M') if self.divar_deleted_at else '',
+            'owner': self.owner.to_dict() if self.owner else None,
+            'agent_name': self.agent.name if self.agent else 'مشخص نشده',
+            'messenger_payload': self.to_messenger_dict(),
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else '',
+            'created_at_formatted': f"{self.created_at.strftime('%Y/%m/%d')} ساعت {self.created_at.strftime('%H:%M')}" if self.created_at else ''
+        }
+
+class Client(db.Model):
+    __tablename__ = 'clients'
+    id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(100), nullable=False)
+    phone_number = db.Column(db.String(30), nullable=False, index=True)
+    
+    preferred_deal_type = db.Column(db.String(20), default='sale', index=True) # sale, rent
+    property_types_json = db.Column(db.Text, default='["apartment"]')
+    preferred_districts_json = db.Column(db.Text, default='[]')
+    
+    # Financial expectations
+    min_budget = db.Column(db.BigInteger, default=0)
+    max_budget = db.Column(db.BigInteger, default=0)
+    max_deposit = db.Column(db.BigInteger, default=0)
+    max_rent = db.Column(db.BigInteger, default=0)
+    
+    # Space & criteria
+    min_area = db.Column(db.Integer, default=0)
+    max_area = db.Column(db.Integer, default=0)
+    min_rooms = db.Column(db.Integer, default=1)
+    
+    must_have_parking = db.Column(db.Boolean, default=False)
+    must_have_elevator = db.Column(db.Boolean, default=False)
+    must_have_warehouse = db.Column(db.Boolean, default=False)
+    
+    urgency = db.Column(db.String(20), default='normal')  # immediate, urgent, normal, looking
+    lead_status = db.Column(db.String(30), default='new', index=True) # new, contacted, visiting, negotiating, contract_won, lost
+    notes = db.Column(db.Text, nullable=True)
+    
+    assigned_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    matches = db.relationship('MatchRecord', backref='client', lazy='dynamic', cascade="all, delete-orphan")
+    visits = db.relationship('Visit', backref='client', lazy=True)
+    interactions = db.relationship('Interaction', backref='client', lazy=True)
+
+    @property
+    def property_types(self):
+        try:
+            return json.loads(self.property_types_json or '[]')
+        except Exception:
+            return []
+
+    @property
+    def preferred_districts(self):
+        try:
+            return json.loads(self.preferred_districts_json or '[]')
+        except Exception:
+            return []
+
+    @preferred_districts.setter
+    def preferred_districts(self, val):
+        self.preferred_districts_json = json.dumps(val, ensure_ascii=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'full_name': self.full_name,
+            'phone_number': self.phone_number,
+            'preferred_deal_type': self.preferred_deal_type,
+            'property_types': self.property_types,
+            'preferred_districts': self.preferred_districts,
+            'min_budget': self.min_budget,
+            'max_budget': self.max_budget,
+            'max_deposit': self.max_deposit,
+            'max_rent': self.max_rent,
+            'min_area': self.min_area,
+            'max_area': self.max_area,
+            'min_rooms': self.min_rooms,
+            'must_have_parking': self.must_have_parking,
+            'must_have_elevator': self.must_have_elevator,
+            'must_have_warehouse': self.must_have_warehouse,
+            'urgency': self.urgency,
+            'lead_status': self.lead_status,
+            'notes': self.notes,
+            'agent_name': self.agent.name if self.agent else 'مشخص نشده',
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
+
+class MatchRecord(db.Model):
+    __tablename__ = 'matching_records'
+    id = db.Column(db.Integer, primary_key=True)
+    # source_type: 'property' (فایلینگ داخلی) یا 'listing' (کراول دیوار/شیپور)
+    source_type = db.Column(db.String(20), default='property', nullable=False)  # property | listing
+    property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=True, index=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey('property_listings.id'), nullable=True, index=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False, index=True)
+    # lead_id: ارجاع اختیاری به CustomerLead برای ردیابی مچ از ورودی مستقیم
+    lead_id = db.Column(db.Integer, db.ForeignKey('customer_leads.id'), nullable=True, index=True)
+    match_score = db.Column(db.Integer, nullable=False)  # 0 to 100
+    match_reasons_json = db.Column(db.Text, default='[]')
+    algorithm_version = db.Column(db.String(20), default='v2.0')  # نسخه الگوریتم برای تاریخچه
+    is_suggested = db.Column(db.Boolean, default=False)
+    client_feedback = db.Column(db.String(30), default='pending')  # pending, interested, rejected, visited
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    outreach_logs = db.relationship('OutreachLog', backref='match_record', lazy=True)
+    listing = db.relationship('PropertyListing', backref='match_records', lazy=True)
+
+    @property
+    def target_item(self):
+        return self.property or self.listing
+
+    @property
+    def deal_type(self):
+        if self.property and self.property.deal_type:
+            return self.property.deal_type
+        if self.listing and self.listing.deal_type:
+            return self.listing.deal_type
+        return getattr(self.client, 'preferred_deal_type', 'sale')
+
+    @property
+    def item_title(self):
+        if self.property:
+            return self.property.title
+        if self.listing:
+            return self.listing.title
+        return 'ملک نامشخص'
+
+    @property
+    def item_district(self):
+        if self.property:
+            return self.property.district
+        if self.listing:
+            return self.listing.district
+        return ''
+
+    @property
+    def item_area(self):
+        if self.property:
+            return self.property.area
+        if self.listing:
+            return self.listing.area
+        return 0
+
+    @property
+    def item_deposit(self):
+        if self.property:
+            return self.property.deposit or 0
+        if self.listing:
+            return self.listing.deposit or 0
+        return 0
+
+    @property
+    def item_monthly_rent(self):
+        if self.property:
+            return self.property.monthly_rent or 0
+        if self.listing:
+            return self.listing.monthly_rent or 0
+        return 0
+
+    @property
+    def item_total_price(self):
+        if self.property:
+            return self.property.total_price or 0
+        if self.listing:
+            return self.listing.total_price or 0
+        return 0
+
+    @property
+    def item_source_url(self):
+        if self.property and self.property.source_url:
+            return self.property.source_url
+        if self.listing and self.listing.source_url:
+            return self.listing.source_url
+        if self.property_id:
+            return f"http://127.0.0.1:5000/properties/{self.property_id}"
+        return 'https://divar.ir'
+
+    @property
+    def item_source_label(self):
+        if self.source_type == 'property':
+            return 'فایلینگ مستقیم مالک'
+        return 'دیوار (مالک تأییدشده)'
+
+    @property
+    def detail_url(self):
+        if self.property_id:
+            return f"/properties/{self.property_id}"
+        if self.listing and self.listing.source_url:
+            return self.listing.source_url
+        return '#'
+
+    @property
+    def match_reasons(self):
+        try:
+            return json.loads(self.match_reasons_json or '[]')
+        except Exception:
+            return []
+
+    @match_reasons.setter
+    def match_reasons(self, val):
+        self.match_reasons_json = json.dumps(val, ensure_ascii=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'source_type': self.source_type,
+            'property_id': self.property_id,
+            'listing_id': self.listing_id,
+            'client_id': self.client_id,
+            'lead_id': self.lead_id,
+            'deal_type': self.deal_type,
+            'title': self.item_title,
+            'district': self.item_district,
+            'area': self.item_area,
+            'deposit': self.item_deposit,
+            'monthly_rent': self.item_monthly_rent,
+            'total_price': self.item_total_price,
+            'source_url': self.item_source_url,
+            'source_label': self.item_source_label,
+            'detail_url': self.detail_url,
+            'match_score': self.match_score,
+            'match_reasons': self.match_reasons,
+            'algorithm_version': self.algorithm_version,
+            'is_suggested': self.is_suggested,
+            'client_feedback': self.client_feedback,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
+
+class Interaction(db.Model):
+    __tablename__ = 'interactions'
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.String(30), default='call')  # call, meeting, visit_followup, whatsapp, offer
+    target_type = db.Column(db.String(20), default='client')  # client, owner
+    target_id = db.Column(db.Integer, nullable=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey('owners.id'), nullable=True)
+    property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    
+    summary = db.Column(db.Text, nullable=False)
+    outcome = db.Column(db.String(30), default='interested') # interested, visit_scheduled, call_back, price_high, rejected
+    next_followup_date = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'target_type': self.target_type,
+            'target_id': self.target_id,
+            'client_id': self.client_id,
+            'owner_id': self.owner_id,
+            'property_id': self.property_id,
+            'property_title': self.property.title if self.property else None,
+            'agent_name': self.agent.name if self.agent else 'مشاور سیستم',
+            'summary': self.summary,
+            'outcome': self.outcome,
+            'next_followup_date': self.next_followup_date.strftime('%Y-%m-%d %H:%M') if self.next_followup_date else None,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
+
+class Visit(db.Model):
+    __tablename__ = 'visits'
+    id = db.Column(db.Integer, primary_key=True)
+    property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    
+    scheduled_time = db.Column(db.DateTime, nullable=False, index=True)
+    status = db.Column(db.String(30), default='scheduled') # scheduled, completed, cancelled, no_show
+    feedback = db.Column(db.Text, nullable=True)
+    readiness_to_buy = db.Column(db.Integer, default=3) # 1 to 5
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'property_id': self.property_id,
+            'property_title': self.property.title if self.property else 'ملک حذف شده',
+            'property_district': self.property.district if self.property else '',
+            'client_id': self.client_id,
+            'client_name': self.client.full_name if self.client else 'مشتری نامشخص',
+            'client_phone': self.client.phone_number if self.client else '',
+            'agent_name': self.agent.name if self.agent else 'مشاور',
+            'scheduled_time': self.scheduled_time.strftime('%Y-%m-%d %H:%M') if self.scheduled_time else '',
+            'status': self.status,
+            'feedback': self.feedback,
+            'readiness_to_buy': self.readiness_to_buy
+        }
+
+# =====================================================================
+# Real Estate Event-Driven Automation Models (Phase 2)
+# =====================================================================
+
+class PropertyListing(db.Model):
+    """
+    جدول اختصاصی فایل‌های استخراج‌شده هدفمند بر اساس مناطق و فیلترهای دیوار/شیپور
+    """
+    __tablename__ = 'property_listings'
+    id = db.Column(db.Integer, primary_key=True)
+    ad_code = db.Column(db.String(50), unique=True, index=True, nullable=False) # کد یکتای ۵ رقمی
+    source = db.Column(db.String(30), default='divar', index=True) # divar, sheypoor, direct
+    source_url = db.Column(db.String(350), nullable=True)
+    
+    title = db.Column(db.String(250), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    city = db.Column(db.String(50), default='تهران', index=True)
+    region = db.Column(db.String(50), default='5', index=True) # منطقه شهرداری (مثلاً ۵)
+    district = db.Column(db.String(100), nullable=False, index=True) # محله (پونک، جنت‌آباد، ...)
+    
+    deal_type = db.Column(db.String(20), nullable=False, index=True) # sale, rent
+    property_type = db.Column(db.String(30), default='apartment') # apartment, villa, commercial
+    
+    # Financial fields in Tomans
+    deposit = db.Column(db.BigInteger, default=0) # ودیعه / رهن
+    monthly_rent = db.Column(db.BigInteger, default=0) # اجاره ماهانه
+    total_price = db.Column(db.BigInteger, default=0) # قیمت کل
+    
+    # Physical specs
+    area = db.Column(db.Integer, nullable=False, index=True)
+    rooms = db.Column(db.Integer, default=1)
+    floor = db.Column(db.Integer, default=1)
+    build_year = db.Column(db.Integer, nullable=True)
+    
+    # Core Amenities
+    has_elevator = db.Column(db.Boolean, default=False)
+    has_parking = db.Column(db.Boolean, default=False)
+    has_warehouse = db.Column(db.Boolean, default=False)
+    has_balcony = db.Column(db.Boolean, default=False)
+    
+    images_json = db.Column(db.Text, default='[]')
+    phone_number = db.Column(db.String(30), nullable=True, index=True)
+    is_personal_owner = db.Column(db.Boolean, default=True)
+    
+    published_at = db.Column(db.DateTime, nullable=True)
+    extracted_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    @property
+    def images(self):
+        try:
+            return json.loads(self.images_json or '[]')
+        except Exception:
+            return []
+
+    @images.setter
+    def images(self, val):
+        self.images_json = json.dumps(val, ensure_ascii=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'ad_code': self.ad_code,
+            'source': self.source,
+            'source_url': self.source_url,
+            'title': self.title,
+            'description': self.description,
+            'city': self.city,
+            'region': self.region,
+            'district': self.district,
+            'deal_type': self.deal_type,
+            'property_type': self.property_type,
+            'deposit': self.deposit,
+            'monthly_rent': self.monthly_rent,
+            'total_price': self.total_price,
+            'area': self.area,
+            'rooms': self.rooms,
+            'floor': self.floor,
+            'build_year': self.build_year,
+            'has_elevator': self.has_elevator,
+            'has_parking': self.has_parking,
+            'has_warehouse': self.has_warehouse,
+            'has_balcony': self.has_balcony,
+            'images': self.images,
+            'phone_number': self.phone_number,
+            'is_personal_owner': self.is_personal_owner,
+            'published_at': self.published_at.strftime('%Y-%m-%d %H:%M') if self.published_at else '',
+            'extracted_at': self.extracted_at.strftime('%Y-%m-%d %H:%M') if self.extracted_at else ''
+        }
+
+class FilterProfile(db.Model):
+    """
+    جدول ذخیره‌سازی پروفایل‌های فیلتر هدفمند کراولر (مانند رهن و اجاره منطقه ۵)
+    """
+    __tablename__ = 'filter_profiles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, unique=True)
+    city = db.Column(db.String(50), default='تهران')
+    region = db.Column(db.String(50), default='5') # منطقه شهرداری
+    active_districts_json = db.Column(db.Text, default='[]') # لیست محله‌ها: ["پونک", "جنت‌آباد"]
+    
+    deal_type = db.Column(db.String(20), default='rent') # sale, rent
+    min_deposit = db.Column(db.BigInteger, default=0)
+    max_deposit = db.Column(db.BigInteger, default=0)
+    min_rent = db.Column(db.BigInteger, default=0)
+    max_rent = db.Column(db.BigInteger, default=0)
+    min_price = db.Column(db.BigInteger, default=0)
+    max_price = db.Column(db.BigInteger, default=0)
+    
+    min_area = db.Column(db.Integer, default=0)
+    max_area = db.Column(db.Integer, default=0)
+    min_year = db.Column(db.Integer, default=0)
+    
+    is_auto_crawl_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @property
+    def active_districts(self):
+        try:
+            return json.loads(self.active_districts_json or '[]')
+        except Exception:
+            return []
+
+    @active_districts.setter
+    def active_districts(self, val):
+        self.active_districts_json = json.dumps(val, ensure_ascii=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'city': self.city,
+            'region': self.region,
+            'active_districts': self.active_districts,
+            'deal_type': self.deal_type,
+            'min_deposit': self.min_deposit,
+            'max_deposit': self.max_deposit,
+            'min_rent': self.min_rent,
+            'max_rent': self.max_rent,
+            'min_price': self.min_price,
+            'max_price': self.max_price,
+            'min_area': self.min_area,
+            'max_area': self.max_area,
+            'min_year': self.min_year,
+            'is_auto_crawl_active': self.is_auto_crawl_active,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
+
+
+# =====================================================================
+# Auditable 24-hour Divar search models
+# =====================================================================
+
+class AccessibleListing(db.Model):
+    """A source-faithful listing; nullable fields remain unknown, never fabricated."""
+    __tablename__ = 'accessible_listings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    source = db.Column(db.String(30), nullable=False, default='divar', index=True)
+    source_id = db.Column(db.String(120), nullable=False, unique=True, index=True)
+    source_url = db.Column(db.String(500), nullable=False)
+    title = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    city = db.Column(db.String(80), nullable=True, index=True)
+    district = db.Column(db.String(120), nullable=True, index=True)
+    deal_type = db.Column(db.String(20), nullable=True, index=True)
+    transaction_type = db.Column(db.String(20), nullable=True, index=True)  # buy, rent
+    property_type = db.Column(db.String(40), nullable=True, index=True)
+    area = db.Column(db.Float, nullable=True, index=True)
+    rooms = db.Column(db.Integer, nullable=True)
+    total_price = db.Column(db.BigInteger, nullable=True)
+    deposit = db.Column(db.BigInteger, nullable=True)
+    monthly_rent = db.Column(db.BigInteger, nullable=True)
+    has_parking = db.Column(db.Boolean, nullable=True)
+    has_elevator = db.Column(db.Boolean, nullable=True)
+    has_warehouse = db.Column(db.Boolean, nullable=True)
+    has_balcony = db.Column(db.Boolean, nullable=True)
+    features_json = db.Column(db.Text, default='[]')
+    images_json = db.Column(db.Text, default='[]')
+
+    published_at = db.Column(db.DateTime, nullable=True, index=True)
+    publication_earliest_at = db.Column(db.DateTime, nullable=True)
+    publication_latest_at = db.Column(db.DateTime, nullable=True)
+    publication_accuracy = db.Column(db.String(30), default='unknown', index=True)
+    publication_source_text = db.Column(db.String(250), nullable=True)
+    source_updated_at = db.Column(db.DateTime, nullable=True)
+    first_seen_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    last_seen_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    publisher_category = db.Column(db.String(40), default='unknown', index=True)
+    publisher_confidence = db.Column(db.Float, default=0.5)
+    publisher_reason = db.Column(db.String(500), nullable=True)
+    publisher_evidence_json = db.Column(db.Text, default='[]')
+    publisher_classifier_version = db.Column(db.String(80), nullable=True)
+    publisher_checked_at = db.Column(db.DateTime, nullable=True)
+    classification_model_status = db.Column(db.String(30), default='not_required', index=True)
+    manual_publisher_category = db.Column(db.String(40), nullable=True, index=True)
+    manual_review_reason = db.Column(db.String(500), nullable=True)
+    manual_reviewed_at = db.Column(db.DateTime, nullable=True)
+    content_hash = db.Column(db.String(64), nullable=True, index=True)
+
+    __table_args__ = (
+        db.Index('ix_accessible_listing_time_category', 'published_at', 'publisher_category'),
+        db.Index('ix_accessible_listing_filters', 'deal_type', 'district', 'area', 'rooms'),
+        db.Index('ix_accessible_listing_transaction_type', 'transaction_type'),
+    )
+
+    @property
+    def effective_publisher_category(self):
+        return self.manual_publisher_category or self.publisher_category or 'unknown'
+
+    @property
+    def features(self):
+        try:
+            value = json.loads(self.features_json or '[]')
+            return value if isinstance(value, list) else []
+        except Exception:
+            return []
+
+    @features.setter
+    def features(self, value):
+        self.features_json = json.dumps(value or [], ensure_ascii=False)
+
+    @property
+    def images(self):
+        try:
+            value = json.loads(self.images_json or '[]')
+            return value if isinstance(value, list) else []
+        except Exception:
+            return []
+
+    @images.setter
+    def images(self, value):
+        safe_urls = [
+            item for item in (value or [])
+            if isinstance(item, str) and item.startswith(('https://', 'http://'))
+        ]
+        self.images_json = json.dumps(safe_urls, ensure_ascii=False)
+
+    @property
+    def publisher_evidence(self):
+        try:
+            value = json.loads(self.publisher_evidence_json or '[]')
+            return value if isinstance(value, list) else []
+        except Exception:
+            return []
+
+    @publisher_evidence.setter
+    def publisher_evidence(self, value):
+        self.publisher_evidence_json = json.dumps(value or [], ensure_ascii=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'source': self.source,
+            'source_id': self.source_id,
+            'source_url': self.source_url,
+            'title': self.title,
+            'description': self.description,
+            'city': self.city,
+            'district': self.district,
+            'deal_type': self.deal_type,
+            'property_type': self.property_type,
+            'area': self.area,
+            'rooms': self.rooms,
+            'total_price': self.total_price,
+            'deposit': self.deposit,
+            'monthly_rent': self.monthly_rent,
+            'has_parking': self.has_parking,
+            'has_elevator': self.has_elevator,
+            'has_warehouse': self.has_warehouse,
+            'has_balcony': self.has_balcony,
+            'features': self.features,
+            'images': self.images,
+            'published_at': self.published_at.isoformat() if self.published_at else None,
+            'publication_earliest_at': self.publication_earliest_at.isoformat() if self.publication_earliest_at else None,
+            'publication_latest_at': self.publication_latest_at.isoformat() if self.publication_latest_at else None,
+            'publication_accuracy': self.publication_accuracy,
+            'publication_source_text': self.publication_source_text,
+            'source_updated_at': self.source_updated_at.isoformat() if self.source_updated_at else None,
+            'first_seen_at': self.first_seen_at.isoformat() if self.first_seen_at else None,
+            'last_seen_at': self.last_seen_at.isoformat() if self.last_seen_at else None,
+            'publisher_category': self.publisher_category,
+            'effective_publisher_category': self.effective_publisher_category,
+            'publisher_confidence': self.publisher_confidence,
+            'publisher_reason': self.publisher_reason,
+            'publisher_evidence': self.publisher_evidence,
+            'publisher_classifier_version': self.publisher_classifier_version,
+            'publisher_checked_at': self.publisher_checked_at.isoformat() if self.publisher_checked_at else None,
+            'classification_model_status': self.classification_model_status,
+            'manual_publisher_category': self.manual_publisher_category,
+            'manual_review_reason': self.manual_review_reason,
+        }
+
+
+class SearchRun(db.Model):
+    """Persistent crawl progress and evidence-backed coverage report."""
+    __tablename__ = 'search_runs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    query_text = db.Column(db.Text, nullable=True)
+    criteria_json = db.Column(db.Text, nullable=False, default='{}')
+    reference_time = db.Column(db.DateTime, nullable=False, index=True)
+    window_start = db.Column(db.DateTime, nullable=False)
+    timezone_name = db.Column(db.String(50), default='Asia/Tehran')
+    status = db.Column(db.String(30), default='pending', index=True)
+    coverage_status = db.Column(db.String(30), default='unknown', index=True)
+    source_status = db.Column(db.String(40), default='not_started')
+    classification_status = db.Column(db.String(40), default='pending')
+    stop_reason = db.Column(db.String(500), nullable=True)
+    checkpoint_json = db.Column(db.Text, default='{}')
+    report_json = db.Column(db.Text, default='{}')
+    can_resume = db.Column(db.Boolean, default=True)
+    started_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @property
+    def criteria(self):
+        try:
+            return json.loads(self.criteria_json or '{}')
+        except Exception:
+            return {}
+
+    @criteria.setter
+    def criteria(self, value):
+        self.criteria_json = json.dumps(value or {}, ensure_ascii=False)
+
+    @property
+    def checkpoint(self):
+        try:
+            return json.loads(self.checkpoint_json or '{}')
+        except Exception:
+            return {}
+
+    @checkpoint.setter
+    def checkpoint(self, value):
+        self.checkpoint_json = json.dumps(value or {}, ensure_ascii=False)
+
+    @property
+    def report(self):
+        try:
+            return json.loads(self.report_json or '{}')
+        except Exception:
+            return {}
+
+    @report.setter
+    def report(self, value):
+        self.report_json = json.dumps(value or {}, ensure_ascii=False)
+
+    def to_dict(self):
+        return {
+            'run_id': self.run_id,
+            'query_text': self.query_text,
+            'criteria': self.criteria,
+            'reference_time': self.reference_time.isoformat() if self.reference_time else None,
+            'window_start': self.window_start.isoformat() if self.window_start else None,
+            'timezone_name': self.timezone_name,
+            'status': self.status,
+            'coverage_status': self.coverage_status,
+            'source_status': self.source_status,
+            'classification_status': self.classification_status,
+            'stop_reason': self.stop_reason,
+            'checkpoint': self.checkpoint,
+            'report': self.report,
+            'can_resume': self.can_resume,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
+class SearchRunItem(db.Model):
+    __tablename__ = 'search_run_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.String(64), db.ForeignKey('search_runs.run_id'), nullable=False, index=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey('accessible_listings.id'), nullable=False, index=True)
+    temporal_status = db.Column(db.String(30), default='uncertain', index=True)
+    criteria_match = db.Column(db.Boolean, default=False, index=True)
+    discovered_after_reference = db.Column(db.Boolean, default=False, index=True)
+    publisher_category_snapshot = db.Column(db.String(40), default='unknown', index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('run_id', 'listing_id', name='uq_search_run_listing'),
+    )
+
+
+class ListingRevision(db.Model):
+    __tablename__ = 'listing_revisions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey('accessible_listings.id'), nullable=False, index=True)
+    changed_fields_json = db.Column(db.Text, default='[]')
+    snapshot_json = db.Column(db.Text, default='{}')
+    observed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class PublisherClassificationCorrection(db.Model):
+    __tablename__ = 'publisher_classification_corrections'
+
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey('accessible_listings.id'), nullable=False, index=True)
+    previous_category = db.Column(db.String(40), nullable=False)
+    corrected_category = db.Column(db.String(40), nullable=False)
+    reason = db.Column(db.String(500), nullable=False)
+    reviewer = db.Column(db.String(120), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+class CallRecord(db.Model):
+    """
+    جدول لاگ تماس‌های ضبط‌شده مرکز تماس VoIP و تحلیل متن و صوت
+    """
+    __tablename__ = 'call_records'
+    id = db.Column(db.Integer, primary_key=True)
+    call_id = db.Column(db.String(100), unique=True, nullable=True, index=True)
+    caller_phone = db.Column(db.String(30), nullable=False, index=True)
+    audio_url = db.Column(db.String(500), nullable=True)
+    transcribed_text = db.Column(db.Text, nullable=True)
+    extracted_criteria_json = db.Column(db.Text, default='{}')
+    processing_status = db.Column(db.String(30), default='pending', index=True) # pending, transcribed, analyzed, failed
+    duration_seconds = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    @property
+    def extracted_criteria(self):
+        try:
+            return json.loads(self.extracted_criteria_json or '{}')
+        except Exception:
+            return {}
+
+    @extracted_criteria.setter
+    def extracted_criteria(self, val):
+        self.extracted_criteria_json = json.dumps(val, ensure_ascii=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'call_id': self.call_id,
+            'caller_phone': self.caller_phone,
+            'audio_url': self.audio_url,
+            'transcribed_text': self.transcribed_text,
+            'extracted_criteria': self.extracted_criteria,
+            'processing_status': self.processing_status,
+            'duration_seconds': self.duration_seconds,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
+
+class CustomerLead(db.Model):
+    """
+    جدول سرنخ‌های ورودی مشتریان از تمام درگاه‌های چندکاناله (VoIP, SMS, Telegram, Bale, Web, ...)
+    """
+    __tablename__ = 'customer_leads'
+    id = db.Column(db.Integer, primary_key=True)
+    # contact_key: شناسه یکتا و namespace‌شده؛ برای phone: '09121234567'، برای پیام‌رسان: 'telegram:12345678'
+    contact_key = db.Column(db.String(80), nullable=False, unique=True, index=True)
+    phone_number = db.Column(db.String(30), nullable=True, index=True)  # nullable برای لیدهای پیام‌رسان‌محور
+    # رابطه صریح یک‌به‌یک با جدول Client (aggregate اصلی CRM)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True, index=True)
+    full_name = db.Column(db.String(100), default='مشتری ورودی')
+    deal_type = db.Column(db.String(20), default='rent', index=True)  # sale, rent
+    preferred_districts_json = db.Column(db.Text, default='[]')  # ["پونک", "جنت‌آباد"]
+
+    min_budget = db.Column(db.BigInteger, default=0)
+    max_budget = db.Column(db.BigInteger, default=0)
+    max_deposit = db.Column(db.BigInteger, default=0)
+    max_rent = db.Column(db.BigInteger, default=0)
+    min_area = db.Column(db.Integer, default=0)
+
+    preferred_features_json = db.Column(db.Text, default='[]')  # ["پارکینگ", "آسانسور"]
+    active_messenger = db.Column(db.String(30), default='telegram')  # telegram, bale, whatsapp, eitaa, rubika
+    source_channel = db.Column(db.String(30), nullable=True, index=True)  # کانال ورود اولیه
+    last_interaction_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    outreach_logs = db.relationship('OutreachLog', backref='lead', lazy=True, cascade="all, delete-orphan")
+    crm_client = db.relationship('Client', foreign_keys=[client_id], lazy='joined')
+
+    @property
+    def preferred_districts(self):
+        try:
+            return json.loads(self.preferred_districts_json or '[]')
+        except Exception:
+            return []
+
+    @preferred_districts.setter
+    def preferred_districts(self, val):
+        self.preferred_districts_json = json.dumps(val, ensure_ascii=False)
+
+    @property
+    def preferred_features(self):
+        try:
+            return json.loads(self.preferred_features_json or '[]')
+        except Exception:
+            return []
+
+    @preferred_features.setter
+    def preferred_features(self, val):
+        self.preferred_features_json = json.dumps(val, ensure_ascii=False)
+
+    @property
+    def has_real_phone(self) -> bool:
+        return bool(self.phone_number and not self.phone_number.startswith(('telegram:', 'bale:', 'eitaa:', 'rubika:', 'lead:', 'system:')))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'phone_number': self.phone_number,
+            'full_name': self.full_name,
+            'deal_type': self.deal_type,
+            'preferred_districts': self.preferred_districts,
+            'min_budget': self.min_budget,
+            'max_budget': self.max_budget,
+            'max_deposit': self.max_deposit,
+            'max_rent': self.max_rent,
+            'min_area': self.min_area,
+            'preferred_features': self.preferred_features,
+            'active_messenger': self.active_messenger,
+            'last_interaction_at': self.last_interaction_at.strftime('%Y-%m-%d %H:%M') if self.last_interaction_at else '',
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
+
+class OutreachLog(db.Model):
+    """
+    جدول ثبت لاگ و وضعیت ارسال‌های چندکاناله — idempotent با کلید یکتا
+    """
+    __tablename__ = 'outreach_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    # idempotency_key: از تکرار ارسال webhook جلوگیری می‌کند
+    idempotency_key = db.Column(db.String(64), nullable=True, unique=True, index=True)
+    lead_id = db.Column(db.Integer, db.ForeignKey('customer_leads.id'), nullable=True, index=True)  # nullable برای ارسال مستقیم مالک
+    property_listing_id = db.Column(db.Integer, db.ForeignKey('property_listings.id'), nullable=True, index=True)
+    match_record_id = db.Column(db.Integer, db.ForeignKey('matching_records.id'), nullable=True, index=True)
+    property_code = db.Column(db.String(50), nullable=False, default='direct')
+    platform = db.Column(db.String(30), nullable=False, index=True)  # telegram, bale, whatsapp, eitaa, rubika
+    recipient_key = db.Column(db.String(80), nullable=True, index=True)  # contact_key گیرنده
+    status = db.Column(db.String(30), default='sent', index=True)  # sent, failed, delivered, retry
+    delivery_status = db.Column(db.String(20), default='sent')  # sent|delivered|failed|retry
+    retry_count = db.Column(db.Integer, default=0)
+    server_response = db.Column(db.Text, nullable=True)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'idempotency_key': self.idempotency_key,
+            'lead_id': self.lead_id,
+            'property_listing_id': self.property_listing_id,
+            'match_record_id': self.match_record_id,
+            'property_code': self.property_code,
+            'platform': self.platform,
+            'recipient_key': self.recipient_key,
+            'status': self.status,
+            'delivery_status': self.delivery_status,
+            'retry_count': self.retry_count,
+            'server_response': self.server_response,
+            'sent_at': self.sent_at.strftime('%Y-%m-%d %H:%M') if self.sent_at else ''
+        }
+
+class AuthSession(db.Model):
+    """
+    جدول مدیریت نشست‌های احراز هویت و ورود یکپارچه با پیام‌رسان‌ها (تلگرام و بله)
+    """
+    __tablename__ = 'auth_sessions'
+    id = db.Column(db.Integer, primary_key=True)
+    session_token = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    phone = db.Column(db.String(30), nullable=True, index=True)
+    platform = db.Column(db.String(20), nullable=False, index=True)  # 'telegram' or 'bale'
+    status = db.Column(db.String(20), default='pending', index=True)  # pending, confirmed, rejected, expired
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    messenger_user_id = db.Column(db.String(64), nullable=True, index=True)  # Telegram or Bale chat_id
+    messenger_user_name = db.Column(db.String(120), nullable=True)
+    ip_address = db.Column(db.String(50), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    confirmed_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('auth_sessions', lazy=True))
+
+    @property
+    def is_expired(self) -> bool:
+        return datetime.utcnow() > self.expires_at
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'session_token': self.session_token,
+            'phone': self.phone or '',
+            'platform': self.platform,
+            'status': self.status,
+            'user_id': self.user_id,
+            'messenger_user_id': self.messenger_user_id or '',
+            'messenger_user_name': self.messenger_user_name or '',
+            'is_expired': self.is_expired,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else '',
+            'expires_at': self.expires_at.strftime('%Y-%m-%d %H:%M:%S') if self.expires_at else '',
+            'confirmed_at': self.confirmed_at.strftime('%Y-%m-%d %H:%M:%S') if self.confirmed_at else ''
+        }
+
+

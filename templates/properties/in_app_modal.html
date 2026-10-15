@@ -1,0 +1,509 @@
+<!-- ===================================================
+     SAGHF IN-APP LUXURY AD VIEWER MODAL (BLACK & GOLD)
+     نمایش ۱۰۰٪ درون‌برنامه‌ای اطلاعات آگهی بدون خروج به دیوار
+     =================================================== -->
+<div id="inAppAdModalOverlay" class="glass-modal-overlay" onclick="handleInAppModalBackdropClick(event)">
+    <div class="glass-modal-box inapp-ad-modal-content" onclick="event.stopPropagation()">
+        <!-- Header -->
+        <div class="inapp-modal-header">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.3rem;">🏛️</span>
+                <div>
+                    <h3 id="inAppModalTitle" style="font-size: 1.1rem; font-weight: 800; color: #ffffff; margin: 0; line-height: 1.3;">
+                        بارگذاری مشخصات فایل...
+                    </h3>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                        <span id="inAppModalCode" class="property-code-badge" style="font-size: 0.76rem; padding: 0.12rem 0.5rem;">🔢 کد فایل: -----</span>
+                        <span id="inAppModalBadgeSource" class="badge-neon badge-neon-gold">دیوار</span>
+                        <span id="inAppModalDistrict" style="font-size: 0.76rem; color: #cbd5e1;">📍 تهران</span>
+                        <span id="inAppModalScore" class="match-score-pill match-high" style="font-size: 0.72rem; padding: 0.15rem 0.55rem;">امتیاز: ۹۰</span>
+                    </div>
+                </div>
+            </div>
+            <button type="button" onclick="closeInAppAdModal()" class="glass-btn" style="padding: 0.35rem 0.7rem; border-radius: 50%; font-size: 1.1rem; border-color: rgba(212, 175, 55, 0.4); color: #f5d77f;" title="بستن پنجره">
+                ✕
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="inapp-modal-body">
+            <!-- Loading Spinner -->
+            <div id="inAppModalLoader" style="text-align: center; padding: 3rem 0; color: var(--gold-light);">
+                <div style="width: 44px; height: 44px; border: 3px solid rgba(212, 175, 55, 0.2); border-top-color: var(--gold-primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem;"></div>
+                <div style="font-weight: 700; font-size: 0.95rem;">در حال دریافت و بازخوانی اطلاعات درون‌برنامه‌ای...</div>
+            </div>
+
+            <!-- Content Area -->
+            <div id="inAppModalData" style="display: none;">
+                <!-- Photo Gallery Carousel -->
+                <div class="inapp-gallery-wrapper">
+                    <img id="inAppGalleryMainImg" src="/static/placeholder.png" alt="تصویر آگهی" class="inapp-gallery-main-img" onerror="this.src='/static/placeholder.png'">
+                    <button type="button" class="inapp-gallery-nav-btn prev" onclick="navigateInAppGallery(-1)" title="عکس قبلی">❮</button>
+                    <button type="button" class="inapp-gallery-nav-btn next" onclick="navigateInAppGallery(1)" title="عکس بعدی">❯</button>
+                    <div id="inAppGalleryCounter" class="inapp-gallery-counter">📷 ۱ از ۱</div>
+                </div>
+
+                <!-- Thumbnails Strip -->
+                <div id="inAppGalleryThumbs" class="inapp-gallery-thumbs"></div>
+
+                <!-- Price Banner -->
+                <div class="inapp-contact-box" style="background: rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.45);">
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <span id="inAppPriceLabel" style="font-size: 0.8rem; color: #cbd5e1;">قیمت کل ملک:</span>
+                        <span id="inAppPriceValue" style="font-size: 1.35rem; font-weight: 900; color: #f5d77f; text-shadow: 0 0 12px rgba(212, 175, 55, 0.4);">
+                            توافقی
+                        </span>
+                    </div>
+                    <div id="inAppSecondaryPriceWrap" style="text-align: left; display: flex; flex-direction: column; gap: 0.2rem;">
+                        <span id="inAppSecondaryPriceLabel" style="font-size: 0.76rem; color: #8896ab;">قیمت هر متر مربع:</span>
+                        <span id="inAppSecondaryPriceValue" style="font-size: 1.05rem; font-weight: 700; color: #fcd34d;">
+                            -
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Verified Owner Contact Card -->
+                <div class="inapp-contact-box">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                            📞
+                        </div>
+                        <div>
+                            <div style="font-size: 0.76rem; color: #8896ab;">اطلاعات تماس مالک آگهی:</div>
+                            <div id="inAppOwnerPhone" style="font-size: 1.15rem; font-weight: 900; color: #34d399; font-family: monospace; direction: ltr; text-align: right; letter-spacing: 1px;">
+                                ۰۹۱۲xxxxxxx
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button type="button" id="inAppCopyPhoneBtn" onclick="copyInAppPhone()" class="glass-btn" style="padding: 0.45rem 0.8rem; font-size: 0.8rem; color: var(--gold-light); border-color: rgba(212, 175, 55, 0.4);">
+                            📋 کپی شماره
+                        </button>
+                        <a id="inAppCallBtn" href="#" class="btn-neon-emerald" style="padding: 0.45rem 1rem; font-size: 0.82rem; border-radius: 10px;">
+                            <span>📞</span> شماره‌گیری مستقیم
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Location & Time Bar -->
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; background: rgba(255,255,255,0.03); padding: 0.65rem 0.9rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.07);">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.84rem; color: #cbd5e1;">
+                        <span style="color: var(--gold-light);">📍</span>
+                        <span id="inAppModalFullLocation">تهران، سعادت‌آباد</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: #94a3b8;">
+                        <span id="inAppModalTime">🕒 زمان ثبت: به تازگی</span>
+                    </div>
+                </div>
+
+                <!-- Comprehensive Specs Table (جدول تفکیک‌شده مشخصات و امکانات ملک) -->
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.84rem; color: var(--gold-light); font-weight: 800; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>📋</span> جدول تفکیک‌شده امکانات و مشخصات فنی ملک
+                    </div>
+                    <div class="inapp-specs-table-wrap" style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 14px; overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: right;">
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; width: 25%; background: rgba(255,255,255,0.02);">📐 متراژ زیربنا</td>
+                                    <td id="inAppTableArea" style="padding: 0.6rem 0.85rem; font-weight: 700; color: #f8fafc; width: 25%;">-</td>
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; width: 25%; background: rgba(255,255,255,0.02);">🛏️ تعداد اتاق خواب</td>
+                                    <td id="inAppTableRooms" style="padding: 0.6rem 0.85rem; font-weight: 700; color: #f8fafc; width: 25%;">-</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">🏢 طبقه واحد</td>
+                                    <td id="inAppTableFloor" style="padding: 0.6rem 0.85rem; font-weight: 700; color: #f8fafc;">-</td>
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">🏗️ تعداد کل طبقات</td>
+                                    <td id="inAppTableTotalFloors" style="padding: 0.6rem 0.85rem; font-weight: 700; color: #f8fafc;">-</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">👥 واحد در هر طبقه</td>
+                                    <td id="inAppTableUnitsPerFloor" style="padding: 0.6rem 0.85rem; font-weight: 700; color: #f8fafc;">-</td>
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">📅 سال ساخت بنا</td>
+                                    <td id="inAppTableYear" style="padding: 0.6rem 0.85rem; font-weight: 700; color: #f8fafc;">-</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">🚗 پارکینگ سندی</td>
+                                    <td id="inAppTableParking" style="padding: 0.6rem 0.85rem; font-weight: 700;">-</td>
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">🛗 آسانسور</td>
+                                    <td id="inAppTableElevator" style="padding: 0.6rem 0.85rem; font-weight: 700;">-</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">📦 انباری اختصاصی</td>
+                                    <td id="inAppTableWarehouse" style="padding: 0.6rem 0.85rem; font-weight: 700;">-</td>
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">🌿 بالکن / تراس</td>
+                                    <td id="inAppTableBalcony" style="padding: 0.6rem 0.85rem; font-weight: 700;">-</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">📄 نوع سند و کاربری</td>
+                                    <td id="inAppTableDocType" style="padding: 0.6rem 0.85rem; font-weight: 700; color: #fcd34d;">سند رسمی تک‌برگ</td>
+                                    <td style="padding: 0.6rem 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.02);">🏷️ نوع معامله</td>
+                                    <td id="inAppTableDealType" style="padding: 0.6rem 0.85rem; font-weight: 700; color: #38bdf8;">فروش مسکونی</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Amenities Badges -->
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.82rem; color: #8896ab; margin-bottom: 0.5rem; font-weight: 700;">✨ ویژگی‌ها و امکانات تکمیلی:</div>
+                    <div id="inAppAmenitiesBadges" style="display: flex; gap: 0.45rem; flex-wrap: wrap;"></div>
+                </div>
+
+                <!-- Full Description with Copy Button -->
+                <div style="background: rgba(18, 20, 28, 0.6); border: 1px solid rgba(212, 175, 55, 0.15); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.84rem; color: var(--gold-light); font-weight: 800;">📄 متن کامل توضیحات آگهی‌دهنده:</span>
+                        <button type="button" id="inAppCopyDescBtn" onclick="copyInAppDescription()" class="glass-btn" style="padding: 0.25rem 0.65rem; font-size: 0.74rem; color: #cbd5e1;" title="کپی متن توضیحات">
+                            📋 کپی متن توضیحات
+                        </button>
+                    </div>
+                    <div id="inAppDescription" style="font-size: 0.88rem; line-height: 1.85; color: #cbd5e1; white-space: pre-line; max-height: 220px; overflow-y: auto;">
+                        توضیحات در حال دریافت است...
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(212, 175, 55, 0.18); padding-top: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                        <a id="inAppDossierLink" href="#" class="btn-luxury-gold" style="padding: 0.55rem 1.4rem; font-size: 0.9rem;">
+                            <span>🏛️</span> باز کردن پرونده کامل
+                        </a>
+                        <button type="button" id="inAppModalTgBtn" class="btn-compact-telegram" style="padding: 0.55rem 1.1rem; font-size: 0.85rem;" title="ارسال آلبوم تصاویر به تلگرام">
+                            <span>📸</span> ارسال تصاویر به تلگرام
+                        </button>
+                    </div>
+                    
+                    <!-- تگ مستقیم لینک آگهی جهت رعایت ماده ۲ راهنمای رفتار توسعه (AGENTS.md) -->
+                    <div id="inAppOriginDirectLinkWrap">
+                        <a id="inAppOriginDirectLink" href="#" target="_blank" rel="noopener noreferrer" class="glass-btn" style="padding: 0.45rem 0.85rem; font-size: 0.78rem; color: #8896ab;" title="لینک مرجع جهت تطبیق هویت داده">
+                            <span>🔗</span> لینک آگهی
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+let inAppAdCurrentImages = [];
+let inAppAdCurrentImageIndex = 0;
+let inAppAdCurrentPhone = '';
+
+function openInAppAdModal(propId, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const overlay = document.getElementById('inAppAdModalOverlay');
+    const loader = document.getElementById('inAppModalLoader');
+    const dataContainer = document.getElementById('inAppModalData');
+    
+    if (!overlay) return;
+
+    overlay.classList.add('active');
+    loader.style.display = 'block';
+    dataContainer.style.display = 'none';
+
+    fetch(`/properties/${propId}/data`)
+        .then(response => {
+            if (!response.ok) throw new Error('Network error');
+            return response.json();
+        })
+        .then(res => {
+            if (!res.success || !res.property) throw new Error('Data format error');
+            populateInAppModal(res.property);
+            loader.style.display = 'none';
+            dataContainer.style.display = 'block';
+        })
+        .catch(err => {
+            console.error('[InAppModal] خطا در واکشی داده‌ها:', err);
+            loader.replaceChildren();
+            const errDiv = document.createElement('div');
+            errDiv.style.color = '#f43f5e';
+            errDiv.style.fontWeight = '700';
+            errDiv.style.marginBottom = '0.75rem';
+            errDiv.textContent = 'خطا در دریافت اطلاعات فایل!';
+
+            const descDiv = document.createElement('div');
+            descDiv.style.fontSize = '0.82rem';
+            descDiv.style.color = '#94a3b8';
+            descDiv.style.marginBottom = '1.25rem';
+            descDiv.textContent = 'لطفاً مجدداً تلاش نمایید یا پرونده را مستقیماً باز کنید.';
+
+            const link = document.createElement('a');
+            link.href = `/properties/${encodeURIComponent(propId)}`;
+            link.className = 'btn-luxury-gold';
+            link.style.fontSize = '0.85rem';
+            link.textContent = 'ورود به پرونده ملک';
+
+            loader.appendChild(errDiv);
+            loader.appendChild(descDiv);
+            loader.appendChild(link);
+        });
+}
+
+function populateInAppModal(p) {
+    document.getElementById('inAppModalTitle').textContent = p.title || 'فایل املاک سقف';
+    document.getElementById('inAppModalDistrict').textContent = `📍 ${p.city || 'تهران'}، ${p.district || ''}`;
+    document.getElementById('inAppModalScore').textContent = `امتیاز: ${p.score || 85}`;
+    
+    const badgeSource = document.getElementById('inAppModalBadgeSource');
+    badgeSource.textContent = p.source === 'divar' ? 'دیوار' : (p.source === 'sheypoor' ? 'شیپور' : 'مالک مستقیم');
+
+    // Property Code & Telegram Action
+    const codeVal = p.file_code || (p.id ? String(10000 + Number(p.id)) : '-----');
+    const codeEl = document.getElementById('inAppModalCode');
+    if (codeEl) {
+        codeEl.textContent = `🔢 کد فایل: ${codeVal}`;
+    }
+    const tgBtn = document.getElementById('inAppModalTgBtn');
+    if (tgBtn) {
+        tgBtn.onclick = function(e) {
+            sendPropertyPhotosToTelegram(p.id, codeVal, e);
+        };
+    }
+
+    // Images
+    inAppAdCurrentImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : ['/static/placeholder.png'];
+    inAppAdCurrentImageIndex = 0;
+    renderInAppGallery();
+
+    // Price
+    const priceLabel = document.getElementById('inAppPriceLabel');
+    const priceVal = document.getElementById('inAppPriceValue');
+    const secWrap = document.getElementById('inAppSecondaryPriceWrap');
+    const secLabel = document.getElementById('inAppSecondaryPriceLabel');
+    const secVal = document.getElementById('inAppSecondaryPriceValue');
+
+    if (p.deal_type === 'sale') {
+        priceLabel.textContent = 'قیمت کل ملک:';
+        priceVal.textContent = p.total_price ? `${Number(p.total_price).toLocaleString('fa-IR')} تومان` : 'توافقی';
+        if (p.meter_price) {
+            secWrap.style.display = 'flex';
+            secLabel.textContent = 'قیمت هر متر مربع:';
+            secVal.textContent = `${Number(p.meter_price).toLocaleString('fa-IR')} تومان`;
+        } else {
+            secWrap.style.display = 'none';
+        }
+    } else {
+        priceLabel.textContent = 'ودیعه (رهن):';
+        priceVal.textContent = p.deposit ? `${Number(p.deposit).toLocaleString('fa-IR')} تومان` : 'توافقی';
+        secWrap.style.display = 'flex';
+        secLabel.textContent = 'اجاره ماهانه:';
+        secVal.textContent = p.monthly_rent ? `${Number(p.monthly_rent).toLocaleString('fa-IR')} تومان` : 'توافقی';
+    }
+
+    // Contact phone
+    const phoneEl = document.getElementById('inAppOwnerPhone');
+    const callBtn = document.getElementById('inAppCallBtn');
+    const copyBtn = document.getElementById('inAppCopyPhoneBtn');
+    
+    let rawPhone = '';
+    if (p.owner && p.owner.phone_number) {
+        rawPhone = p.owner.phone_number;
+    }
+    inAppAdCurrentPhone = rawPhone;
+
+    if (rawPhone && rawPhone.startsWith('09')) {
+        phoneEl.textContent = rawPhone;
+        phoneEl.style.color = '#34d399';
+        callBtn.href = `tel:${rawPhone}`;
+        callBtn.style.display = 'inline-flex';
+        copyBtn.style.display = 'inline-flex';
+    } else {
+        phoneEl.textContent = 'محفوظ در سیستم / در حال استعلام';
+        phoneEl.style.color = '#f59e0b';
+        callBtn.style.display = 'none';
+        copyBtn.style.display = 'none';
+    }
+
+    // Location & Time Bar
+    const fullLocEl = document.getElementById('inAppModalFullLocation');
+    if (fullLocEl) {
+        let locStr = `${p.city || 'تهران'}`;
+        if (p.district) locStr += ` | منطقه: ${p.district}`;
+        if (p.address) locStr += ` | محدوده: ${p.address}`;
+        fullLocEl.textContent = locStr;
+    }
+    const timeEl = document.getElementById('inAppModalTime');
+    if (timeEl) {
+        const timeAgo = p.time_ago || 'به تازگی';
+        const formattedDate = p.created_at_formatted || p.created_at || 'امروز';
+        timeEl.textContent = `🕒 زمان ثبت: ${timeAgo} (${formattedDate})`;
+    }
+
+    // Comprehensive Specs Table
+    const setElem = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+    const setBoolElem = (id, hasVal) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (hasVal) {
+            el.textContent = 'دارد ✓';
+            el.style.color = '#34d399';
+        } else {
+            el.textContent = 'ندارد ✕';
+            el.style.color = '#94a3b8';
+        }
+    };
+
+    setElem('inAppTableArea', p.area ? `${p.area} متر` : '-');
+    setElem('inAppTableRooms', p.rooms !== null && p.rooms !== undefined ? `${p.rooms} خواب` : '-');
+    setElem('inAppTableFloor', p.floor !== null && p.floor !== undefined ? `طبقه ${p.floor}` : '-');
+    setElem('inAppTableTotalFloors', p.total_floors ? `${p.total_floors} طبقه` : '-');
+    setElem('inAppTableUnitsPerFloor', p.units_per_floor ? `${p.units_per_floor} واحد` : '-');
+    setElem('inAppTableYear', p.build_year ? `سال ${p.build_year}` : '-');
+
+    setBoolElem('inAppTableParking', p.has_parking);
+    setBoolElem('inAppTableElevator', p.has_elevator);
+    setBoolElem('inAppTableWarehouse', p.has_warehouse);
+    setBoolElem('inAppTableBalcony', p.has_balcony);
+
+    setElem('inAppTableDocType', `${p.property_type_label || 'مسکونی'} - سند رسمی`);
+    setElem('inAppTableDealType', p.deal_label || (p.deal_type === 'rent' ? 'رهن و اجاره' : 'فروش'));
+
+    // Amenities Badges
+    const amenitiesWrap = document.getElementById('inAppAmenitiesBadges');
+    amenitiesWrap.replaceChildren();
+    
+    const badges = [];
+    if (p.has_elevator) badges.push({ text: 'آسانسور دارد', cls: 'badge-neon-emerald' });
+    if (p.has_parking) badges.push({ text: 'پارکینگ دارد', cls: 'badge-neon-emerald' });
+    if (p.has_warehouse) badges.push({ text: 'انباری دارد', cls: 'badge-neon-emerald' });
+    if (p.has_balcony) badges.push({ text: 'بالکن دارد', cls: 'badge-neon-gold' });
+    
+    if (Array.isArray(p.features)) {
+        p.features.slice(0, 8).forEach(f => {
+            if (!badges.some(b => b.text.includes(f))) {
+                badges.push({ text: f, cls: 'badge-neon-gold' });
+            }
+        });
+    }
+
+    badges.forEach(b => {
+        const span = document.createElement('span');
+        span.className = `badge-neon ${b.cls}`;
+        span.textContent = b.text;
+        amenitiesWrap.appendChild(span);
+    });
+
+    // Description
+    document.getElementById('inAppDescription').textContent = p.description || 'توضیحات تکمیلی ثبت نشده است.';
+
+    // Dossier Link
+    document.getElementById('inAppDossierLink').href = `/properties/${p.id}`;
+
+    // Direct ad link per AGENTS.md rule 2
+    const originLink = document.getElementById('inAppOriginDirectLink');
+    if (p.source_url && (p.source_url.startsWith('http://') || p.source_url.startsWith('https://'))) {
+        originLink.href = p.source_url;
+        originLink.parentElement.style.display = 'block';
+    } else {
+        originLink.href = '#';
+        originLink.parentElement.style.display = 'none';
+    }
+}
+
+function copyInAppDescription() {
+    const descEl = document.getElementById('inAppDescription');
+    const btn = document.getElementById('inAppCopyDescBtn');
+    if (!descEl) return;
+    const text = descEl.textContent || '';
+    if (!text.trim()) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (btn) {
+                const orig = btn.textContent;
+                btn.textContent = 'کپی شد ✓';
+                btn.style.borderColor = 'var(--emerald-border)';
+                btn.style.color = '#34d399';
+                setTimeout(() => {
+                    btn.textContent = orig;
+                    btn.style.borderColor = '';
+                    btn.style.color = '';
+                }, 2000);
+            }
+        }).catch(err => {
+            console.error('Clipboard copy failed:', err);
+        });
+    }
+}
+
+function renderInAppGallery() {
+    const mainImg = document.getElementById('inAppGalleryMainImg');
+    const counter = document.getElementById('inAppGalleryCounter');
+    const thumbs = document.getElementById('inAppGalleryThumbs');
+
+    if (!inAppAdCurrentImages.length) {
+        mainImg.src = '/static/placeholder.png';
+        counter.textContent = '📷 بدون تصویر';
+        thumbs.replaceChildren();
+        return;
+    }
+
+    mainImg.src = inAppAdCurrentImages[inAppAdCurrentImageIndex];
+    counter.textContent = `📷 ${inAppAdCurrentImageIndex + 1} از ${inAppAdCurrentImages.length}`;
+
+    thumbs.replaceChildren();
+    inAppAdCurrentImages.forEach((url, idx) => {
+        const item = document.createElement('div');
+        item.className = `inapp-thumb-item ${idx === inAppAdCurrentImageIndex ? 'active' : ''}`;
+        item.onclick = () => {
+            inAppAdCurrentImageIndex = idx;
+            renderInAppGallery();
+        };
+        const img = document.createElement('img');
+        img.src = url;
+        img.loading = 'lazy';
+        img.onerror = () => { img.src = '/static/placeholder.png'; };
+        item.appendChild(img);
+        thumbs.appendChild(item);
+    });
+}
+
+function navigateInAppGallery(direction) {
+    if (!inAppAdCurrentImages.length) return;
+    inAppAdCurrentImageIndex = (inAppAdCurrentImageIndex + direction + inAppAdCurrentImages.length) % inAppAdCurrentImages.length;
+    renderInAppGallery();
+}
+
+function copyInAppPhone() {
+    if (!inAppAdCurrentPhone) return;
+    navigator.clipboard.writeText(inAppAdCurrentPhone).then(() => {
+        const copyBtn = document.getElementById('inAppCopyPhoneBtn');
+        const orig = copyBtn.textContent;
+        copyBtn.textContent = '✓ کپی شد!';
+        setTimeout(() => { copyBtn.textContent = orig; }, 2000);
+    });
+}
+
+function closeInAppAdModal() {
+    const overlay = document.getElementById('inAppAdModalOverlay');
+    if (overlay) overlay.classList.remove('active');
+}
+
+function handleInAppModalBackdropClick(e) {
+    if (e.target.id === 'inAppAdModalOverlay') {
+        closeInAppAdModal();
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeInAppAdModal();
+    }
+});
+</script>

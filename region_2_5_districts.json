@@ -1,0 +1,307 @@
+[
+  {
+    "id": 925,
+    "name": "آسمان",
+    "slug": "aseman"
+  },
+  {
+    "id": 173,
+    "name": "اباذر",
+    "slug": "aboozar"
+  },
+  {
+    "id": 1020,
+    "name": "ابوذر",
+    "slug": "abouzar"
+  },
+  {
+    "id": 160,
+    "name": "ارم",
+    "slug": "eram"
+  },
+  {
+    "id": 283,
+    "name": "اسکندری",
+    "slug": "eskandari"
+  },
+  {
+    "id": 167,
+    "name": "اکباتان",
+    "slug": "ekbatan"
+  },
+  {
+    "id": 143,
+    "name": "المهدی",
+    "slug": "almahdi"
+  },
+  {
+    "id": 927,
+    "name": "ایوانک",
+    "slug": "eivanak"
+  },
+  {
+    "id": 930,
+    "name": "باغ فردوس",
+    "slug": "bagh-ferdows"
+  },
+  {
+    "id": 920,
+    "name": "باغ فیض",
+    "slug": "bagh-feyz"
+  },
+  {
+    "id": 922,
+    "name": "پرواز",
+    "slug": "parvaz"
+  },
+  {
+    "id": 82,
+    "name": "پونک",
+    "slug": "poonak"
+  },
+  {
+    "id": 203,
+    "name": "توحید",
+    "slug": "tohid"
+  },
+  {
+    "id": 148,
+    "name": "جنت‌آباد جنوبی",
+    "slug": "south-janat-abad"
+  },
+  {
+    "id": 145,
+    "name": "جنت‌آباد شمالی",
+    "slug": "north-janat-abad"
+  },
+  {
+    "id": 146,
+    "name": "جنت‌آباد مرکزی",
+    "slug": "central-janat-abad"
+  },
+  {
+    "id": 919,
+    "name": "حصارک",
+    "slug": "tehran-hesarak"
+  },
+  {
+    "id": 929,
+    "name": "دریا",
+    "slug": "darya"
+  },
+  {
+    "id": 200,
+    "name": "دریان‌نو",
+    "slug": "daryan-no"
+  },
+  {
+    "id": 157,
+    "name": "سازمان آب",
+    "slug": "sazman-ab"
+  },
+  {
+    "id": 4133,
+    "name": "سازمان برنامه جنوبی",
+    "slug": "sazman-barname-jonubi"
+  },
+  {
+    "id": 158,
+    "name": "سازمان برنامه شمالی",
+    "slug": "sazamn-barnameh"
+  },
+  {
+    "id": 205,
+    "name": "ستارخان",
+    "slug": "sattarkhan"
+  },
+  {
+    "id": 75,
+    "name": "سعادت‌آباد",
+    "slug": "saadat-abad"
+  },
+  {
+    "id": 147,
+    "name": "شاهین",
+    "slug": "shahin"
+  },
+  {
+    "id": 202,
+    "name": "شهرآرا",
+    "slug": "sharara"
+  },
+  {
+    "id": 152,
+    "name": "شهران جنوبی",
+    "slug": "south-shahran"
+  },
+  {
+    "id": 151,
+    "name": "شهران شمالی",
+    "slug": "north-shahran"
+  },
+  {
+    "id": 155,
+    "name": "شهر زیبا",
+    "slug": "shahr-e-ziba"
+  },
+  {
+    "id": 169,
+    "name": "شهرک آپادانا",
+    "slug": "shahrak-e-apadana"
+  },
+  {
+    "id": 180,
+    "name": "شهرک آسمان",
+    "slug": "shahrak-e-aseman"
+  },
+  {
+    "id": 259,
+    "name": "شهرک ابوذر",
+    "slug": "shahrak-e-aboozar"
+  },
+  {
+    "id": 4147,
+    "name": "شهرک المهدی",
+    "slug": "shahrak-almahdi-tehran"
+  },
+  {
+    "id": 159,
+    "name": "شهرک پرواز",
+    "slug": "shahrak-e-parvaz"
+  },
+  {
+    "id": 4156,
+    "name": "شهرک صادقیه",
+    "slug": "shahrak-sadeghieh"
+  },
+  {
+    "id": 78,
+    "name": "شهرک غرب",
+    "slug": "shahrak-e-gharb"
+  },
+  {
+    "id": 185,
+    "name": "شهرک فردوس (حسینی)",
+    "slug": "shahrak-e-ferdows"
+  },
+  {
+    "id": 140,
+    "name": "شهرک کوهسار",
+    "slug": "shahrak-e-koohsar"
+  },
+  {
+    "id": 4170,
+    "name": "شهرک مخابرات",
+    "slug": "shahrak-mokhaberat"
+  },
+  {
+    "id": 4230,
+    "name": "شهرک نظامی",
+    "slug": "shahrak-nezami"
+  },
+  {
+    "id": 921,
+    "name": "شهرک نفت",
+    "slug": "shahrak-naft-district5"
+  },
+  {
+    "id": 172,
+    "name": "صادقیه",
+    "slug": "sadeghiyeh"
+  },
+  {
+    "id": 171,
+    "name": "طرشت",
+    "slug": "tarasht"
+  },
+  {
+    "id": 59,
+    "name": "فرحزاد",
+    "slug": "farahzad"
+  },
+  {
+    "id": 170,
+    "name": "فردوس",
+    "slug": "kooy-e-ferdos"
+  },
+  {
+    "id": 994,
+    "name": "فردوسی",
+    "slug": "ferdowsi"
+  },
+  {
+    "id": 153,
+    "name": "کن",
+    "slug": "kan"
+  },
+  {
+    "id": 4142,
+    "name": "کوهسار",
+    "slug": "kuhsar-tehran"
+  },
+  {
+    "id": 168,
+    "name": "کوی بیمه",
+    "slug": "kooy-e-bimeh"
+  },
+  {
+    "id": 923,
+    "name": "کوی فراز",
+    "slug": "kuy-faraz"
+  },
+  {
+    "id": 4146,
+    "name": "کوی نصر مهرآباد",
+    "slug": "kuy-nasr-mehrabad"
+  },
+  {
+    "id": 88,
+    "name": "گیشا",
+    "slug": "gisha"
+  },
+  {
+    "id": 139,
+    "name": "مرزداران",
+    "slug": "marzdaran"
+  },
+  {
+    "id": 174,
+    "name": "مهران",
+    "slug": "hasan-abad-shomali"
+  },
+  {
+    "id": 95,
+    "name": "مهران (سیدخندان)",
+    "slug": "seyed-khandan"
+  },
+  {
+    "id": 4129,
+    "name": "میدان میوه و تره‌بار مرکزی",
+    "slug": "meydan-mive-va-terehbar-markazi"
+  },
+  {
+    "id": 49,
+    "name": "مینی‌سیتی (شهرک نفت)",
+    "slug": "shahrak-naft"
+  },
+  {
+    "id": 399,
+    "name": "نارمک",
+    "slug": "narmak"
+  },
+  {
+    "id": 954,
+    "name": "نارمک جنوبی",
+    "slug": "south-narmak"
+  },
+  {
+    "id": 290,
+    "name": "نیکنام",
+    "slug": "soleymanieh"
+  },
+  {
+    "id": 315,
+    "name": "ونک",
+    "slug": "vanak"
+  }
+]

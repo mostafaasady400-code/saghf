@@ -1,0 +1,52 @@
+/* Scoped drawer fixes: never transform or resize the underlying page. */
+#universalDashboardBackdrop, #mobileDrawerBackdrop, .universal-dashboard-backdrop, .mobile-drawer-backdrop {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    cursor: pointer;
+}
+
+#universalDashboardDrawer, #mobileNavDrawer, .universal-dashboard-drawer, .mobile-nav-drawer {
+    height: calc(100dvh - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow: hidden;
+    overscroll-behavior: contain;
+    visibility: hidden;
+    transition: transform .32s cubic-bezier(0.16, 1, 0.3, 1), visibility .32s ease;
+}
+
+#universalDashboardDrawer.active, #mobileNavDrawer.active, .universal-dashboard-drawer.active, .mobile-nav-drawer.active {
+    visibility: visible !important;
+    transform: translate3d(0, 0, 0) !important;
+    pointer-events: auto !important;
+}
+
+#universalDashboardDrawer .dashboard-drawer-header, #mobileNavDrawer .dashboard-drawer-header {
+    flex-shrink: 0;
+}
+
+#universalDashboardDrawer .dashboard-drawer-body, #mobileNavDrawer .dashboard-drawer-body, #mobileNavDrawer .mobile-drawer-body {
+    min-height: 0;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+#universalDashboardDrawer .dashboard-drawer-close-btn, #mobileNavDrawer .dashboard-drawer-close-btn, #mobileNavDrawer .mobile-drawer-close-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+}
+
+#universalDashboardDrawer :focus-visible, #mobileNavDrawer :focus-visible {
+    outline: 2px solid #fce79f;
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #universalDashboardDrawer, #mobileNavDrawer, #universalDashboardBackdrop, #mobileDrawerBackdrop {
+        transition: none !important;
+    }
+}
